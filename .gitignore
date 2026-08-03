@@ -37,3 +37,5 @@ Thumbs.db
 *.swo
 .mise.local.toml
 .agents
+.claude
+secrets.ini

@@ -1,56 +1,14 @@
 [tools]
-rust = "stable"
-cargo-watch = "latest"
-sccache = "latest"
+rust = "stable"                     # Rust 官方编译器与工具链
+sccache = "latest"                  # Rust 编译缓存加速工具
+just = "latest"                     # 现代化 command runner 任务命令工具
+"cargo:cargo-watch" = "latest"      # 监听代码变更并触发增量热重载
+"cargo:cargo-outdated" = "latest"   # 检查 Cargo.toml 依赖包的最新可用版本
+"cargo:cargo-edit" = "latest"       # 提供 cargo upgrade 命令直接修改 Cargo.toml
+"cargo:cargo-nextest" = "latest"    # 现代化极速 Rust 并行测试运行器
+"cargo:cargo-audit" = "latest"      # 扫描依赖包中的 RustSec 已知安全漏洞
+"cargo:cargo-llvm-cov" = "latest"   # 代码测试覆盖率统计工具
+"cargo:sea-orm-cli" = "latest"      # Sea-ORM 数据库实体与迁移 CLI 工具
 
 [env]
 RUSTC_WRAPPER = "sccache"
-
-
-[tasks.start]
-description = "启动 Loco Web 服务"
-run = "cargo loco start"
-
-[tasks.dev]
-description = "启动开发环境热重载服务 (自动检测 src/ 及 config/ 变更并重启)"
-run = "cargo watch -w src -w config -s 'cargo run -- start'"
-
-[tasks.migrate]
-description = "运行数据库迁移"
-run = "cargo loco db migrate"
-
-[tasks.routes]
-description = "查看当前所有已注册的路由列表"
-run = "cargo loco routes"
-
-[tasks.test]
-description = "运行项目单元测试与集成测试"
-run = "cargo test"
-
-[tasks.check]
-description = "运行类型检查与 Clippy 代码规范检查"
-run = "cargo clippy"
-
-[tasks.fmt]
-description = "格式化所有 Rust 源代码"
-run = "cargo fmt --all"
-
-[tasks.fix]
-description = "自动修复格式（fmt）与 Clippy 警告（允许未提交/暂存的改动）"
-run = "cargo clippy --fix --allow-dirty --allow-staged && cargo fmt --all"
-
-[tasks.doctor]
-description = "检查当前 Loco 开发环境配置与依赖健康状态"
-run = "cargo loco doctor"
-
-[tasks.clean]
-description = "清理 target 构建目录以释放磁盘空间"
-run = "cargo clean"
-
-[tasks.up]
-description = "使用 Docker Compose 启动 App 容器"
-run = "docker compose up --build -d"
-
-[tasks.down]
-description = "停止并销毁 Docker Compose 容器"
-run = "docker compose down"
