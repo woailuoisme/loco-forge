@@ -1,0 +1,17 @@
+{
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.clippy": "explicit"
+  },
+  "rust-analyzer.check.command": "clippy",
+  "rust-analyzer.cargo.buildScripts.enable": true,
+  "rust-analyzer.procMacro.enable": true,
+  "files.associations": {
+    "*.yaml": "yaml",
+    "*.toml": "toml"
+  },
+  "files.watcherExclude": {
+    "**/target/**": true,
+    "**/.codegraph/**": true
+  }
+}

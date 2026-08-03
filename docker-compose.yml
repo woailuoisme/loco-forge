@@ -1,0 +1,26 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: loco_app
+    ports:
+      - "5150:5150"
+    environment:
+      - LOCO_ENV=development
+      - LOCO_BINDING=0.0.0.0
+      - DATABASE_URL=${DATABASE_URL:-sqlite://loco-starter_development.sqlite?mode=rwc}
+      - JWT_SECRET=${JWT_SECRET:-mHuQ6y9WZiykqoDgaAEm}
+    # 允许容器通过 host.docker.internal 访问宿主机服务：
+    # - Postgres: postgres://user:pass@host.docker.internal:5432/db_name
+    # - Redis:    redis://host.docker.internal:6379
+    # - Mailer:   host: host.docker.internal / port: 1025
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - backend
+    restart: unless-stopped
+
+networks:
+  backend:
+    external: true

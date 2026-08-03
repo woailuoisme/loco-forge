@@ -1,0 +1,40 @@
+[alias]
+# 核心别名：支持 `cargo loco <subcommand>` 语法，直接将子命令（如 start, routes, db migrate）传递给本地编译出的二进制程序
+loco = "run --"
+
+# 备用别名：与 loco 作用相同，当系统安装了全局 loco-cli 工具时，提供显式调用本项目本地 CLI 的替代命令
+loco-tool = "run --"
+
+# 开发热重载别名：使用 cargo-watch 监听 src/ 与 config/ 目录，文件变更时自动重新编译并运行 `cargo run -- start`
+dev = ["watch", "-w", "src", "-w", "config", "-s", "cargo run -- start"]
+
+# 游乐场脚本别名：快捷运行 examples/playground.rs 独立示例，方便临时测试与实验代码
+playground = "run --example playground"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 跨平台极速链接器配置 (rust-lld / lld)
+# 在开发迭代时加速 Rust 二进制文件的链接阶段 (提速 2x - 5x)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# macOS (Apple Silicon)
+[target.aarch64-apple-darwin]
+linker = "rust-lld"
+rustflags = ["-C", "link-arg=-w"]
+
+# macOS (Intel)
+[target.x86_64-apple-darwin]
+linker = "rust-lld"
+rustflags = ["-C", "link-arg=-w"]
+
+# Linux (x86_64)
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+# Linux (aarch64)
+[target.aarch64-unknown-linux-gnu]
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+# Windows (MSVC)
+[target.x86_64-pc-windows-msvc]
+linker = "rust-lld"

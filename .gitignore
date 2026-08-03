@@ -1,0 +1,39 @@
+# ── Rust / Cargo ─────────────────────────────────────────────────────────────
+target/
+debug/
+**/*.rs.bk
+*.pdb
+**/*.snap.new
+
+# Keep Cargo.lock for application builds
+!Cargo.lock
+
+# ── Loco Configuration & Environments ─────────────────────────────────────────
+config/local.yaml
+config/*.local.yaml
+config/production.yaml
+.env
+.env.*
+
+# ── Databases & Dynamic Storage ───────────────────────────────────────────────
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+uploads/
+storage/
+tmp/
+logs/
+*.log
+
+# ── OS & IDE / Tooling ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+.mise.local.toml
+.agents

@@ -1,0 +1,44 @@
+# ── Rust Build Artifacts ──────────────────────────────────────────────────────
+target/
+debug/
+**/*.rs.bk
+*.pdb
+
+# ── Version Control & Project Metadata ────────────────────────────────────────
+.git/
+.gitignore
+.dockerignore
+.github/
+.agents/
+.codegraph/
+
+# ── IDEs & Tooling ────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+.mise.toml
+.mise.local.toml
+.mcp.json
+skills-lock.json
+lefthook.yml
+
+# ── Documentation & Docker Specs ─────────────────────────────────────────────
+README.md
+AGENTS.md
+Dockerfile
+docker-compose.yml
+
+# ── Local Databases, Logs & Temporary Files ──────────────────────────────────
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+*.log
+logs/
+uploads/
+storage/
+tmp/
+
+# ── Environment & Secrets ─────────────────────────────────────────────────────
+.env*
+config/*.local.yaml
+config/local.yaml
