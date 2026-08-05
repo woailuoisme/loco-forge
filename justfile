@@ -6,9 +6,23 @@ default:
 start:
     cargo loco start
 
+# 启动后台 Job 消费进程 (Worker)
+worker:
+    cargo loco start --worker
+
+# 启动定时任务调度服务 (Scheduler)
+scheduler:
+    cargo loco scheduler
+
+# 单进程同时启动 Web Server、Worker 与 Scheduler
+start-all:
+    cargo loco start --all
+
 # 启动开发环境热重载服务 (自动检测 src/ 及 config/ 变更并重启)
 dev:
-    cargo watch -w src -w config -s 'cargo run -- start'
+    RUST_LOG=debug cargo watch -w src -w config -s 'cargo run -- start'
+
+
 
 # 运行数据库迁移
 migrate:
@@ -17,6 +31,10 @@ migrate:
 # 查看当前所有已注册的路由列表
 routes:
     cargo loco routes
+
+# 运行 Loco 后台/管理 Task (空参数时列出所有 Task 列表)
+task *args="":
+    cargo loco task {{args}}
 
 # 运行项目单元测试与集成测试 (基础驱动，兼容 SQLite 串行测试)
 test:

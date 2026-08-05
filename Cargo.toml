@@ -13,17 +13,26 @@ default-run = "lococ"
 loco-rs = { version = "1.0" }
 
 [dependencies]
-loco-rs = { workspace = true  }
-serde = { version = "1", features = ["derive"] }
-serde_json = { version = "1" }
+# 1. 核心框架与异步运行时 (Core Framework & Async Runtime)
+loco-rs = { workspace = true, features = [
+  "storage_aws_s3",
+  "cache_redis",
+  "worker_redis",
+  "testing",
+] }
 tokio = { version = "1.53", default-features = false, features = [
   "rt-multi-thread",
 ] }
 async-trait = { version = "0.1" }
 axum = { version = "0.8" }
-tracing = { version = "0.1" }
-tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+# 2. 序列化与基础工具库 (Serialization & Core Utilities)
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1" }
+chrono = { version = "0.4" }
+uuid = { version = "1.24", features = ["v4"] }
+validator = { version = "0.20" }
 regex = { version = "1.13" }
+# 3. 数据库与数据迁移 (Database & ORM)
 migration = { path = "migration" }
 sea-orm = { version = "2.0", features = [
   "sqlx-sqlite",
@@ -31,12 +40,11 @@ sea-orm = { version = "2.0", features = [
   "runtime-tokio-rustls",
   "macros",
 ] }
-chrono = { version = "0.4" }
-validator = { version = "0.20" }
-uuid = { version = "1.24", features = ["v4"] }
-# ts-rs derives the TypeScript bindings for the `dtos` (the typed JSON API
-# contract). Present for every db app; the SPA frontend consumes the exports,
-# and a headless app can still emit them for external consumers.
+# 4. 日志与链路追踪 (Logging & Observability)
+tracing = { version = "0.1" }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+# 6. API 文档与前端契约生成 (API Docs & TypeScript Bindings)
+# ts-rs 自动为 DTO 导出 TypeScript 类型定义文件，供 SPA 前端消费
 ts-rs = { version = "12", features = ["chrono-impl", "serde-compat"] }
 include_dir = { version = "0.7" }
 utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }

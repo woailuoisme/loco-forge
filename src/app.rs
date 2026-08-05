@@ -52,6 +52,9 @@ impl Hooks for App {
 
     #[allow(unused_variables)]
     fn register_tasks(tasks: &mut Tasks) {
+        tasks.register(tasks::jwt_secret::JwtSecret);
+        tasks.register(tasks::route_list::RouteList);
+        tasks.register(tasks::health_check::HealthCheck);
         // tasks-inject (do not remove)
         tasks.register(tasks::user_create::UserCreate);
     }

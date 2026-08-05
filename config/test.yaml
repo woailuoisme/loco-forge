@@ -86,3 +86,9 @@ auth:
     secret: JrpYhwuDmrP0LuVeg9PV
     # Token expiration time in seconds
     expiration: 604800 # 7 days
+
+# Cache Configuration (InMem for Tests)
+cache:
+  kind: InMem
+
+

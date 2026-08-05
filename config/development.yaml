@@ -1,91 +1,111 @@
-# Loco configuration file documentation
+# Loco 应用开发环境配置文件 (development.yaml)
 
-# Application logging configuration
+# 1. 日志与链路追踪配置 (Logger)
 logger:
-  # Enable or disable logging.
+  # 是否开启日志输出
   enable: true
-  # Enable pretty backtrace (sets RUST_BACKTRACE=1)
+  # 是否开启美化堆栈跟踪 (RUST_BACKTRACE=1)
   pretty_backtrace: true
-  # Log level, options: trace, debug, info, warn or error.
+  # 日志级别: trace, debug, info, warn, error
   level: debug
-  # Define the logging format. options: compact, pretty or json
+  # 日志格式: compact, pretty, json
   format: compact
-  # By default the logger has filtering only logs that came from your code or logs that came from `loco` framework. to see all third party libraries
-  # Uncomment the line below to override to see all third party libraries you can enable this config and override the logger filters.
-  # override_filter: trace
+  # 覆盖日志过滤器 (debug 确保请求响应 log 实时输出)
+  override_filter: debug
 
-# Web server configuration
+
+# 2. Web 服务配置 (Web Server)
 server:
-  # Port on which the server will listen. the server binding is 0.0.0.0:{PORT}
-  port: 5150
-  # Binding for the server (which interface to bind to)
-  binding: localhost
-  # The UI hostname or IP address that mailers will point to.
-  host: http://localhost
-  # Out of the box middleware configuration. to disable middleware you can changed the `enable` field to `false` of comment the middleware block
+  # 服务监听端口
+  port: {{ get_env(name="PORT", default="5150") }}
+  # 服务绑定地址 (例如 localhost 或 0.0.0.0)
+  binding: {{ get_env(name="BINDING", default="localhost") }}
+  # 邮件等服务引用的 UI 根地址
+  host: {{ get_env(name="SERVER_HOST", default="http://localhost") }}
+  # 内置中间件配置
   middlewares:
+    logger:
+      enable: true
 
-# Worker Configuration
+
+# 3. 后台异步任务 Worker 配置 (Worker)
 workers:
-  # specifies the worker mode. Options:
-  #   - BackgroundQueue - Workers operate asynchronously in the background, processing queued.
-  #   - ForegroundBlocking - Workers operate in the foreground and block until tasks are completed.
-  #   - BackgroundAsync - Workers operate asynchronously in the background, processing tasks with async capabilities.
+  # 模式: BackgroundAsync (后台异步), BackgroundQueue (队列), ForegroundBlocking (前台阻塞)
   mode: BackgroundAsync
 
-  
-
-# Mailer Configuration.
+# 4. 邮件服务配置 (SMTP Mailer)
 mailer:
-  # SMTP mailer configuration.
   smtp:
-    # Enable/Disable smtp mailer.
+    # 是否启用 SMTP 邮件服务
     enable: true
-    # SMTP server host. e.x localhost, smtp.gmail.com
-    host: localhost
-    # SMTP server port
-    port: 1025
-    # Use secure connection (SSL/TLS).
-    secure: false
-    # auth:
-    #   user:
-    #   password:
-    # Override the SMTP hello name (default is the machine's hostname)
-    # hello_name:
+    # SMTP 服务器地址 (例如 127.0.0.1 或 smtp.gmail.com)
+    host: {{ get_env(name="SMTP_HOST", default="127.0.0.1") }}
+    # SMTP 服务器端口 (例如 Mailpit 1025)
+    port: {{ get_env(name="SMTP_PORT", default="1025") }}
+    # 是否使用 SSL/TLS 安全连接
+    secure: {{ get_env(name="SMTP_SECURE", default="false") }}
 
-# Initializers Configuration
-# initializers:
-#  oauth2:
-#    authorization_code: # Authorization code grant type
-#      - client_identifier: google # Identifier for the OAuth2 provider. Replace 'google' with your provider's name if different, must be unique within the oauth2 config.
-#        ... other fields
+# 5. 对象存储配置 (Storage - S3 兼容协议: Garage / MinIO / AWS S3)
+storage:
+  kind: S3
+  ext:
+    s3:
+      # S3 Bucket 存储桶名称
+      bucket: {{ get_env(name="STORAGE_S3_BUCKET", default="default") }}
+      # S3 区域 (Garage 默认为 garage)
+      region: {{ get_env(name="STORAGE_S3_REGION", default="garage") }}
+      # S3 Endpoint 访问端点 URL
+      endpoint: {{ get_env(name="STORAGE_S3_ENDPOINT", default="http://127.0.0.1:3900") }}
+      # S3 访问密钥 ID (Access Key)
+      access_key_id: {{ get_env(name="STORAGE_S3_ACCESS_KEY", default="GKfd16f76e81fb861a868a01b9b19452ad") }}
+      # S3 私有密钥 (Secret Key)
+      secret_access_key: {{ get_env(name="STORAGE_S3_SECRET_KEY", default="18d5eda476ff7fb88f0bec38eae3a5e468020ae6dfc610defe2f3f72a65c4339") }}
 
-# Database Configuration
+# 6. 数据库配置 (Database - PostgreSQL / SQLite)
 database:
-  # Database connection URI
-  uri: {{ get_env(name="DATABASE_URL", default="sqlite://loco-starter_development.sqlite?mode=rwc") }}
-  # When enabled, the sql query will be logged.
+  # 数据库连接 URI
+  uri: {{ get_env(name="DATABASE_URL", default="postgres://postgres:598f18a1c99d539ced6631add2b428b3@127.0.0.1:45432/loco_starter_development") }}
+  # 是否开启 SQL 查询日志
   enable_logging: false
-  # Set the timeout duration when acquiring a connection.
+  # 获取连接的超时时间 (ms)
   connect_timeout: {{ get_env(name="DB_CONNECT_TIMEOUT", default="500") }}
-  # Set the idle duration before closing a connection.
+  # 空闲连接超时关闭时间 (ms)
   idle_timeout: {{ get_env(name="DB_IDLE_TIMEOUT", default="500") }}
-  # Minimum number of connections for a pool.
+  # 连接池最小连接数
   min_connections: {{ get_env(name="DB_MIN_CONNECTIONS", default="1") }}
-  # Maximum number of connections for a pool.
-  max_connections: {{ get_env(name="DB_MAX_CONNECTIONS", default="1") }}
-  # Run migration up when application loaded
+  # 连接池最大连接数
+  max_connections: {{ get_env(name="DB_MAX_CONNECTIONS", default="10") }}
+  # 应用启动时自动运行数据库迁移
   auto_migrate: true
-  # Truncate database when application loaded. This is a dangerous operation, make sure that you using this flag only on dev environments or test mode
+  # 启动时清空数据库 (危险操作，仅适用于开发/测试环境)
   dangerously_truncate: false
-  # Recreating schema when application loaded.  This is a dangerous operation, make sure that you using this flag only on dev environments or test mode
+  # 启动时重建 Schema (危险操作，仅适用于开发/测试环境)
   dangerously_recreate: false
 
-# Authentication Configuration
+# 7. 身份认证与安全配置 (Authentication & JWT)
 auth:
-  # JWT authentication
   jwt:
-    # Secret key for token generation and verification
-    secret: mHuQ6y9WZiykqoDgaAEm
-    # Token expiration time in seconds
-    expiration: 604800 # 7 days
+    # 用于 JWT 签名与验证的私钥
+    secret: {{ get_env(name="JWT_SECRET", default="7a0358d8737b4092856b124bc6eaa6e09107b3946d264c8bbf67af66873b7163") }}
+    # Token 过期时间 (秒，例如 604800 表示 7 天)
+    expiration: {{ get_env(name="JWT_EXPIRATION", default="604800") }}
+
+# 8. 缓存配置 (Cache - Redis / Valkey 共享缓存)
+cache:
+  kind: Redis
+  # Redis 连接 URI (支持密码与数据库编号)
+  uri: "{{ get_env(name='REDIS_CACHE_URL', default='redis://:redis_secret@127.0.0.1:6379/1') }}"
+  # 内存/连接最大限制
+  max_size: {{ get_env(name='REDIS_CACHE_MAX_SIZE', default='10') }}
+
+# 9. 定时任务调度配置 (Scheduler)
+scheduler:
+  output: stdout
+  jobs:
+    health_check:
+      run: "health:check"
+      schedule: "run every 1 hour"
+      output: silent
+      tags: ['health']
+
+
