@@ -24,7 +24,13 @@ pub struct PostDto {
 
 impl From<crate::models::_entities::posts::Model> for PostDto {
     fn from(m: crate::models::_entities::posts::Model) -> Self {
-        Self { id: m.id, title: m.title, content: m.content, created_at: m.created_at, updated_at: m.updated_at }
+        Self {
+            id: m.id,
+            title: m.title,
+            content: m.content,
+            created_at: m.created_at,
+            updated_at: m.updated_at,
+        }
     }
 }
 

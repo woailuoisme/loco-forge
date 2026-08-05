@@ -120,10 +120,19 @@ async fn can_verification_token() {
         .await
         .expect("Failed to find user by PID");
 
-    assert!(user.email_verification_sent_at.is_none(), "Expected no email verification sent timestamp");
-    assert!(user.email_verification_token.is_none(), "Expected no email verification token");
+    assert!(
+        user.email_verification_sent_at.is_none(),
+        "Expected no email verification sent timestamp"
+    );
+    assert!(
+        user.email_verification_token.is_none(),
+        "Expected no email verification token"
+    );
 
-    let result = user.into_active_model().set_email_verification_sent(&boot.app_context.db).await;
+    let result = user
+        .into_active_model()
+        .set_email_verification_sent(&boot.app_context.db)
+        .await;
 
     assert!(result.is_ok(), "Failed to set email verification sent");
 
@@ -131,8 +140,14 @@ async fn can_verification_token() {
         .await
         .expect("Failed to find user by PID after setting verification sent");
 
-    assert!(user.email_verification_sent_at.is_some(), "Expected email verification sent timestamp to be present");
-    assert!(user.email_verification_token.is_some(), "Expected email verification token to be present");
+    assert!(
+        user.email_verification_sent_at.is_some(),
+        "Expected email verification sent timestamp to be present"
+    );
+    assert!(
+        user.email_verification_token.is_some(),
+        "Expected email verification token to be present"
+    );
 }
 
 #[tokio::test]
@@ -150,7 +165,10 @@ async fn can_set_forgot_password_sent() {
     assert!(user.reset_sent_at.is_none(), "Expected no reset sent timestamp");
     assert!(user.reset_token.is_none(), "Expected no reset token");
 
-    let result = user.into_active_model().set_forgot_password_sent(&boot.app_context.db).await;
+    let result = user
+        .into_active_model()
+        .set_forgot_password_sent(&boot.app_context.db)
+        .await;
 
     assert!(result.is_ok(), "Failed to set forgot password sent");
 
@@ -158,7 +176,10 @@ async fn can_set_forgot_password_sent() {
         .await
         .expect("Failed to find user by PID after setting forgot password sent");
 
-    assert!(user.reset_sent_at.is_some(), "Expected reset sent timestamp to be present");
+    assert!(
+        user.reset_sent_at.is_some(),
+        "Expected reset sent timestamp to be present"
+    );
     assert!(user.reset_token.is_some(), "Expected reset token to be present");
 }
 
@@ -199,9 +220,16 @@ async fn can_reset_password() {
         .await
         .expect("Failed to find user by PID");
 
-    assert!(user.verify_password("12341234"), "Password verification failed for original password");
+    assert!(
+        user.verify_password("12341234"),
+        "Password verification failed for original password"
+    );
 
-    let result = user.clone().into_active_model().reset_password(&boot.app_context.db, "new-password").await;
+    let result = user
+        .clone()
+        .into_active_model()
+        .reset_password(&boot.app_context.db, "new-password")
+        .await;
 
     assert!(result.is_ok(), "Failed to reset password");
 
@@ -209,7 +237,10 @@ async fn can_reset_password() {
         .await
         .expect("Failed to find user by PID after password reset");
 
-    assert!(user.verify_password("new-password"), "Password verification failed for new password");
+    assert!(
+        user.verify_password("new-password"),
+        "Password verification failed for new password"
+    );
 }
 
 #[tokio::test]
@@ -218,20 +249,35 @@ async fn magic_link() {
     let boot = boot_test::<App>().await.unwrap();
     seed::<App>(&boot.app_context).await.unwrap();
 
-    let user = Model::find_by_pid(&boot.app_context.db, "11111111-1111-1111-1111-111111111111").await.unwrap();
+    let user = Model::find_by_pid(&boot.app_context.db, "11111111-1111-1111-1111-111111111111")
+        .await
+        .unwrap();
 
-    assert!(user.magic_link_token.is_none(), "Magic link token should be initially unset");
-    assert!(user.magic_link_expiration.is_none(), "Magic link expiration should be initially unset");
+    assert!(
+        user.magic_link_token.is_none(),
+        "Magic link token should be initially unset"
+    );
+    assert!(
+        user.magic_link_expiration.is_none(),
+        "Magic link expiration should be initially unset"
+    );
 
     let create_result = user.into_active_model().create_magic_link(&boot.app_context.db).await;
 
-    assert!(create_result.is_ok(), "Failed to create magic link: {:?}", create_result.unwrap_err());
+    assert!(
+        create_result.is_ok(),
+        "Failed to create magic link: {:?}",
+        create_result.unwrap_err()
+    );
 
     let updated_user = Model::find_by_pid(&boot.app_context.db, "11111111-1111-1111-1111-111111111111")
         .await
         .expect("Failed to refetch user after magic link creation");
 
-    assert!(updated_user.magic_link_token.is_some(), "Magic link token should be set after creation");
+    assert!(
+        updated_user.magic_link_token.is_some(),
+        "Magic link token should be set after creation"
+    );
 
     let magic_link_token = updated_user.magic_link_token.unwrap();
     assert_eq!(
@@ -240,13 +286,22 @@ async fn magic_link() {
         "Magic link token length does not match expected length"
     );
 
-    assert!(updated_user.magic_link_expiration.is_some(), "Magic link expiration should be set after creation");
+    assert!(
+        updated_user.magic_link_expiration.is_some(),
+        "Magic link expiration should be set after creation"
+    );
 
     let now = Local::now();
     let should_expired_at = now + Duration::minutes(users::MAGIC_LINK_EXPIRATION_MIN.into());
     let actual_expiration = updated_user.magic_link_expiration.unwrap();
 
-    assert!(actual_expiration >= now, "Magic link expiration should be in the future or now");
+    assert!(
+        actual_expiration >= now,
+        "Magic link expiration should be in the future or now"
+    );
 
-    assert!(actual_expiration <= should_expired_at, "Magic link expiration exceeds expected maximum expiration time");
+    assert!(
+        actual_expiration <= should_expired_at,
+        "Magic link expiration exceeds expected maximum expiration time"
+    );
 }

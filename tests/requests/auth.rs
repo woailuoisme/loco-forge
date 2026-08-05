@@ -74,9 +74,12 @@ async fn can_login_with_verify(#[case] test_name: &str, #[case] password: &str) 
         assert_eq!(register_response.status_code(), 200, "Register request should succeed");
 
         let user = users::Model::find_by_email(&ctx.db, email).await.unwrap();
-        let email_verification_token =
-            user.email_verification_token.expect("Email verification token should be generated");
-        request.get(&format!("/api/auth/verify/{email_verification_token}")).await;
+        let email_verification_token = user
+            .email_verification_token
+            .expect("Email verification token should be generated");
+        request
+            .get(&format!("/api/auth/verify/{email_verification_token}"))
+            .await;
 
         //verify user request
         let response = request
@@ -88,7 +91,9 @@ async fn can_login_with_verify(#[case] test_name: &str, #[case] password: &str) 
             .await;
 
         // Make sure email_verified_at is set
-        let user = users::Model::find_by_email(&ctx.db, email).await.expect("Failed to find user by email");
+        let user = users::Model::find_by_email(&ctx.db, email)
+            .await
+            .expect("Failed to find user by email");
 
         assert!(
             user.email_verified_at.is_some(),
@@ -192,11 +197,18 @@ async fn can_reset_password() {
         let forget_response = request.post("/api/auth/forgot").json(&forgot_payload).await;
         assert_eq!(forget_response.status_code(), 200, "Forget request should succeed");
 
-        let user =
-            users::Model::find_by_email(&ctx.db, &login_data.user.email).await.expect("Failed to find user by email");
+        let user = users::Model::find_by_email(&ctx.db, &login_data.user.email)
+            .await
+            .expect("Failed to find user by email");
 
-        assert!(user.reset_token.is_some(), "Expected reset_token to be set, but it was None. User: {user:?}");
-        assert!(user.reset_sent_at.is_some(), "Expected reset_sent_at to be set, but it was None. User: {user:?}");
+        assert!(
+            user.reset_token.is_some(),
+            "Expected reset_token to be set, but it was None. User: {user:?}"
+        );
+        assert!(
+            user.reset_sent_at.is_some(),
+            "Expected reset_sent_at to be set, but it was None. User: {user:?}"
+        );
 
         let new_password = "new-password";
         let reset_payload = serde_json::json!({
@@ -205,7 +217,11 @@ async fn can_reset_password() {
         });
 
         let reset_response = request.post("/api/auth/reset").json(&reset_payload).await;
-        assert_eq!(reset_response.status_code(), 200, "Reset password request should succeed");
+        assert_eq!(
+            reset_response.status_code(),
+            200,
+            "Reset password request should succeed"
+        );
 
         let user = users::Model::find_by_email(&ctx.db, &user.email).await.unwrap();
 
@@ -284,11 +300,17 @@ async fn can_auth_with_magic_link() {
         //     assert_debug_snapshot!(deliveries.messages);
         // });
 
-        let user = users::Model::find_by_email(&ctx.db, "user1@example.com").await.expect("User should be found");
+        let user = users::Model::find_by_email(&ctx.db, "user1@example.com")
+            .await
+            .expect("User should be found");
 
         let magic_link_token = user.magic_link_token.expect("Magic link token should be generated");
         let magic_link_response = request.get(&format!("/api/auth/magic-link/{magic_link_token}")).await;
-        assert_eq!(magic_link_response.status_code(), 200, "Magic link authentication should succeed");
+        assert_eq!(
+            magic_link_response.status_code(),
+            200,
+            "Magic link authentication should succeed"
+        );
 
         with_settings!({
             filters => cleanup_user_model()
@@ -326,7 +348,11 @@ async fn can_reject_invalid_magic_link_token() {
         seed::<App>(&ctx).await.unwrap();
 
         let magic_link_response = request.get("/api/auth/magic-link/invalid-token").await;
-        assert_eq!(magic_link_response.status_code(), 401, "Magic link authentication should be rejected");
+        assert_eq!(
+            magic_link_response.status_code(),
+            401,
+            "Magic link authentication should be rejected"
+        );
     })
     .await;
 }
@@ -349,15 +375,27 @@ async fn can_resend_verification_email() {
 
         let resend_payload = serde_json::json!({ "email": email });
 
-        let resend_response = request.post("/api/auth/resend-verification-mail").json(&resend_payload).await;
+        let resend_response = request
+            .post("/api/auth/resend-verification-mail")
+            .json(&resend_payload)
+            .await;
 
-        assert_eq!(resend_response.status_code(), 200, "Resend verification email should succeed");
+        assert_eq!(
+            resend_response.status_code(),
+            200,
+            "Resend verification email should succeed"
+        );
 
         let deliveries = ctx.mailer.unwrap().deliveries();
 
-        assert_eq!(deliveries.count, 2, "Two emails should have been sent: welcome and re-verification");
+        assert_eq!(
+            deliveries.count, 2,
+            "Two emails should have been sent: welcome and re-verification"
+        );
 
-        let user = users::Model::find_by_email(&ctx.db, email).await.expect("User should exist");
+        let user = users::Model::find_by_email(&ctx.db, email)
+            .await
+            .expect("User should exist");
 
         with_settings!({
             filters => cleanup_user_model()
@@ -392,9 +430,16 @@ async fn cannot_resend_email_if_already_verified() {
         // Try resending verification email
         let resend_payload = serde_json::json!({ "email": email });
 
-        let resend_response = request.post("/api/auth/resend-verification-mail").json(&resend_payload).await;
+        let resend_response = request
+            .post("/api/auth/resend-verification-mail")
+            .json(&resend_payload)
+            .await;
 
-        assert_eq!(resend_response.status_code(), 200, "Should return 200 even if already verified");
+        assert_eq!(
+            resend_response.status_code(),
+            200,
+            "Should return 200 even if already verified"
+        );
 
         let deliveries = ctx.mailer.unwrap().deliveries();
         assert_eq!(deliveries.count, 1, "Only the original welcome email should be sent");

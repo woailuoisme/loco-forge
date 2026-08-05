@@ -27,10 +27,15 @@ impl Task for UserCreate {
         // 步骤 1: 解析必填的命令行参数 (email, name, password)
         let email = vars.cli_arg("email").map_err(|_| Error::string("email 参数为必填项"))?;
         let name = vars.cli_arg("name").map_err(|_| Error::string("name 参数为必填项"))?;
-        let password = vars.cli_arg("password").map_err(|_| Error::string("password 参数为必填项"))?;
+        let password = vars
+            .cli_arg("password")
+            .map_err(|_| Error::string("password 参数为必填项"))?;
 
-        let register_params =
-            RegisterParams { email: email.to_owned(), password: password.to_owned(), name: name.to_owned() };
+        let register_params = RegisterParams {
+            email: email.to_owned(),
+            password: password.to_owned(),
+            name: name.to_owned(),
+        };
 
         // 步骤 2: 调用 User Model 的 create_with_password 进行密码哈希与记录插入
         let res = users::Model::create_with_password(&app_context.db, &register_params).await;
@@ -56,14 +61,26 @@ impl Task for UserCreate {
         };
 
         // 步骤 3: 生成邮箱验证 Token 并标记验证邮件发送状态
-        let user = user.into_active_model().set_email_verification_sent(&app_context.db).await.map_err(|err| {
-            tracing::error!(message = err.to_string(), user_email = &register_params.email, "设置邮箱验证标记失败");
-            Error::string("设置邮箱验证失败")
-        })?;
+        let user = user
+            .into_active_model()
+            .set_email_verification_sent(&app_context.db)
+            .await
+            .map_err(|err| {
+                tracing::error!(
+                    message = err.to_string(),
+                    user_email = &register_params.email,
+                    "设置邮箱验证标记失败"
+                );
+                Error::string("设置邮箱验证失败")
+            })?;
 
         // 步骤 4: 发送注册欢迎与验证邮件
         AuthMailer::send_welcome(app_context, &user).await.map_err(|err| {
-            tracing::error!(message = err.to_string(), user_email = &register_params.email, "发送欢迎邮件失败");
+            tracing::error!(
+                message = err.to_string(),
+                user_email = &register_params.email,
+                "发送欢迎邮件失败"
+            );
             Error::string("发送欢迎邮件失败")
         })?;
 

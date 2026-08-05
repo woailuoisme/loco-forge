@@ -70,7 +70,10 @@ async fn check_cache(ctx: &AppContext) -> std::result::Result<Duration, String> 
     let test_val = "ping";
 
     // 1. 测试缓存写入
-    ctx.cache.insert(test_key, &test_val).await.map_err(|e| format!("写入失败: {}", e))?;
+    ctx.cache
+        .insert(test_key, &test_val)
+        .await
+        .map_err(|e| format!("写入失败: {}", e))?;
 
     // 2. 测试缓存读取与值匹配
     let res: Option<String> = ctx.cache.get(test_key).await.map_err(|e| format!("读取失败: {}", e))?;
@@ -105,16 +108,26 @@ async fn check_storage(ctx: &AppContext) -> std::result::Result<Duration, String
     let secret_key = std::env::var("STORAGE_S3_SECRET_KEY")
         .unwrap_or_else(|_| "18d5eda476ff7fb88f0bec38eae3a5e468020ae6dfc610defe2f3f72a65c4339".to_string());
 
-    let credential = loco_rs::storage::drivers::aws::Credential { key_id, secret_key, token: None };
+    let credential = loco_rs::storage::drivers::aws::Credential {
+        key_id,
+        secret_key,
+        token: None,
+    };
 
     let driver = loco_rs::storage::drivers::aws::with_credentials_and_endpoint(&bucket, &region, &endpoint, credential)
         .map_err(|e| format!("S3 驱动创建失败: {}", e))?;
 
     let storage = loco_rs::storage::Storage::single(driver);
 
-    storage.upload(test_path, &test_bytes).await.map_err(|e| format!("上传文件失败: {}", e))?;
+    storage
+        .upload(test_path, &test_bytes)
+        .await
+        .map_err(|e| format!("上传文件失败: {}", e))?;
 
-    storage.delete(test_path).await.map_err(|e| format!("删除测试文件失败: {}", e))?;
+    storage
+        .delete(test_path)
+        .await
+        .map_err(|e| format!("删除测试文件失败: {}", e))?;
 
     Ok(start.elapsed())
 }
