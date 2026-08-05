@@ -1,11 +1,11 @@
 [workspace]
 
 [package]
-name = "loco-starter"
+name = "locos"
 version = "0.1.0"
 edition = "2021"
 publish = false
-default-run = "lococ"
+default-run = "locos"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -52,7 +52,7 @@ utoipa-scalar = { version = "0.3", features = ["axum"] }
 utoipa-redoc = { version = "6", features = ["axum"] }
 
 [[bin]]
-name = "lococ"
+name = "locos"
 path = "src/bin/main.rs"
 required-features = []
 

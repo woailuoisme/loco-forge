@@ -20,9 +20,7 @@ start-all:
 
 # 启动开发环境热重载服务 (自动检测 src/ 及 config/ 变更并重启)
 dev:
-    RUST_LOG=debug cargo watch -w src -w config -s 'cargo run -- start'
-
-
+    cargo watch -w src -w config -s 'cargo run -- start'
 
 # 运行数据库迁移
 migrate:

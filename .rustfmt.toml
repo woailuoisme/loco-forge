@@ -1,2 +1,23 @@
-max_width = 120
-use_small_heuristics = "Default"
+# 开启 Nightly/Unstable 高级格式化特性
+unstable_features = true
+
+# 行宽与排版紧凑度
+max_width = 120                 # 每行最大字符数限制（适应现代宽屏显示器）
+comment_width = 120             # 注释折行最大列数限制
+use_small_heuristics = "Max"    # 启发式紧凑模式：尽量在单行内排列简短结构体/函数/表达式，避免过度拆行
+
+# 导入声明 (use) 自动分组与合并规则
+group_imports = "StdExternalCrate" # 自动将 import 分为三段：std 标准库、第三方依赖库、内部 crate 模块
+imports_granularity = "Crate"      # 按 Crate 粒度自动合并导入路径（例如：use std::collections::{HashMap, HashSet};）
+reorder_imports = true             # 导入声明按字母顺序自动排序
+
+# 注释与 Rustdoc 文档排版
+format_code_in_doc_comments = true # 自动格式化文档注释 (///) 中的 Rust 代码块示例
+wrap_comments = true               # 超过行宽限制的注释自动换行
+normalize_comments = true          # 规范化块注释与单行注释风格
+normalize_doc_attributes = true    # 统一将 #[doc = "..."] 转换为 /// 文档注释语法
+
+# 代码风格与 Git Diff 友好性配置
+newline_style = "Unix"             # 强制统一使用 LF (Unix) 换行符
+condense_wildcard_suffixes = true  # 自动压缩模式匹配尾部的多余通配符（如 (x, _, _) 缩写为 (x, ..)）
+match_arm_blocks = false           # 去除单行 match 分支中无意义的大括号块包裹

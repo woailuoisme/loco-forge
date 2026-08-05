@@ -32,11 +32,7 @@ pub struct ListParams {
 
 /// 构建包含 [`ApiError`] 规范的 404 错误响应
 fn not_found(message: &str) -> Response {
-    let error = ApiError {
-        code: "not_found".to_string(),
-        message: message.to_string(),
-        details: None,
-    };
+    let error = ApiError { code: "not_found".to_string(), message: message.to_string(), details: None };
     (StatusCode::NOT_FOUND, Json(error)).into_response()
 }
 
@@ -125,11 +121,7 @@ pub async fn create(
     State(ctx): State<AppContext>,
     Json(params): Json<CreatePost>,
 ) -> Result<Response> {
-    let item = ActiveModel {
-        title: Set(params.title),
-        content: Set(params.content),
-        ..Default::default()
-    };
+    let item = ActiveModel { title: Set(params.title), content: Set(params.content), ..Default::default() };
     let item = item.insert(&ctx.db).await?;
 
     Ok((StatusCode::CREATED, Json(PostDto::from(item))).into_response())

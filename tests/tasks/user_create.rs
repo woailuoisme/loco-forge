@@ -1,5 +1,5 @@
 use loco_rs::{task, testing::prelude::*};
-use loco_starter::{app::App, models::users};
+use locos::{app::App, models::users};
 
 use loco_rs::boot::run_task;
 use serial_test::serial;
@@ -18,11 +18,7 @@ async fn test_can_run_user_create() {
         ("name".to_string(), "Test User".to_string()),
         ("password".to_string(), "securepassword".to_string()),
     ]);
-    assert!(
-        run_task::<App>(&boot.app_context, Some(&"user:create".to_string()), &vars)
-            .await
-            .is_ok()
-    );
+    assert!(run_task::<App>(&boot.app_context, Some(&"user:create".to_string()), &vars).await.is_ok());
 
     let deliveries = boot.app_context.mailer.unwrap().deliveries();
     assert_eq!(deliveries.count, 1, "Exactly one email should be sent");
@@ -44,9 +40,7 @@ async fn test_user_email_already_exists() {
         ("name".to_string(), "Test User".to_string()),
         ("password".to_string(), "securepassword".to_string()),
     ]);
-    let err = run_task::<App>(&boot.app_context, Some(&"user:create".to_string()), &vars)
-        .await
-        .expect_err("err");
+    let err = run_task::<App>(&boot.app_context, Some(&"user:create".to_string()), &vars).await.expect_err("err");
 
     assert_eq!(err.to_string(), "Failed to create user. err: Entity already exists");
 

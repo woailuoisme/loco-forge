@@ -62,11 +62,7 @@ pub async fn register(State(ctx): State<AppContext>, Json(params): Json<Register
     let user = match res {
         Ok(user) => user,
         Err(err) => {
-            tracing::info!(
-                message = err.to_string(),
-                user_email = &params.email,
-                "could not register user",
-            );
+            tracing::info!(message = err.to_string(), user_email = &params.email, "could not register user",);
             return format::json(());
         }
     };
@@ -158,9 +154,7 @@ pub async fn reset(State(ctx): State<AppContext>, Json(params): Json<ResetParams
 
         return format::json(());
     };
-    user.into_active_model()
-        .reset_password(&ctx.db, &params.password)
-        .await?;
+    user.into_active_model().reset_password(&ctx.db, &params.password).await?;
 
     format::json(())
 }
@@ -193,9 +187,8 @@ pub async fn login(State(ctx): State<AppContext>, Json(params): Json<LoginParams
 
     let jwt_secret = ctx.config.get_jwt_config()?;
 
-    let token = user
-        .generate_jwt(&jwt_secret.secret, jwt_secret.expiration)
-        .or_else(|_| unauthorized("unauthorized!"))?;
+    let token =
+        user.generate_jwt(&jwt_secret.secret, jwt_secret.expiration).or_else(|_| unauthorized("unauthorized!"))?;
 
     format::json(LoginResponse::new(&user, &token))
 }
@@ -236,10 +229,7 @@ pub async fn current(auth: auth::JWT, State(ctx): State<AppContext>) -> Result<R
 pub async fn magic_link(State(ctx): State<AppContext>, Json(params): Json<MagicLinkParams>) -> Result<Response> {
     let email_regex = get_allow_email_domain_re();
     if !email_regex.is_match(&params.email) {
-        tracing::debug!(
-            email = params.email,
-            "The provided email is invalid or does not match the allowed domains"
-        );
+        tracing::debug!(email = params.email, "The provided email is invalid or does not match the allowed domains");
         return bad_request("invalid request");
     }
 
@@ -282,9 +272,8 @@ pub async fn magic_link_verify(Path(token): Path<String>, State(ctx): State<AppC
 
     let jwt_secret = ctx.config.get_jwt_config()?;
 
-    let token = user
-        .generate_jwt(&jwt_secret.secret, jwt_secret.expiration)
-        .or_else(|_| unauthorized("unauthorized!"))?;
+    let token =
+        user.generate_jwt(&jwt_secret.secret, jwt_secret.expiration).or_else(|_| unauthorized("unauthorized!"))?;
 
     format::json(LoginResponse::new(&user, &token))
 }

@@ -73,12 +73,7 @@ impl Modify for SecurityAddon {
         if let Some(components) = openapi.components.as_mut() {
             components.add_security_scheme(
                 "bearer_auth",
-                SecurityScheme::Http(
-                    HttpBuilder::new()
-                        .scheme(HttpAuthScheme::Bearer)
-                        .bearer_format("JWT")
-                        .build(),
-                ),
+                SecurityScheme::Http(HttpBuilder::new().scheme(HttpAuthScheme::Bearer).bearer_format("JWT").build()),
             );
         }
     }
@@ -103,10 +98,7 @@ impl Initializer for OpenApiInitializer {
                     move || async move { Json(openapi_json) }
                 }),
             )
-            .route(
-                "/redoc",
-                get(|| async move { Html(Redoc::new("/api-docs/openapi.json").to_html()) }),
-            )
+            .route("/redoc", get(|| async move { Html(Redoc::new("/api-docs/openapi.json").to_html()) }))
             .merge(Scalar::with_url("/scalar", openapi));
 
         Ok(router)

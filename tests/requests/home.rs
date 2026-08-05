@@ -1,5 +1,5 @@
 use loco_rs::testing::prelude::*;
-use loco_starter::app::App;
+use locos::app::App;
 use serde_json::Value;
 
 #[tokio::test]

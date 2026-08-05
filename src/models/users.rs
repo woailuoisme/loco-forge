@@ -41,10 +41,7 @@ pub struct Validator {
 
 impl Validatable for ActiveModel {
     fn validator(&self) -> Box<dyn Validate> {
-        Box::new(Validator {
-            name: self.name.as_ref().to_owned(),
-            email: self.email.as_ref().to_owned(),
-        })
+        Box::new(Validator { name: self.name.as_ref().to_owned(), email: self.email.as_ref().to_owned() })
     }
 }
 
@@ -98,11 +95,7 @@ impl Model {
     /// When could not find user by the given token or DB query error
     pub async fn find_by_verification_token(db: &DatabaseConnection, token: &str) -> ModelResult<Self> {
         let user = users::Entity::find()
-            .filter(
-                model::query::condition()
-                    .eq(users::Column::EmailVerificationToken, token)
-                    .build(),
-            )
+            .filter(model::query::condition().eq(users::Column::EmailVerificationToken, token).build())
             .one(db)
             .await?;
         user.ok_or_else(|| ModelError::EntityNotFound)
@@ -209,11 +202,7 @@ impl Model {
         let txn = db.begin().await?;
 
         if users::Entity::find()
-            .filter(
-                model::query::condition()
-                    .eq(users::Column::Email, &params.email)
-                    .build(),
-            )
+            .filter(model::query::condition().eq(users::Column::Email, &params.email).build())
             .one(&txn)
             .await?
             .is_some()
@@ -242,9 +231,7 @@ impl Model {
     ///
     /// when could not convert user claims to jwt token
     pub fn generate_jwt(&self, secret: &str, expiration: u64) -> ModelResult<String> {
-        jwt::JWT::new(secret)
-            .generate_token(expiration, self.pid.to_string(), Map::new())
-            .map_err(ModelError::from)
+        jwt::JWT::new(secret).generate_token(expiration, self.pid.to_string(), Map::new()).map_err(ModelError::from)
     }
 }
 
