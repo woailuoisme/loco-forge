@@ -48,7 +48,7 @@ async fn test_user_email_already_exists() {
         .await
         .expect_err("err");
 
-    assert_eq!(err.to_string(), "Failed to create user. err: Entity already exists");
+    assert_eq!(err.to_string(), "创建用户失败: Entity already exists");
 
     let deliveries = boot.app_context.mailer.unwrap().deliveries();
     assert_eq!(deliveries.count, 0, "No email should be sent");

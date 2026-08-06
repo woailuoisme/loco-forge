@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use axum::{response::Html, routing::get, Json, Router};
+use axum::{routing::get, Json, Router};
 use loco_rs::{
     app::{AppContext, Initializer},
     Result,
@@ -8,7 +8,6 @@ use utoipa::{
     openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme},
     Modify, OpenApi,
 };
-use utoipa_redoc::Redoc;
 use utoipa_scalar::{Scalar, Servable as ScalarServable};
 
 use crate::{controllers, dtos, models, views};
@@ -61,7 +60,7 @@ use crate::{controllers, dtos, models, views};
     info(
         title = "Loco RESTful API 文档",
         version = "1.0.0",
-        description = "基于 utoipa、Scalar 与 Redoc 驱动的 RESTful API 接口规范说明"
+        description = "基于 utoipa 与 Scalar 驱动的 RESTful API 接口规范说明"
     )
 )]
 pub struct ApiDoc;
@@ -103,11 +102,7 @@ impl Initializer for OpenApiInitializer {
                     move || async move { Json(openapi_json) }
                 }),
             )
-            .route(
-                "/redoc",
-                get(|| async move { Html(Redoc::new("/api-docs/openapi.json").to_html()) }),
-            )
-            .merge(Scalar::with_url("/scalar", openapi));
+            .merge(Scalar::with_url("/docs", openapi));
 
         Ok(router)
     }

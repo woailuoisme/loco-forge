@@ -1,12 +1,19 @@
 # ── rumdl Markdown Linter Configuration ─────────────────────────────────────────
+# rumdl 是超高速 Rust 编写的 Markdown 代码规范审计与格式检查工具
 
 [rules]
-# 忽略指定的校验规则：
-# - MD013 / line-length: 行长度限制
-# - MD033 / no-inline-html: 内联 HTML 限制
+# 忽略特定的 MarkdownLint 检查规则，适应技术文档与 AGENTS.md 规范：
+# - MD013 / line-length: 忽略单行超长限制（适应代码块与中英混排展示）
+# - MD033 / no-inline-html: 允许使用内联 HTML 元素
+# - MD024 / no-duplicate-heading: 允许不同章节下使用同名子标题
+# - MD041 / first-line-heading: 允许文件开头不强制要求一级标题
 ignore = [
     "MD013",
-    "MD033",
     "line-length",
+    "MD033",
     "no-inline-html",
+    "MD024",
+    "no-duplicate-heading",
+    "MD041",
+    "first-line-heading",
 ]

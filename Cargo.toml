@@ -25,14 +25,22 @@ tokio = { version = "1.53", default-features = false, features = [
 ] }
 async-trait = { version = "0.1" }
 axum = { version = "0.8" }
-# 2. 序列化与基础工具库 (Serialization & Core Utilities)
-serde = { version = "1", features = ["derive"] }
-serde_json = { version = "1" }
-chrono = { version = "0.4" }
-uuid = { version = "1.24", features = ["v4"] }
-validator = { version = "0.20" }
-regex = { version = "1.13" }
-# 3. 数据库与数据迁移 (Database & ORM)
+
+# 2. 网络与 HTTP 客户端 (Networking & HTTP Client)
+reqwest = { version = "0.13.4", features = ["json"] }
+
+# 3. 序列化与基础工具库 (Serialization & Core Utilities)
+serde = { version = "1", features = ["derive"] } # 通用数据序列化与反序列化框架
+serde_json = { version = "1" } # JSON 数据格式化与解析工具
+thiserror = { version = "2" } # 自定义错误类型派生宏 (std::error::Error)
+chrono = { version = "0.4" } # 日期与时间跨时区处理库 (Loco/SeaORM/utoipa 全栈统一标准)
+uuid = { version = "1.24", features = ["v4"] } # 通用唯一标识符 (UUID v4) 生成器
+validator = { version = "0.20" } # DTO 请求参数格式校验器 (email, len 等)
+base64 = { version = "0.23" }
+argon2 = { version = "0.5" }
+regex = { version = "1.13" } # 高性能正则表达式匹配工具
+
+# 4. 数据库与数据迁移 (Database & ORM)
 migration = { path = "migration" }
 sea-orm = { version = "2.0", features = [
   "sqlx-sqlite",
@@ -40,16 +48,26 @@ sea-orm = { version = "2.0", features = [
   "runtime-tokio-rustls",
   "macros",
 ] }
-# 4. 日志与链路追踪 (Logging & Observability)
+
+# 5. 日志与链路追踪 (Logging & Observability)
 tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
-# 6. API 文档与前端契约生成 (API Docs & TypeScript Bindings)
+tracing-appender = { version = "0.2" } # 日志文件自动滚动切割与非阻塞写入器 (类似 pino-roll)
+
+# 6. Excel 与电子表格处理 (Excel & Spreadsheet Processing)
+calamine = { version = "0.36" }
+rust_xlsxwriter = { version = "0.97" }
+
+# 7. 图像与二维码生成 (Image & QR Code Processing)
+image = { version = "0.25" }
+qrcode = { version = "0.14" }
+
+# 8. API 文档与前端契约生成 (API Docs & TypeScript Bindings)
 # ts-rs 自动为 DTO 导出 TypeScript 类型定义文件，供 SPA 前端消费
 ts-rs = { version = "12", features = ["chrono-impl", "serde-compat"] }
 include_dir = { version = "0.7" }
 utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
 utoipa-scalar = { version = "0.3", features = ["axum"] }
-utoipa-redoc = { version = "6", features = ["axum"] }
 
 [[bin]]
 name = "locos"
@@ -70,5 +88,3 @@ split-debuginfo = "unpacked"
 # 屏蔽所有第三方依赖包的调试符号（仅保留项目自身代码符号，大幅削减 target/debug/deps 体积）
 [profile.dev.package."*"]
 debug = 0
-
-

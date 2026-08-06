@@ -8,5 +8,5 @@ test-threads = "num-cpus"
 
 # 针对触碰测试数据库与 IO 资源的集成测试，指派至 db-tests 单线程组
 [[profile.default.overrides]]
-filter = 'test(models::) or test(requests::) or test(tasks::)'
+filter = 'test(models::) or test(requests::) or test(tasks::) or test(common::)'
 test-group = 'db-tests'

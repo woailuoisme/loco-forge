@@ -8,7 +8,9 @@ AI Agent 在此项目中编写、重构代码或排查问题时，必须严格�
 ## 核心原则 (Core Principles)
 
 1. **优先使用 Loco 原生脚手架与内置组件**
-   - 严禁手写繁琐的基础设施代码。新增模块、模型、控制器、后台任务、邮件、迁移时，**必须优先使用生成器**：
+   - 严禁手写繁琐的基础设施代码。
+     新增模块、模型、控制器、后台任务、邮件、迁移时，
+     **必须优先使用生成器**：
      - `cargo loco generate model <name> [field:type...]`
      - `cargo loco generate controller <name>`
      - `cargo loco generate scaffold <name> [field:type...]`
@@ -58,20 +60,21 @@ AI Agent 在此项目中编写、重构代码或排查问题时，必须严格�
 
 ```bash
 # 开发与构建
-mise run dev          # 启动热重载开发服务 (cargo dev)
-mise run start        # 启动 Web 服务 (cargo loco start)
-mise run test         # 运行单元测试与集成测试 (cargo test)
-mise run check        # 运行 Clippy 代码检查 (cargo clippy)
-mise run fix          # 自动修复格式与 Clippy 警告
+mise run dev      # 启动热重载开发服务 (cargo dev)
+mise run start    # 启动 Web 服务 (cargo loco start)
+mise run prod     # Release 高性能模式 (cargo run --release -- start)
+mise run test     # 极速并行测试 (cargo nextest run)
+mise run check    # 运行 Clippy 代码检查 (cargo clippy)
+mise run fix      # 自动修复格式与 Clippy 警告
 
 # 数据库与路由
-mise run migrate      # 执行数据库迁移 (cargo loco db migrate)
-mise run routes       # 查看当前所有已注册的路由表 (cargo loco routes)
+mise run migrate  # 执行数据库迁移 (cargo loco db migrate)
+mise run routes   # 查看当前所有已注册的路由表 (cargo loco routes)
 
 # 依赖与容器
-mise run doctor       # 检查开发环境健康状态 (cargo loco doctor)
-mise run up           # 使用 Docker Compose 启动容器
-mise run down         # 停止并销毁 Docker Compose 容器
+mise run doctor   # 检查开发环境健康状态 (cargo loco doctor)
+mise run up       # 使用 Docker Compose 启动容器
+mise run down     # 停止并销毁 Docker Compose 容器
 ```
 
 > **AI 命令调用规范**：在终端执行 Git 和 Cargo 命令时，
@@ -82,10 +85,19 @@ mise run down         # 停止并销毁 Docker Compose 容器
 
 ## 测试规范 (Testing Guidelines)
 
-- 新增 API 或模型功能时，必须遵守 **TDD** 流程，在 `tests/` 中编写或更新测试。
+- **推荐测试运行器**: 优先使用 `cargo nextest run`
+  进行极速并行测试（已配置 `.config/nextest.toml`
+  控制数据库单线程串行与纯逻辑多线程并发）。
+- **测试表达力与参数化**: 优先使用 **`rstest`**
+  (`#[rstest]`, `#[case(...)]`, `#[fixture]`)
+  替代冗余模板代码，精确定位用例边界断言。
+- 新增 API 或模型功能时，必须遵守 **TDD** 流程，
+  在 `tests/` 中编写或更新测试。
 - HTTP 集成测试模式：
   `request::<App, _, _>(|request, ctx| async move { ... }).await;`
-- 保证测试的自包含性与数据库隔离。
+- 并发保护与数据库隔离：
+  依赖全局 AppContext / 数据库事务的测试需标注
+  `#[serial_test::serial]` 隔离。
 
 ---
 

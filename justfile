@@ -2,9 +2,40 @@
 default:
     @just --list
 
-# 启动 Loco Web 服务
+# ==============================================================================
+# 1. 核心开发与运行 (Development & Execution)
+# ==============================================================================
+
+# 启动开发环境热重载服务 (自动检测 src/ 及 config/ 变更并重启)
+dev:
+    cargo watch -w src -w config -s 'cargo run -- start'
+
+# 使用 concurrently 并行启动 Server、Worker 与 Scheduler（带热重载）
+dev-all:
+    concurrently -k -n "server,worker,scheduler" -c "blue,magenta,yellow" \
+        "cargo watch -w src -w config -s 'cargo run -- start'" \
+        "cargo watch -w src -w config -s 'cargo run -- start --worker'" \
+        "cargo watch -w src -w config -s 'cargo run -- scheduler'"
+
+# 启动默认 Loco Web 服务 (Debug 调试模式)
 start:
     cargo loco start
+
+# 单进程同时启动 Web Server、Worker 与 Scheduler
+start-all:
+    cargo loco start --all
+
+# 开发环境编译构建 (Cargo Check & Debug 二进制)
+build:
+    cargo build
+
+# 生产环境 Release 高性能优化编译
+build-prod:
+    cargo build --release
+
+# 以 Release 高性能优化模式启动 Loco Web 服务
+prod:
+    cargo run --release -- start
 
 # 启动后台 Job 消费进程 (Worker)
 worker:
@@ -14,13 +45,13 @@ worker:
 scheduler:
     cargo loco scheduler
 
-# 单进程同时启动 Web Server、Worker 与 Scheduler
-start-all:
-    cargo loco start --all
+# 兼容与方便调用的旧别名 (Aliases for backward compatibility)
+alias build-release := build-prod
+alias start-release := prod
 
-# 启动开发环境热重载服务 (自动检测 src/ 及 config/ 变更并重启)
-dev:
-    cargo watch -w src -w config -s 'cargo run -- start'
+# ==============================================================================
+# 2. 数据库与领域 Task (Database & Loco Tasks)
+# ==============================================================================
 
 # 运行数据库迁移
 migrate:
@@ -34,21 +65,21 @@ routes:
 task *args="":
     cargo loco task {{args}}
 
-# 运行项目单元测试与集成测试 (基础驱动，兼容 SQLite 串行测试)
+# 检查当前 Loco 开发环境配置与依赖健康状态
+doctor:
+    cargo loco doctor
+
+# ==============================================================================
+# 3. 代码质量与测试 (Quality, Formatting & Testing)
+# ==============================================================================
+
+# 运行项目单元测试与集成测试
 test:
     cargo test
 
 # 使用 nextest 运行极速并行测试
 nextest:
     cargo nextest run
-
-# 检查依赖包的安全漏洞 (RustSec 漏洞数据库)
-audit:
-    cargo audit
-
-# 生成并查看 HTML 格式的代码测试覆盖率报告
-coverage:
-    cargo llvm-cov --html
 
 # 运行类型检查与 Clippy 代码规范检查
 check:
@@ -62,9 +93,25 @@ fmt:
 fix:
     cargo clippy --fix --allow-dirty --allow-staged && cargo fmt --all
 
-# 检查当前 Loco 开发环境配置与依赖健康状态
-doctor:
-    cargo loco doctor
+# 检查依赖包的安全漏洞 (RustSec 漏洞数据库)
+audit:
+    cargo audit
+
+# 生成并查看 HTML 格式的代码测试覆盖率报告
+coverage:
+    cargo llvm-cov --html
+
+# ==============================================================================
+# 4. 容器与依赖管理 (Docker & Dependencies)
+# ==============================================================================
+
+# 使用 Docker Compose 启动容器
+up:
+    docker compose up --build -d
+
+# 停止并销毁 Docker Compose 容器
+down:
+    docker compose down
 
 # 清理 target 构建目录以释放磁盘空间
 clean:
@@ -74,21 +121,12 @@ clean:
 outdated:
     cargo outdated -d 1
 
-# 将 Cargo.toml 中的依赖包版本直接升级至最新版本 (仅修改配置文件，类比 ncu -u)
+# 将 Cargo.toml 中的依赖包版本直接升级至最新版本 (类比 ncu -u)
 upgrade:
     cargo upgrade
 
-# 刷新 Cargo.lock 锁文件并下载安装最新依赖 (类比 bun install)
+# 刷新 Cargo.lock 锁文件并下载安装最新依赖 (类比 bun install / npm install)
 update:
     cargo update
 
-# update 的同义别名 (类比 bun install / npm install)
 alias install := update
-
-# 使用 Docker Compose 启动 App 容器
-up:
-    docker compose up --build -d
-
-# 停止并销毁 Docker Compose 容器
-down:
-    docker compose down

@@ -12,9 +12,8 @@ async fn can_get_home() {
         let text = res.text();
         let body: Value = serde_json::from_str(&text).expect("Failed to parse JSON");
         assert_eq!(body["status"], "ok");
-        assert_eq!(body["name"], "loco_starter");
-        assert_eq!(body["docs"]["scalar"], "/scalar");
-        assert_eq!(body["docs"]["redoc"], "/redoc");
+        assert_eq!(body["name"], "locos");
+        assert_eq!(body["docs"]["docs"], "/docs");
         assert_eq!(body["docs"]["openapi"], "/api-docs/openapi.json");
     })
     .await;

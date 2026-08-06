@@ -8,26 +8,33 @@ use loco_rs::{app::AppContext, Result};
 ///
 /// 记录每一个经过 Axum Router 的请求，输出请求方法、请求路径、状态码与执行耗时。
 pub async fn log_request(req: axum::extract::Request, next: axum::middleware::Next) -> axum::response::Response {
-    // 步骤 1: 提取 HTTP 请求方法与 URI 路径
-    let method = req.method().to_string();
-    let path = req.uri().path().to_string();
+    let method = req.method().clone();
+    let path = req
+        .uri()
+        .path_and_query()
+        .map_or_else(|| req.uri().path(), |pq| pq.as_str())
+        .to_string();
+    let version = req.version();
 
-    // 步骤 2: 记录请求处理开始时间
+    let client_ip = req
+        .headers()
+        .get("x-forwarded-for")
+        .or_else(|| req.headers().get("x-real-ip"))
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.split(',').next())
+        .map_or("127.0.0.1", str::trim)
+        .to_string();
+
     let start = std::time::Instant::now();
-
-    // 步骤 3: 传递给下一个中间件 / 控制器处理
     let response = next.run(req).await;
-
-    // 步骤 4: 统计处理耗时与响应 HTTP 状态码
     let duration = start.elapsed();
     let status = response.status().as_u16();
 
-    // 步骤 5: 强制打到 stderr 控制台 (防过滤) 并同步打入 Tracing 日志系统
-    eprintln!("   --> [HTTP] {} {} -> {} ({:?})", method, path, status, duration);
+    // 协议版本置顶最前 (如: [HTTP/1.1] GET / 200 1.105ms | 127.0.0.1)
     tracing::info!(
         target: "app",
-        "[HTTP] {} {} -> {} ({:?})",
-        method, path, status, duration
+        "[{:?}] {} {} {} {:?} | {}",
+        version, method, path, status, duration, client_ip
     );
 
     response
@@ -35,8 +42,41 @@ pub async fn log_request(req: axum::extract::Request, next: axum::middleware::Ne
 
 /// 路由组装后的中间件挂载钩子
 ///
-/// 在路由完全构建后，向 Router 注册 `log_request` 全局中间件。
-pub async fn after_routes(router: axum::Router, _ctx: &AppContext) -> Result<axum::Router> {
-    // 1. 将 log_request 中间件绑定到全局 Axum 路由层
-    Ok(router.layer(axum::middleware::from_fn(log_request)))
+/// 根据配置文件 `server.middlewares.logger` 的开关状态，决定是否挂载 `log_request` 全局中间件。
+pub async fn after_routes(router: axum::Router, ctx: &AppContext) -> Result<axum::Router> {
+    let enabled = ctx.config.server.middlewares.logger.as_ref().is_none_or(|m| m.enable);
+
+    if enabled {
+        Ok(router
+            .fallback(|| async { axum::http::StatusCode::NOT_FOUND })
+            .layer(axum::middleware::from_fn(log_request)))
+    } else {
+        Ok(router)
+    }
+}
+
+/// 初始化类似 Laravel `daily` 模式的按天自动切割离线日志文件写入器
+///
+/// 日志文件将自动保存至指定目录（如 `./logs`），生成的日志文件名形如 `2026-08-06.log` 或 `app-2026-08-06.log`。
+///
+/// # 返回值
+/// 返回 `tracing_appender::non_blocking::WorkerGuard` 异步写入守护句柄。
+/// **必须在主程序生命周期中持续持有该句柄**，确保应用退出时缓冲区内的日志被安全刷入磁盘。
+pub fn init_daily_file_logger(folder: &str, filename_prefix: &str) -> tracing_appender::non_blocking::WorkerGuard {
+    // 使用 Builder 配置生成类似 Laravel 风格的 YYYY-MM-DD.log 日志文件名
+    let file_appender = tracing_appender::rolling::Builder::new()
+        .rotation(tracing_appender::rolling::Rotation::DAILY)
+        .filename_prefix(filename_prefix)
+        .filename_suffix("log")
+        .build(folder)
+        .expect("初始化文件日志追加器失败");
+
+    let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+
+    tracing_subscriber::fmt()
+        .with_writer(non_blocking)
+        .with_ansi(false)
+        .init();
+
+    guard
 }

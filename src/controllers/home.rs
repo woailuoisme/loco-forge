@@ -5,9 +5,7 @@ use utoipa::ToSchema;
 #[derive(Debug, Serialize, ToSchema)]
 pub struct DocsLocation {
     /// Scalar 交互式 API 文档链接
-    pub scalar: String,
-    /// Redoc 规范 API 文档链接
-    pub redoc: String,
+    pub docs: String,
     /// OpenAPI Specification JSON 描述链接
     pub openapi: String,
 }
@@ -42,8 +40,7 @@ pub async fn index() -> Result<Response> {
         version: env!("CARGO_PKG_VERSION").to_string(),
         status: "ok".to_string(),
         docs: DocsLocation {
-            scalar: "/scalar".to_string(),
-            redoc: "/redoc".to_string(),
+            docs: "/docs".to_string(),
             openapi: "/api-docs/openapi.json".to_string(),
         },
     })
