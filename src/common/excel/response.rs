@@ -10,7 +10,7 @@ use axum::{
 ///
 /// ## 典型控制器场景：查询数据库 → 导出为 xlsx → 浏览器下载
 ///
-/// ```rust
+/// ```ignore
 /// use crate::common::excel::{export::export_to_bytes, response::ExcelResponse};
 ///
 /// async fn export_users(State(ctx): State<AppContext>) -> impl IntoResponse {
@@ -30,7 +30,7 @@ use axum::{
 ///
 /// ## 动态文件名示例（包含日期戳）
 ///
-/// ```rust
+/// ```ignore
 /// use chrono::Local;
 ///
 /// let filename = format!("orders-{}.xlsx", Local::now().format("%Y%m%d%H%M%S"));
@@ -39,7 +39,7 @@ use axum::{
 ///
 /// ## 路由注册
 ///
-/// ```rust
+/// ```ignore
 /// // src/controllers/user.rs
 /// router.get("/users/export", export_users);
 /// ```

@@ -1,5 +1,5 @@
 [tools]
-rust = "stable"                     # Rust 官方编译器与工具链
+rust-analyzer = "latest"            # Rust 官方 IDE 语言服务器
 sccache = "latest"                  # Rust 编译缓存加速工具
 just = "latest"                     # 现代化 command runner 任务命令工具
 "cargo:cargo-watch" = "latest"      # 监听代码变更并触发增量热重载
@@ -14,7 +14,7 @@ just = "latest"                     # 现代化 command runner 任务命令工�
 dev = { run = "cargo watch -w src -w config -s 'cargo run -- start'", description = "启动开发环境热重载服务 (自动监听 src/ 与 config/)" }
 prod = { run = "cargo run --release -- start", description = "以 Release 高性能优化模式启动 Web 服务" }
 test = { run = "cargo nextest run", description = "使用 cargo nextest 极速运行全量单元与集成测试" }
-check = { run = "cargo clippy", description = "运行 Rust Clippy 静态检查" }
+lint = { run = "just lint", description = "运行 Rust Clippy 静态检查与格式校验" }
 fix = { run = "cargo clippy --fix --allow-dirty --allow-staged && cargo fmt --all", description = "自动修复代码格式与 Clippy 警告" }
 migrate = { run = "cargo loco db migrate", description = "执行数据库迁移" }
 routes = { run = "cargo loco routes", description = "查看当前所有已注册的路由表" }

@@ -1,24 +1,31 @@
+# 开启自动装载 .env 环境变量文件
+set dotenv-load := true
+
 # 默认列出所有可用的 just 命令
 default:
     @just --list
+
+# 释放 Web 服务端口占用 (自动读取 .env 中的 PORT 变量，默认 5150)
+kill-port port=env('PORT', '5150'):
+    @lsof -ti:{{port}} | xargs kill -9 2>/dev/null || true
 
 # ==============================================================================
 # 1. 核心开发与运行 (Development & Execution)
 # ==============================================================================
 
-# 启动开发环境热重载服务 (自动检测 src/ 及 config/ 变更并重启)
-dev:
+# 启动开发环境热重载服务 (自动清理端口并监听 src/ 及 config/)
+dev: kill-port
     cargo watch -w src -w config -s 'cargo run -- start'
 
-# 使用 concurrently 并行启动 Server、Worker 与 Scheduler（带热重载）
-dev-all:
+# 使用 concurrently 并行启动 Server、Worker 与 Scheduler（带热重载与端口清理）
+dev-all: kill-port
     concurrently -k -n "server,worker,scheduler" -c "blue,magenta,yellow" \
         "cargo watch -w src -w config -s 'cargo run -- start'" \
         "cargo watch -w src -w config -s 'cargo run -- start --worker'" \
         "cargo watch -w src -w config -s 'cargo run -- scheduler'"
 
-# 启动默认 Loco Web 服务 (Debug 调试模式)
-start:
+# 启动默认 Loco Web 服务 (Debug 调试模式，自动清理端口)
+start: kill-port
     cargo loco start
 
 # 单进程同时启动 Web Server、Worker 与 Scheduler
@@ -33,8 +40,8 @@ build:
 build-prod:
     cargo build --release
 
-# 以 Release 高性能优化模式启动 Loco Web 服务
-prod:
+# 以 Release 高性能优化模式启动 Loco Web 服务 (自动清理端口)
+prod: kill-port
     cargo run --release -- start
 
 # 启动后台 Job 消费进程 (Worker)
@@ -81,9 +88,12 @@ test:
 nextest:
     cargo nextest run
 
-# 运行类型检查与 Clippy 代码规范检查
-check:
-    cargo clippy
+# 运行全量代码静态规范检查 (Clippy 检查与 Rustfmt 格式验证)
+lint:
+    cargo clippy --all-targets --all-features -- -D warnings
+    cargo fmt --all --check
+
+alias check := lint
 
 # 格式化所有 Rust 源代码
 fmt:
@@ -101,18 +111,6 @@ audit:
 coverage:
     cargo llvm-cov --html
 
-# ==============================================================================
-# 4. 容器与依赖管理 (Docker & Dependencies)
-# ==============================================================================
-
-# 使用 Docker Compose 启动容器
-up:
-    docker compose up --build -d
-
-# 停止并销毁 Docker Compose 容器
-down:
-    docker compose down
-
 # 清理 target 构建目录以释放磁盘空间
 clean:
     cargo clean
@@ -121,12 +119,14 @@ clean:
 outdated:
     cargo outdated -d 1
 
-# 将 Cargo.toml 中的依赖包版本直接升级至最新版本 (类比 ncu -u)
-upgrade:
-    cargo upgrade
-
-# 刷新 Cargo.lock 锁文件并下载安装最新依赖 (类比 bun install / npm install)
+# ★ 日常推荐 ★ 刷新 Cargo.lock 锁文件并下载安装最新依赖补丁包 (类比 bun install / npm install)
 update:
     cargo update
 
 alias install := update
+
+# 将 Cargo.toml 中的依赖包版本升级 (支持透传参数如 `just upgrade --incompatible`)
+upgrade *args="":
+    cargo upgrade {{args}}
+
+

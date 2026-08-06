@@ -25,11 +25,6 @@ pub struct App;
 
 #[async_trait]
 impl Hooks for App {
-    /// 返回应用 Crate 名称
-    fn app_name() -> &'static str {
-        env!("CARGO_CRATE_NAME")
-    }
-
     /// 返回当前应用版本号与 Git Hash 标识
     fn app_version() -> String {
         format!(
@@ -39,9 +34,19 @@ impl Hooks for App {
         )
     }
 
+    /// 返回应用 Crate 名称
+    fn app_name() -> &'static str {
+        env!("CARGO_CRATE_NAME")
+    }
+
     /// 引导启动底层网络服务与数据库迁移驱动
     async fn boot(mode: StartMode, environment: &Environment, config: Config) -> Result<BootResult> {
         create_app::<Self, Migrator>(mode, environment, config).await
+    }
+
+    /// 绑定全局 HTTP 中间件与请求日志钩子 (委托给 `setup::logger`)
+    async fn after_routes(router: axum::Router, ctx: &AppContext) -> Result<axum::Router> {
+        setup::logger::after_routes(router, ctx).await
     }
 
     /// 加载系统 Initializer 插件 (例如 OpenAPI 接口文档)
@@ -52,11 +57,6 @@ impl Hooks for App {
     /// 绑定并返回全局控制器路由 (委托给 `setup::routes`)
     fn routes(ctx: &AppContext) -> AppRoutes {
         setup::routes::routes(ctx)
-    }
-
-    /// 绑定全局 HTTP 中间件与请求日志钩子 (委托给 `setup::logger`)
-    async fn after_routes(router: axum::Router, ctx: &AppContext) -> Result<axum::Router> {
-        setup::logger::after_routes(router, ctx).await
     }
 
     /// 注册后台异步任务 Worker (委托给 `setup::workers`)

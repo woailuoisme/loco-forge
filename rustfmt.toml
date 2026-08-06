@@ -1,0 +1,12 @@
+# Loco 项目 Rustfmt 最佳实践配置
+
+# 1. 行宽与缩进规范 (Line Width & Indentation)
+max_width = 120                 # 每行最大字符数限制（适应现代宽屏显示器）
+hard_tabs = false               # 使用空格缩进 (遵循 Rust 官方标准)
+tab_spaces = 4                  # 缩进使用 4 个空格
+newline_style = "Unix"          # 强制统一使用 Unix (LF) 换行符
+
+# 2. 启发式折行与排序 (Heuristics & Ordering)
+use_small_heuristics = "Default" # 保持 Rust 官方平衡折行密度
+reorder_imports = true          # 自动按字母顺序对导入路径 (use) 进行排序
+reorder_modules = true          # 自动按字母顺序对模块声明 (mod) 进行排序

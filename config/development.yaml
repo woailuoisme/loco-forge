@@ -13,20 +13,21 @@ logger:
   override_filter: info
 
 
-# 2. Web 服务配置 (Web Server)
+# 2. Web 服务与中间件配置 (Web Server & Middlewares)
 server:
   port: {{ get_env(name="PORT", default="5150") }}
   binding: {{ get_env(name="BINDING", default="localhost") }}
   host: {{ get_env(name="SERVER_HOST", default="http://localhost") }}
-  # 内置中间件配置
+  # X-Powered-By 响应头标识 (设置为 "" 空字符串即可禁用 X-Powered-By 响应头)
+  ident: {{ get_env(name="SERVER_IDENT", default="") }}
+  # 全量 Loco 内置中间件显式配置表 (All Built-in Loco Middlewares)
+  # 注意: powered_by 不属于 middlewares 节点，而是由上方的 server.ident 统一控制
   middlewares:
+    # 1. 日志中间件：记录请求 HTTP 状态码与耗时
     logger:
       enable: true
-    fallback:
-      enable: false
-    powered_by:
-      enable: false
-    # 跨域支持：开发环境开放前端常用端口 (React 3000, Vite 5173 等)
+
+    # 2. 跨域支持：开发环境开放前端常用端口 (React 3000, Vite 5173 等)
     cors:
       enable: true
       allow_origins:
@@ -44,9 +45,54 @@ server:
         - "PUT"
         - "DELETE"
         - "OPTIONS"
-    # Gzip / Brotli 数据压缩：节省 60%~80% 网络带宽
+
+    # 3. Gzip / Brotli 数据压缩：节省网络带宽
     compression:
       enable: true
+
+    # 4. 请求 Payload 体积限制 (防止大文件/大 JSON 崩溃)
+    limit_payload:
+      enable: true
+      body_limit: "5mb"
+
+    # 5. ETag 响应缓存哈希
+    etag:
+      enable: true
+
+    # 6. Panic 异常捕获 (防止单请求 panic 影响服务)
+    catch_panic:
+      enable: true
+
+    # 7. 全局请求 Trace ID 追踪
+    request_id:
+      enable: true
+
+    # 8. 真实客户端 IP 提取 (反向代理如 Nginx/Caddy 环境使用)
+    remote_ip:
+      enable: false
+
+    # 9. 请求超时保护 (超时自动返回 408 Timeout)
+    timeout_request:
+      enable: false
+      timeout: 5000
+
+    # 10. OWASP 安全 HTTP 响应头 (HSTS, CSP, X-Frame-Options 等)
+    secure_headers:
+      enable: true
+
+    # 11. 静态资源托管服务 (托管前端编译出的静态文件)
+    static:
+      enable: false
+      must_exist: false
+      path: "/public"
+      folder:
+        uri: "public"
+        path: "public"
+
+    # 12. SPA 单页应用路由 Fallback 兜底处理
+    fallback:
+      enable: false
+      path: "frontend/dist/index.html"
 
 
 # 3. 后台异步任务 Worker 配置 (Worker)
@@ -115,5 +161,3 @@ scheduler:
       schedule: "run every 1 hour"
       output: silent
       tags: ['health']
-
-

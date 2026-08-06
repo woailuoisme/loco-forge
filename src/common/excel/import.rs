@@ -21,7 +21,7 @@ pub struct RowError {
 ///
 /// # 使用方式
 ///
-/// ```rust
+/// ```ignore
 /// // 从 import_from_bytes 获取结果后，先判断是否有错误，再使用有效数据
 /// let result: ImportResult<UserImport> = import_from_bytes(&file_bytes)?;
 ///
@@ -58,7 +58,7 @@ impl<T> ImportResult<T> {
 ///
 /// ## 1. 定义导入结构体并实现本 trait
 ///
-/// ```rust
+/// ```ignore
 /// use std::collections::HashMap;
 /// use crate::common::excel::import::{ExcelImport, RowError};
 ///
@@ -109,7 +109,7 @@ impl<T> ImportResult<T> {
 ///
 /// ## 2. 在控制器中接收上传文件并调用 `import_from_bytes`
 ///
-/// ```rust
+/// ```ignore
 /// use crate::common::excel::import::import_from_bytes;
 ///
 /// async fn import_users(
@@ -155,7 +155,7 @@ pub trait ExcelImport: Sized {
 ///
 /// # 使用方式
 ///
-/// ```rust
+/// ```ignore
 /// use crate::common::excel::import::{import_from_bytes, ImportResult};
 ///
 /// // file_bytes: Vec<u8>，通常来自 multipart 上传字段

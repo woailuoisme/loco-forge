@@ -1,0 +1,20 @@
+# Loco 项目 rust-analyzer IDE 最佳实践配置
+
+# 1. 自动导入与路径风格 (Imports & Path Style)
+[imports]
+granularity.enforce = true        # 强制自动导入遵循指定的粒度规则（搭配 granularity.group 使用）
+granularity.group = "crate"      # 按 Crate 聚合 use 导入块
+prefix = "crate"                 # 内部模块统一强制使用 crate:: 绝对路径
+preferNoStd = false              # Web 项目默认使用 std
+preferPrelude = true             # 优先自动补全 Prelude 命名空间中的符号
+
+# 2. 保存时实时检查 (Check-on-Save)
+[check]
+command = "clippy"               # 保存时运行 Clippy，第一时间在编辑器抛出 Lint 警告
+
+# 3. Cargo 构建脚本与 Target 推断 (Cargo Build Scripts & Target)
+[cargo]
+target = "all-targets"           # 对 src/、tests/、benches/ 全量 Target 提供精确推断
+
+[cargo.buildScripts]
+enable = true                    # 允许运行 build.rs 获取环境与编译配置

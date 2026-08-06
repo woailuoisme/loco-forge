@@ -14,5 +14,5 @@
     "**/target/**": true,
     "**/.codegraph/**": true
   },
-  "rust-analyzer.checkOnSave": true
+  "rust-analyzer.checkOnSave": false
 }
