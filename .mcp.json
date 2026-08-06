@@ -3,7 +3,8 @@
     "codegraph": {
       "command": "codegraph",
       "args": [
-        "mcp"
+        "serve",
+        "--mcp"
       ]
     }
   }

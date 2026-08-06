@@ -103,13 +103,16 @@ workers:
   #   - ForegroundBlocking: 测试推荐。前台同步阻塞运行，主要用于单元/集成测试中确保任务即时完成。
   mode: BackgroundAsync
 
-# 4. 邮件服务配置 (SMTP Mailer)
+# 4. 邮件服务配置 (SMTP Mailer，支持标准 SMTP 及 Resend SMTP Relay)
 mailer:
   smtp:
-    enable: true
+    enable: {{ get_env(name="SMTP_ENABLE", default="true") }}
     host: {{ get_env(name="SMTP_HOST", default="127.0.0.1") }}
     port: {{ get_env(name="SMTP_PORT", default="1025") }}
     secure: {{ get_env(name="SMTP_SECURE", default="false") }}
+    auth:
+      user: {{ get_env(name="SMTP_USER", default="") }}
+      password: {{ get_env(name="SMTP_PASSWORD", default="") }}
 
 # 5. 对象存储配置 (Storage - S3 兼容协议: Garage / MinIO / AWS S3)
 storage:
