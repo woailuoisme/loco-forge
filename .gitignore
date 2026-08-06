@@ -23,10 +23,9 @@ config/production.yaml
 *.db
 *.db-*
 *.log
-/storages/*
-!/storages/
-!/storages/**/.gitignore
-!/storages/**/.gitkeep
+/storages/*/*
+!/storages/*/.gitignore
+!/storages/*/.gitkeep
 
 # ── OS & IDE / Tooling ────────────────────────────────────────────────────────
 .DS_Store
