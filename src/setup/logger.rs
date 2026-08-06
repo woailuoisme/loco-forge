@@ -46,6 +46,8 @@ pub async fn log_request(req: axum::extract::Request, next: axum::middleware::Ne
 pub async fn after_routes(router: axum::Router, ctx: &AppContext) -> Result<axum::Router> {
     let enabled = ctx.config.server.middlewares.logger.as_ref().is_none_or(|m| m.enable);
 
+    let router = router.layer(axum::middleware::from_fn(crate::setup::i18n::i18n_middleware));
+
     if enabled {
         Ok(router
             .fallback(|| async { axum::http::StatusCode::NOT_FOUND })

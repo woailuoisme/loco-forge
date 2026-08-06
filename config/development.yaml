@@ -19,7 +19,7 @@ server:
   binding: {{ get_env(name="BINDING", default="localhost") }}
   host: {{ get_env(name="SERVER_HOST", default="http://localhost") }}
   # X-Powered-By 响应头标识 (设置为 "" 空字符串即可禁用 X-Powered-By 响应头)
-  ident: {{ get_env(name="SERVER_IDENT", default="") }}
+  ident: "{{ get_env(name='SERVER_IDENT', default='') }}"
   # 全量 Loco 内置中间件显式配置表 (All Built-in Loco Middlewares)
   # 注意: powered_by 不属于 middlewares 节点，而是由上方的 server.ident 统一控制
   middlewares:
@@ -111,8 +111,8 @@ mailer:
     port: {{ get_env(name="SMTP_PORT", default="1025") }}
     secure: {{ get_env(name="SMTP_SECURE", default="false") }}
     auth:
-      user: {{ get_env(name="SMTP_USER", default="") }}
-      password: {{ get_env(name="SMTP_PASSWORD", default="") }}
+      user: "{{ get_env(name='SMTP_USER', default='') }}"
+      password: "{{ get_env(name='SMTP_PASSWORD', default='') }}"
 
 # 5. 对象存储配置 (Storage - S3 兼容协议: Garage / MinIO / AWS S3)
 storage:

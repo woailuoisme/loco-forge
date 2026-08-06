@@ -1,4 +1,7 @@
 //! # 全文检索索引更新后台 Worker (ScoutWorker)
+//!
+//! 该 Worker 负责从后台队列中异步接收全文检索索引更新任务，
+//! 支持增量更新文档、删除文档和刷新索引，将数据同步到 Meilisearch 等搜索引擎中。
 
 use crate::common::scout::{config::MeilisearchConfig, engines::meilisearch::MeilisearchEngine, traits::Engine};
 use loco_rs::prelude::*;

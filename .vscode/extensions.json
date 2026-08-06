@@ -3,6 +3,7 @@
     "rust-lang.rust-analyzer",
     "tamasfe.even-toml",
     "editorconfig.editorconfig",
-    "evilmartians.lefthook"
+    "evilmartians.lefthook",
+    "samuelcolvin.jinjahtml"
   ]
 }

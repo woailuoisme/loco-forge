@@ -1,4 +1,7 @@
 //! # 异步通知队列后台 Worker (NotificationWorker)
+//!
+//! 该 Worker 负责从后台队列中消费异步通知任务，支持通过邮件 (Email)、Telegram
+//! 以及自定义渠道 (Custom Channel) 发送各类通知消息，实现业务逻辑与消息投递的解耦。
 
 use crate::common::notifications::{
     channels::{EmailChannel, TelegramChannel},
