@@ -22,11 +22,11 @@ config/production.yaml
 *.sqlite-*
 *.db
 *.db-*
-uploads/
-storage/
-tmp/
-logs/
 *.log
+/storages/*
+!/storages/
+!/storages/**/.gitignore
+!/storages/**/.gitkeep
 
 # ── OS & IDE / Tooling ────────────────────────────────────────────────────────
 .DS_Store
