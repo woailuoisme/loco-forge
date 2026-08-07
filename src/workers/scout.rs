@@ -52,7 +52,7 @@ impl BackgroundWorker<ScoutJobArgs> for ScoutWorker {
             }
         };
 
-        let engine = MeilisearchEngine::new(config);
+        let engine = MeilisearchEngine::new(config)?;
 
         match args.action {
             ScoutAction::Update => {

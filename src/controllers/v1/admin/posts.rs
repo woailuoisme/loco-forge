@@ -5,7 +5,6 @@ use crate::{
         common::{AdminUser, ApiError, ApiResponse, PaginatedData, PaginationQuery, format_res},
         posts::{CreatePost, PostDto, UpdatePost},
     },
-    errors::AppError,
     services::admin::PostService,
 };
 
@@ -55,7 +54,7 @@ pub async fn list(
 #[debug_handler]
 pub async fn get_one(_auth: auth::JWT, State(ctx): State<AppContext>, Path(id): Path<i64>) -> Result<Response> {
     let Some(dto) = PostService::get_one(&ctx, id).await? else {
-        return Ok(AppError::NotFound("post not found".to_string()).into_response());
+        return format_res::not_found("post not found");
     };
     format_res::ok(dto)
 }
@@ -82,7 +81,8 @@ pub async fn create(
     Json(params): Json<CreatePost>,
 ) -> Result<Response> {
     if let Err(err) = validator::Validate::validate(&params) {
-        return Ok(AppError::from(err).into_response());
+        let details = serde_json::to_value(&err).ok();
+        return format_res::validation_error_with_details("Invalid request payload parameters", details);
     }
 
     let dto = PostService::create(&ctx, params).await?;
@@ -116,11 +116,12 @@ pub async fn update(
     Json(params): Json<UpdatePost>,
 ) -> Result<Response> {
     if let Err(err) = validator::Validate::validate(&params) {
-        return Ok(AppError::from(err).into_response());
+        let details = serde_json::to_value(&err).ok();
+        return format_res::validation_error_with_details("Invalid request payload parameters", details);
     }
 
     let Some(dto) = PostService::update(&ctx, id, params).await? else {
-        return Ok(AppError::NotFound("post not found".to_string()).into_response());
+        return format_res::not_found("post not found");
     };
 
     format_res::ok(dto)
@@ -147,7 +148,7 @@ pub async fn update(
 #[debug_handler]
 pub async fn remove(_admin: AdminUser, State(ctx): State<AppContext>, Path(id): Path<i64>) -> Result<Response> {
     if !PostService::remove(&ctx, id).await? {
-        return Ok(AppError::NotFound("post not found".to_string()).into_response());
+        return format_res::not_found("post not found");
     }
 
     format_res::empty_msg("删除成功")

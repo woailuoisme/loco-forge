@@ -6,6 +6,7 @@
 //! |------|------------------------|
 //! | [`export`] | `FromCollection` + `WithHeadings` + `WithStyles` |
 //! | [`import`] | `ToModel` + `WithHeadingRow` + `WithValidation` |
+//! | [`cell`] | `CellValue` 数据类型封装 |
 //! | [`response`] | `Excel::download()` |
 //! | [`async_task`] | `spawn_excel_export` / `spawn_excel_import` |
 //!
@@ -17,13 +18,13 @@
 //! struct UserRow { name: String, age: u32 }
 //!
 //! impl ExcelExport for UserRow {
-//!     fn headings() -> Vec<String> {
-//!         vec!["姓名".into(), "年龄".into()]
+//!     fn headings() -> Vec<&'static str> {
+//!         vec!["姓名", "年龄"]
 //!     }
 //!     fn row_cells(&self) -> Vec<CellValue> {
 //!         vec![self.name.clone().into(), self.age.into()]
 //!     }
-//!     fn sheet_name() -> String { "用户列表".into() }
+//!     fn sheet_name() -> &'static str { "用户列表" }
 //! }
 //!
 //! // 在 Axum 控制器中：
@@ -32,12 +33,17 @@
 //! ```
 
 pub mod async_task;
+pub mod cell;
 pub mod export;
 pub mod import;
 pub mod response;
 
 // 便捷 re-export —— 最常用的类型无需深层 use 路径
 pub use async_task::{spawn_excel_export, spawn_excel_import};
-pub use export::{CellValue, ExcelExport, export_to_bytes};
-pub use import::{ExcelImport, ImportResult, RowError, import_from_bytes};
+pub use cell::CellValue;
+pub use export::{ExcelExport, ExportOptions, export_chunked_to_file, export_to_bytes};
+pub use import::{
+    ChunkImportSummary, ExcelImport, ExcelRow, ImportOptions, ImportResult, RowError, import_from_bytes,
+    import_in_chunks_from_reader,
+};
 pub use response::ExcelResponse;

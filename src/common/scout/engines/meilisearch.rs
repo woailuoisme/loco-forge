@@ -7,42 +7,47 @@ use crate::common::scout::{
 };
 use async_trait::async_trait;
 use loco_rs::prelude::*;
-use serde_json::{Value, json};
-use std::sync::LazyLock;
-use std::time::Duration;
+use meilisearch_sdk::client::Client;
+use serde_json::Value;
 
-// 共享的全局 HTTP 连接池客户端 (复用 Keep-Alive，大幅降低网络开销)
-static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
-    reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
-        .build()
-        .expect("Failed to initialize Meilisearch HTTP client")
-});
+use std::collections::HashMap;
+use std::sync::{LazyLock, RwLock};
+
+static CLIENT_CACHE: LazyLock<RwLock<HashMap<String, Client>>> = LazyLock::new(|| RwLock::new(HashMap::new()));
 
 /// Meilisearch 全文搜索引擎驱动结构体 (MeilisearchEngine)
 pub struct MeilisearchEngine {
+    client: Client,
     config: MeilisearchConfig,
 }
 
 impl MeilisearchEngine {
-    /// 创建 MeilisearchEngine 实例
-    pub fn new(config: MeilisearchConfig) -> Self {
-        Self { config }
+    /// 创建 MeilisearchEngine 实例，自动复用全局 HTTP 客户端连接池
+    pub fn new(config: MeilisearchConfig) -> Result<Self> {
+        let cache_key = format!("{}:{:?}", config.host, config.api_key);
+
+        if let Ok(read_guard) = CLIENT_CACHE.read()
+            && let Some(cached_client) = read_guard.get(&cache_key)
+        {
+            return Ok(Self {
+                client: cached_client.clone(),
+                config,
+            });
+        }
+
+        let client = Client::new(&config.host, config.api_key.as_deref())
+            .map_err(|e| Error::string(&format!("Meilisearch client init failed: {e}")))?;
+
+        if let Ok(mut write_guard) = CLIENT_CACHE.write() {
+            write_guard.insert(cache_key, client.clone());
+        }
+
+        Ok(Self { client, config })
     }
 
-    /// 封装附带 API Key 的 HTTP Request Builder
-    fn request_builder(&self, method: reqwest::Method, path: &str) -> reqwest::RequestBuilder {
-        let url = format!(
-            "{}/{}",
-            self.config.host.trim_end_matches('/'),
-            path.trim_start_matches('/')
-        );
-        let mut req = HTTP_CLIENT.request(method, &url);
-        if let Some(key) = &self.config.api_key {
-            req = req.header("Authorization", format!("Bearer {key}"));
-            req = req.header("X-Meili-Api-Key", key);
-        }
-        req
+    /// 获取底层官方 SDK Client 句柄
+    pub fn client(&self) -> &Client {
+        &self.client
     }
 }
 
@@ -50,130 +55,108 @@ impl MeilisearchEngine {
 impl Engine for MeilisearchEngine {
     async fn update(&self, index_name: &str, docs: &[Value]) -> Result<Value> {
         let prefixed_index = self.config.prefixed_index(index_name);
-        let path = format!("indexes/{prefixed_index}/documents");
+        let index = self.client.index(&prefixed_index);
 
-        let res = self
-            .request_builder(reqwest::Method::POST, &path)
-            .json(docs)
-            .send()
+        let task_info = index
+            .add_documents(docs, None)
             .await
-            .map_err(|e| Error::string(&format!("Meilisearch update request failed: {e}")))?;
-
-        if !res.status().is_success() {
-            let status = res.status();
-            let err_text = res.text().await.unwrap_or_default();
-            tracing::error!("Meilisearch 文档更新失败 HTTP {}: {}", status, err_text);
-            return Err(Error::string(&format!(
-                "Meilisearch update error HTTP {status}: {err_text}"
-            )));
-        }
-
-        let json_val = res
-            .json::<Value>()
-            .await
-            .map_err(|e| Error::string(&format!("Parse Meilisearch update response failed: {e}")))?;
+            .map_err(|e| Error::string(&format!("Meilisearch update failed: {e}")))?;
 
         tracing::info!(
-            "Meilisearch 文档成功索引至 [{}] ({} 条记录)",
-            prefixed_index,
-            docs.len()
+            task_uid = task_info.task_uid,
+            index = %prefixed_index,
+            doc_count = docs.len(),
+            "Meilisearch 文档已提交索引任务"
         );
-        Ok(json_val)
+
+        Ok(serde_json::json!({
+            "task_uid": task_info.task_uid,
+            "index_uid": task_info.index_uid,
+        }))
     }
 
     async fn delete(&self, index_name: &str, ids: &[&str]) -> Result<Value> {
         let prefixed_index = self.config.prefixed_index(index_name);
-        let path = format!("indexes/{prefixed_index}/documents/delete-batch");
+        let index = self.client.index(&prefixed_index);
 
-        let res = self
-            .request_builder(reqwest::Method::POST, &path)
-            .json(ids)
-            .send()
+        let task_info = index
+            .delete_documents(ids)
             .await
-            .map_err(|e| Error::string(&format!("Meilisearch delete request failed: {e}")))?;
-
-        if !res.status().is_success() {
-            let status = res.status();
-            let err_text = res.text().await.unwrap_or_default();
-            tracing::error!("Meilisearch 文档删除失败 HTTP {}: {}", status, err_text);
-            return Err(Error::string(&format!(
-                "Meilisearch delete error HTTP {status}: {err_text}"
-            )));
-        }
-
-        let json_val = res
-            .json::<Value>()
-            .await
-            .map_err(|e| Error::string(&format!("Parse Meilisearch delete response failed: {e}")))?;
+            .map_err(|e| Error::string(&format!("Meilisearch delete failed: {e}")))?;
 
         tracing::info!(
-            "Meilisearch 文档成功从 [{}] 批量删除 ({} 条记录)",
-            prefixed_index,
-            ids.len()
+            task_uid = task_info.task_uid,
+            index = %prefixed_index,
+            id_count = ids.len(),
+            "Meilisearch 文档批量删除请求已提交"
         );
-        Ok(json_val)
+
+        Ok(serde_json::json!({
+            "task_uid": task_info.task_uid,
+            "index_uid": task_info.index_uid,
+        }))
     }
 
     async fn flush(&self, index_name: &str) -> Result<Value> {
         let prefixed_index = self.config.prefixed_index(index_name);
-        let path = format!("indexes/{prefixed_index}/documents");
+        let index = self.client.index(&prefixed_index);
 
-        let res = self
-            .request_builder(reqwest::Method::DELETE, &path)
-            .send()
+        let task_info = index
+            .delete_all_documents()
             .await
-            .map_err(|e| Error::string(&format!("Meilisearch flush request failed: {e}")))?;
+            .map_err(|e| Error::string(&format!("Meilisearch flush failed: {e}")))?;
 
-        let json_val = res
-            .json::<Value>()
-            .await
-            .map_err(|e| Error::string(&format!("Parse Meilisearch flush response failed: {e}")))?;
+        tracing::info!(
+            task_uid = task_info.task_uid,
+            index = %prefixed_index,
+            "Meilisearch 索引清空请求已提交"
+        );
 
-        tracing::info!("Meilisearch 索引 [{}] 已清空 (Flush)", prefixed_index);
-        Ok(json_val)
+        Ok(serde_json::json!({
+            "task_uid": task_info.task_uid,
+            "index_uid": task_info.index_uid,
+        }))
     }
 
     async fn search(&self, index_name: &str, query: &ScoutQuery) -> Result<SearchResult> {
         let prefixed_index = self.config.prefixed_index(index_name);
-        let path = format!("indexes/{prefixed_index}/search");
+        let index = self.client.index(&prefixed_index);
 
-        let mut body = json!({
-            "q": query.q,
-        });
-        if let Some(f) = &query.filter {
-            body["filter"] = json!(f);
+        let sort_refs: Vec<&str> = query.sort.iter().map(|s| s.as_str()).collect();
+
+        let mut search_builder = index.search();
+        search_builder.with_query(&query.q);
+
+        if let Some(filter) = &query.filter {
+            search_builder.with_filter(filter);
         }
-        if !query.sort.is_empty() {
-            body["sort"] = json!(query.sort);
+
+        if !sort_refs.is_empty() {
+            search_builder.with_sort(&sort_refs);
         }
+
         if let Some(limit) = query.limit {
-            body["limit"] = json!(limit);
+            search_builder.with_limit(limit);
         }
+
         if let Some(offset) = query.offset {
-            body["offset"] = json!(offset);
+            search_builder.with_offset(offset);
         }
 
-        let res = self
-            .request_builder(reqwest::Method::POST, &path)
-            .json(&body)
-            .send()
+        let search_results = search_builder
+            .execute::<Value>()
             .await
-            .map_err(|e| Error::string(&format!("Meilisearch search request failed: {e}")))?;
+            .map_err(|e| Error::string(&format!("Meilisearch search failed: {e}")))?;
 
-        if !res.status().is_success() {
-            let status = res.status();
-            let err_text = res.text().await.unwrap_or_default();
-            tracing::error!("Meilisearch 检索失败 HTTP {}: {}", status, err_text);
-            return Err(Error::string(&format!(
-                "Meilisearch search error HTTP {status}: {err_text}"
-            )));
-        }
+        let hits: Vec<Value> = search_results.hits.into_iter().map(|h| h.result).collect();
+        let estimated_total_hits = search_results.estimated_total_hits.unwrap_or(hits.len());
 
-        let result = res
-            .json::<SearchResult>()
-            .await
-            .map_err(|e| Error::string(&format!("Parse Meilisearch search response failed: {e}")))?;
-
-        Ok(result)
+        Ok(SearchResult {
+            hits,
+            estimated_total_hits,
+            processing_time_ms: search_results.processing_time_ms as usize,
+            limit: query.limit.unwrap_or(20),
+            offset: query.offset.unwrap_or(0),
+        })
     }
 }

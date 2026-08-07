@@ -6,6 +6,7 @@ use locos::common::scout::{MeilisearchConfig, ScoutBuilder, SearchResult, Search
 use serde_json::json;
 
 /// 模拟模型对象 (Article)
+#[derive(serde::Serialize)]
 struct Article {
     pub id: i64,
     pub title: String,
@@ -14,21 +15,21 @@ struct Article {
 }
 
 impl Searchable for Article {
-    fn searchable_as(&self) -> String {
-        "articles".to_string()
+    fn searchable_as(&self) -> &str {
+        "articles"
     }
 
     fn get_searchable_key(&self) -> String {
         self.id.to_string()
     }
 
-    fn to_searchable_array(&self) -> serde_json::Value {
-        json!({
+    fn to_searchable_value(&self) -> loco_rs::Result<serde_json::Value> {
+        Ok(json!({
             "id": self.id,
             "title": self.title,
             "content": self.content,
             "category": self.category,
-        })
+        }))
     }
 }
 
@@ -44,7 +45,7 @@ fn test_searchable_trait_methods() {
     assert_eq!(article.searchable_as(), "articles");
     assert_eq!(article.get_searchable_key(), "10086");
 
-    let doc = article.to_searchable_array();
+    let doc = article.to_searchable_value().unwrap();
     assert_eq!(doc["id"], 10086);
     assert_eq!(doc["title"], "Rust 高性能全栈开发");
 }

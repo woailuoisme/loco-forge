@@ -109,21 +109,25 @@ async fn test_async_spawn_media_task() {
 
 #[test]
 fn test_media_response_headers() {
-    let png_data = vec![1, 2, 3, 4];
-    let response = MediaResponse::png(png_data);
+    use axum::response::IntoResponse;
 
+    let png_data = vec![1, 2, 3, 4];
+    let media_res = MediaResponse::png(png_data);
+    assert_eq!(media_res.content_type, "image/png");
+
+    let response = media_res.into_response();
     assert_eq!(response.status(), axum::http::StatusCode::OK);
     let headers = response.headers();
     assert_eq!(headers.get(header::CONTENT_TYPE).unwrap(), "image/png");
     assert_eq!(headers.get(header::CACHE_CONTROL).unwrap(), "public, max-age=86400");
 
-    let svg_response = MediaResponse::svg("<svg></svg>");
+    let svg_response = MediaResponse::svg("<svg></svg>").into_response();
     assert_eq!(
         svg_response.headers().get(header::CONTENT_TYPE).unwrap(),
         "image/svg+xml"
     );
 
-    let webp_response = MediaResponse::webp(vec![1, 2, 3]);
+    let webp_response = MediaResponse::webp(vec![1, 2, 3]).into_response();
     assert_eq!(webp_response.headers().get(header::CONTENT_TYPE).unwrap(), "image/webp");
 }
 

@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Map;
 use uuid::Uuid;
 
+use secrecy::{ExposeSecret, SecretString};
+
 pub use super::_entities::users::{self, ActiveModel, Entity, Model};
 
 pub const MAGIC_LINK_LENGTH: i8 = 32;
@@ -40,7 +42,9 @@ pub struct LoginParams {
     /// 注册邮箱
     pub email: String,
     /// 密码
-    pub password: String,
+    #[schema(value_type = String, format = Password)]
+    #[serde(skip_serializing)]
+    pub password: SecretString,
 }
 
 /// 注册请求参数
@@ -49,7 +53,9 @@ pub struct RegisterParams {
     /// 注册邮箱
     pub email: String,
     /// 密码
-    pub password: String,
+    #[schema(value_type = String, format = Password)]
+    #[serde(skip_serializing)]
+    pub password: SecretString,
     /// 用户姓名
     pub name: String,
 }
@@ -257,7 +263,8 @@ impl Model {
             return Err(ModelError::EntityAlreadyExists {});
         }
 
-        let password_hash = hash::hash_password(&params.password).map_err(|e| ModelError::Any(e.into()))?;
+        let password_hash =
+            hash::hash_password(params.password.expose_secret()).map_err(|e| ModelError::Any(e.into()))?;
         let user = users::ActiveModel {
             email: ActiveValue::set(params.email.clone()),
             password: ActiveValue::set(password_hash),

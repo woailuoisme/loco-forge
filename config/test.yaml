@@ -10,6 +10,16 @@ logger:
   level: debug
   # Define the logging format. options: compact, pretty or json
   format: compact
+  file_appender:
+    enable: false
+    non_blocking: true
+    level: debug
+    format: compact
+    rotation: daily
+    dir: ./storages/logs
+    filename_prefix: locos
+    filename_suffix: log
+    max_log_files: 7
   # By default the logger has filtering only logs that came from your code or logs that came from `loco` framework. to see all third party libraries
   # Uncomment the line below to override to see all third party libraries you can enable this config and override the logger filters.
   # override_filter: trace
@@ -31,7 +41,7 @@ workers:
   #   - BackgroundAsync - Workers operate asynchronously in the background, processing tasks with async capabilities.
   mode: ForegroundBlocking
 
-  
+
 
 # Mailer Configuration.
 mailer:

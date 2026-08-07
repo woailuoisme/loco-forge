@@ -56,9 +56,9 @@ impl Scout {
     pub async fn searchable<T: Searchable + ?Sized>(ctx: &AppContext, model: &T) -> Result<()> {
         let config = MeilisearchConfig::from_ctx(ctx).ok_or_else(|| Error::string("Meilisearch config is not set"))?;
 
-        let engine = MeilisearchEngine::new(config);
-        let docs = vec![model.to_searchable_array()];
-        engine.update(&model.searchable_as(), &docs).await?;
+        let engine = MeilisearchEngine::new(config)?;
+        let docs = vec![model.to_searchable_value()?];
+        engine.update(model.searchable_as(), &docs).await?;
         Ok(())
     }
 
@@ -70,11 +70,14 @@ impl Scout {
 
         let config = MeilisearchConfig::from_ctx(ctx).ok_or_else(|| Error::string("Meilisearch config is not set"))?;
 
-        let engine = MeilisearchEngine::new(config);
+        let engine = MeilisearchEngine::new(config)?;
         let index_name = models[0].searchable_as();
-        let docs: Vec<serde_json::Value> = models.iter().map(|m| m.to_searchable_array()).collect();
+        let mut docs = Vec::with_capacity(models.len());
+        for m in models {
+            docs.push(m.to_searchable_value()?);
+        }
 
-        engine.update(&index_name, &docs).await?;
+        engine.update(index_name, &docs).await?;
         Ok(())
     }
 
@@ -82,9 +85,9 @@ impl Scout {
     pub async fn unsearchable<T: Searchable + ?Sized>(ctx: &AppContext, model: &T) -> Result<()> {
         let config = MeilisearchConfig::from_ctx(ctx).ok_or_else(|| Error::string("Meilisearch config is not set"))?;
 
-        let engine = MeilisearchEngine::new(config);
+        let engine = MeilisearchEngine::new(config)?;
         let key = model.get_searchable_key();
-        engine.delete(&model.searchable_as(), &[&key]).await?;
+        engine.delete(model.searchable_as(), &[&key]).await?;
         Ok(())
     }
 
@@ -92,9 +95,9 @@ impl Scout {
     pub async fn searchable_queued<T: Searchable + ?Sized>(ctx: &AppContext, model: &T) -> Result<()> {
         let job_args = crate::workers::scout::ScoutJobArgs {
             action: crate::workers::scout::ScoutAction::Update,
-            index_name: model.searchable_as(),
+            index_name: model.searchable_as().to_string(),
             key: model.get_searchable_key(),
-            document: Some(model.to_searchable_array()),
+            document: Some(model.to_searchable_value()?),
         };
         crate::workers::scout::ScoutWorker::perform_later(ctx, job_args).await?;
         Ok(())
@@ -104,7 +107,7 @@ impl Scout {
     pub async fn unsearchable_queued<T: Searchable + ?Sized>(ctx: &AppContext, model: &T) -> Result<()> {
         let job_args = crate::workers::scout::ScoutJobArgs {
             action: crate::workers::scout::ScoutAction::Delete,
-            index_name: model.searchable_as(),
+            index_name: model.searchable_as().to_string(),
             key: model.get_searchable_key(),
             document: None,
         };

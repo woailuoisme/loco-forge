@@ -2,7 +2,7 @@
 
 use axum::{
     extract::{FromRef, FromRequestParts},
-    http::request::Parts,
+    http::{StatusCode, request::Parts},
 };
 use loco_rs::prelude::*;
 
@@ -27,14 +27,17 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let auth = auth::JWT::from_request_parts(parts, state)
             .await
-            .map_err(|e| AppError::Unauthorized(e.to_string()))?;
+            .map_err(|e| AppError::Custom(StatusCode::UNAUTHORIZED, e.to_string()))?;
         let ctx = AppContext::from_ref(state);
         let user = users::Model::find_by_pid(&ctx.db, &auth.claims.pid)
             .await
-            .map_err(|_| AppError::Unauthorized("User not found".to_string()))?;
+            .map_err(|_| AppError::Custom(StatusCode::UNAUTHORIZED, "User not found".to_string()))?;
 
         if !user.is_admin() {
-            return Err(AppError::Forbidden("Access denied: admin role required".to_string()));
+            return Err(AppError::Custom(
+                StatusCode::FORBIDDEN,
+                "Access denied: admin role required".to_string(),
+            ));
         }
 
         Ok(AdminUser(user))
@@ -55,11 +58,11 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let auth = auth::JWT::from_request_parts(parts, state)
             .await
-            .map_err(|e| AppError::Unauthorized(e.to_string()))?;
+            .map_err(|e| AppError::Custom(StatusCode::UNAUTHORIZED, e.to_string()))?;
         let ctx = AppContext::from_ref(state);
         let user = users::Model::find_by_pid(&ctx.db, &auth.claims.pid)
             .await
-            .map_err(|_| AppError::Unauthorized("User not found".to_string()))?;
+            .map_err(|_| AppError::Custom(StatusCode::UNAUTHORIZED, "User not found".to_string()))?;
 
         Ok(AuthenticatedUser(user))
     }

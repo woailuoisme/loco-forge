@@ -53,7 +53,6 @@ impl Hooks for App {
     async fn initializers(_ctx: &AppContext) -> Result<Vec<Box<dyn Initializer>>> {
         Ok(vec![
             Box::new(crate::initializers::config_validator::ConfigValidatorInitializer),
-            Box::new(crate::initializers::logger::LoggerInitializer),
             Box::new(crate::initializers::openapi::OpenApiInitializer),
         ])
     }

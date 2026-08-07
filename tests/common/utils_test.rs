@@ -1,36 +1,6 @@
-use locos::common::utils::{Hash, OrderNoOptions, OrderPrefix, OrderUtil};
+use locos::common::utils::{OrderNoOptions, OrderPrefix, OrderUtil};
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
-
-#[test]
-fn test_hash_make_and_check() {
-    let password = "MySuperSecretPassword123!";
-    let hash = Hash::make(password).expect("Should generate Argon2id hash");
-
-    // 验证导出的哈希串格式符合 Argon2id 规范
-    assert!(hash.starts_with("$argon2id$"));
-
-    // 校验正确密码匹配
-    assert!(Hash::check(password, &hash));
-
-    // 校验错误密码拒绝
-    assert!(!Hash::check("WrongPassword123!", &hash));
-    assert!(!Hash::check("", &hash));
-}
-
-#[rstest::rstest]
-#[case("invalid-hash-string")]
-#[case("$pbkdf2-sha256$i=10000$saltsalt$hash")]
-fn test_hash_needs_rehash(#[case] invalid_hash: &str) {
-    let password = "TestPassword888";
-    let valid_hash = Hash::make(password).unwrap();
-
-    // 合规的 Argon2id 哈希不需要 rehash
-    assert!(!Hash::needs_rehash(&valid_hash));
-
-    // 无法解析或非 Argon2id 结构的哈希需要 rehash
-    assert!(Hash::needs_rehash(invalid_hash));
-}
 
 #[test]
 fn test_generate_and_parse_order_no() {

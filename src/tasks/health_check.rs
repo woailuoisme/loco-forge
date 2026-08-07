@@ -135,10 +135,10 @@ async fn check_storage(ctx: &AppContext) -> std::result::Result<Duration, String
 /// 格式化输出健康检查结果状态
 fn report_status(label: &str, res: std::result::Result<Duration, String>, has_failures: &mut bool) {
     match res {
-        Ok(duration) => println!("  [OK]   {:<10} ({:?})", label, duration),
+        Ok(duration) => tracing::info!(service = label, duration = ?duration, "[OK] 探针正常"),
         Err(err) => {
             *has_failures = true;
-            println!("  [FAIL] {:<10} - 错误信息: {}", label, err);
+            tracing::error!(service = label, error = %err, "[FAIL] 探针异常");
         }
     }
 }
@@ -158,7 +158,7 @@ impl Task for HealthCheck {
         // 步骤 1: 解析命令行参数中的检测目标服务
         let targets = parse_targets(vars);
 
-        println!("\n[INFO] 开始执行基础设施健康检查探针...\n");
+        tracing::info!("开始执行基础设施健康检查探针...");
         let mut has_failures = false;
 
         // 步骤 2: 检测数据库状态
@@ -176,12 +176,12 @@ impl Task for HealthCheck {
             report_status("Storage", check_storage(ctx).await, &mut has_failures);
         }
 
-        println!();
         // 步骤 5: 根据是否存在失败项返回执行结果
         if has_failures {
+            tracing::error!("部分基础设施健康检查未通过！");
             Err(Error::string("部分基础设施健康检查未通过！"))
         } else {
-            println!("[SUCCESS] 所选基础设施探针检测全数通过！\n");
+            tracing::info!("[SUCCESS] 所选基础设施探针检测全数通过！");
             Ok(())
         }
     }

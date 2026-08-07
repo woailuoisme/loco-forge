@@ -11,6 +11,17 @@ logger:
   format: compact
   # 覆盖日志过滤器 (设置为 info 精简启动与数据库底层日志)
   override_filter: info
+  # Loco 原生文件追加器 (File Appender) 配置
+  file_appender:
+    enable: true
+    non_blocking: true
+    level: info
+    format: compact
+    rotation: daily
+    dir: ./storages/logs
+    filename_prefix: locos
+    filename_suffix: log
+    max_log_files: 7
 
 
 # 2. Web 服务与中间件配置 (Web Server & Middlewares)

@@ -31,23 +31,24 @@ tokio = { version = "1.53", default-features = false, features = [
 ] }
 tokio-util = { version = "0.7" } # Tokio 异步工具库扩展 (包含 CancellationToken/Codec/TaskTracker)
 async-trait = { version = "0.1" } # 允许在 Trait 中定义 async 方法的属性宏 (Hooks/Initializer 必须)
-axum = { version = "0.8", features = ["multipart"] } # 底层 Web 框架支持 (开启 multipart 支持表单文件上传)
+axum = { version = "0.8", features = ["multipart","macros"] } # 底层 Web 框架支持 (开启 multipart 支持表单文件上传)
 governor = "0.10" # 高性能 Token/Leaky Bucket 频控算法核心库
 tower_governor = { version = "0.8" } # 基于 Governor 算法的 Tower/Axum 速率限制中间件 (Rate Limiting)
 
 # 2. 网络与 HTTP 客户端 (Networking & HTTP Client)
 reqwest = { version = "0.13.4", features = ["json"] }
+meilisearch-sdk = "0.33" # Meilisearch 官方 Rust SDK (全文检索)
 
 # 3. 序列化与基础工具库 (Serialization & Core Utilities)
 serde = { version = "1", features = ["derive"] } # 通用数据序列化与反序列化框架
 serde_json = { version = "1" } # JSON 数据格式化与解析工具
 thiserror = { version = "2" } # 自定义错误类型派生宏 (std::error::Error)
-eyre = { version="0.6" } # 不透明动态异常堆栈捕获库
+
 chrono = { version = "0.4", features = ["serde"] } # 日期与时间跨时区处理库 (Loco/SeaORM/utoipa 全栈统一标准)
 uuid = { version = "1.24", features = ["v4", "serde"] } # 通用唯一标识符 (UUID v4) 生成器
 validator = { version = "0.20" } # DTO 请求参数格式校验器 (锁定 0.20.x 需与 loco-rs 1.0 的 Validate Trait 保持一致)
 base64 = { version = "0.23" } # Base64 数据编解码工具 (用于二进制/Token/图片数据编解码)
-argon2 = { version = "0.5" } # OWASP 推荐的密码哈希算法库 (用户密码安全哈希与校验)
+secrecy = { version = "0.10.3", features = ["serde"] }
 regex = { version = "1.13" } # 高性能正则表达式匹配工具
 rust-i18n = {version="4"} # 多语言国际化 (i18n) 翻译框架
 
@@ -63,11 +64,10 @@ sea-orm = { workspace = true, features = [
 # 5. 日志与链路追踪 (Logging & Observability)
 tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
-tracing-appender = { version = "0.2" } # 日志文件自动滚动切割与非阻塞写入器 (类似 pino-roll)
 
 # 6. Excel 与电子表格处理 (Excel & Spreadsheet Processing)
 calamine = { version = "0.36" }
-rust_xlsxwriter = { version = "0.97" }
+rust_xlsxwriter = { version = "0.97", features = ["constant_memory"] }
 
 # 7. 图像与二维码生成 (Image & QR Code Processing)
 image = { version = "0.25" }

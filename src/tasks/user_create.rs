@@ -33,7 +33,7 @@ impl Task for UserCreate {
 
         let register_params = RegisterParams {
             email: email.to_owned(),
-            password: password.to_owned(),
+            password: secrecy::SecretString::from(password.to_owned()),
             name: name.to_owned(),
         };
 
@@ -91,11 +91,13 @@ impl Task for UserCreate {
             "用户创建 Task 执行完毕"
         );
 
-        // 步骤 5: 终端控制台打印创建成功明细
-        println!("✅ 用户创建成功！");
-        println!("   Email: {}", user.email);
-        println!("   Name: {}", user.name);
-        println!("   PID: {}", user.pid);
+        // 步骤 5: 终端控制台记录创建成功明细
+        tracing::info!(
+            email = %user.email,
+            name = %user.name,
+            pid = %user.pid,
+            "✅ 用户创建成功！"
+        );
 
         Ok(())
     }

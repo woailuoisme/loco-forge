@@ -31,12 +31,3 @@ impl From<MediaError> for loco_rs::Error {
         loco_rs::Error::string(&err.to_string())
     }
 }
-
-impl From<MediaError> for crate::errors::AppError {
-    fn from(err: MediaError) -> Self {
-        match &err {
-            MediaError::InvalidInput(msg) => crate::errors::AppError::BadRequest(msg.clone()),
-            _ => crate::errors::AppError::internal(err),
-        }
-    }
-}

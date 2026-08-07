@@ -81,12 +81,14 @@ impl AuthService {
 
     /// 用户登录业务逻辑
     pub async fn login(ctx: &AppContext, params: &LoginParams) -> Result<Result<LoginResponse, &'static str>> {
+        use secrecy::ExposeSecret;
+
         let Ok(user) = users::Model::find_by_email(&ctx.db, &params.email).await else {
             tracing::debug!(email = params.email, "login attempt with non-existent email");
             return Ok(Err("Invalid credentials!"));
         };
 
-        if !user.verify_password(&params.password) {
+        if !user.verify_password(params.password.expose_secret()) {
             return Ok(Err("unauthorized!"));
         }
 

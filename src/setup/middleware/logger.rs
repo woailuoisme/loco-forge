@@ -65,29 +65,3 @@ pub async fn after_routes(router: axum::Router, ctx: &AppContext) -> Result<axum
         Ok(router)
     }
 }
-
-/// 初始化类似 Laravel `daily` 模式的按天自动切割离线日志文件写入器
-///
-/// 日志文件将自动保存至指定目录（如 `./logs`），生成的日志文件名形如 `2026-08-06.log` 或 `app-2026-08-06.log`。
-///
-/// # 返回值
-/// 返回 `tracing_appender::non_blocking::WorkerGuard` 异步写入守护句柄。
-/// **必须在主程序生命周期中持续持有该句柄**，确保应用退出时缓冲区内的日志被安全刷入磁盘。
-pub fn init_daily_file_logger(folder: &str, filename_prefix: &str) -> tracing_appender::non_blocking::WorkerGuard {
-    // 使用 Builder 配置生成类似 Laravel 风格的 YYYY-MM-DD.log 日志文件名
-    let file_appender = tracing_appender::rolling::Builder::new()
-        .rotation(tracing_appender::rolling::Rotation::DAILY)
-        .filename_prefix(filename_prefix)
-        .filename_suffix("log")
-        .build(folder)
-        .expect("初始化文件日志追加器失败");
-
-    let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
-
-    tracing_subscriber::fmt()
-        .with_writer(non_blocking)
-        .with_ansi(false)
-        .init();
-
-    guard
-}

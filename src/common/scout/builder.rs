@@ -113,7 +113,7 @@ impl<'a> ScoutBuilder<'a> {
         let config =
             MeilisearchConfig::from_ctx(self.ctx).ok_or_else(|| Error::string("Meilisearch config is not set"))?;
 
-        let engine = MeilisearchEngine::new(config);
+        let engine = MeilisearchEngine::new(config)?;
         engine.search(&self.index_name, &self.query).await
     }
 
@@ -135,7 +135,15 @@ impl<'a> ScoutBuilder<'a> {
             return Ok(Vec::new());
         }
 
-        let models = E::find()
+        use sea_orm::{Iterable, PrimaryKeyToColumn, QueryFilter};
+        let mut query = E::find();
+
+        if let Some(primary_key) = E::PrimaryKey::iter().next() {
+            let col = primary_key.into_column();
+            query = query.filter(col.is_in(ids.clone()));
+        }
+
+        let models = query
             .all(db)
             .await
             .map_err(|e| Error::string(&format!("Database query failed: {e}")))?;

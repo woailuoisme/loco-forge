@@ -45,10 +45,15 @@ AI Agent 在此项目中编写、重构代码或排查问题时，必须严格�
    - 自定义业务逻辑、关联查询和模型验证必须编写在 `src/models/*.rs` 中。
    - 主键与外键类型统一使用 `i64`（Loco 0.17+ 规范）。
 
-6. **错误处理与代码风格**
+6. **错误处理、日志规范与代码风格**
    - 控制器、模型、Service 与 Task 返回类型统一为 `loco_rs::Result<T>`，
      优先使用 `?` 运算符向上抛出错误。
    - 模块顶部统一导入 `use loco_rs::prelude::*;`。
+   - **严禁使用 `println!` / `eprintln!`**：Loco 的日志系统统一基于 **`tracing`** 基础设施。在所有控制器、Service、模型与命令行 Task（`src/tasks/`）中，**绝对禁止直接使用 `println!` 或 `eprintln!`**。所有日志与提示信息必须统一使用 `tracing::info!`、`tracing::warn!`、`tracing::error!`、`tracing::debug!`，使其受环境配置文件（`config/*.yaml`）中的日志级别、日志格式与 `file_appender` 轮转文件管控。
+
+7. **优先使用 Loco 内置的功能服务与基础设施**
+   - 各种通用功能服务（如身份认证/JWT 校验、文件存储 `ctx.storage`、缓存 `ctx.cache`、邮件发送 `ctx.mailer`、后台任务队列 `ctx.queue` / `Worker`、数据库与事务 `ctx.db`、环境配置 `ctx.config`、日志 `tracing` 等）**必须优先使用 Loco 框架原生内置的服务与能力**。
+   - **严禁**在 Loco 已提供内置支持的情况下重复造轮子或盲目引入冗余的第三方替代依赖。
 
 ---
 
@@ -60,7 +65,7 @@ AI Agent 在此项目中编写、重构代码或排查问题时，必须严格�
 | **Service 层** | `src/services/` | 编排业务流程、跨 Model 事务处理、业务规则校验、触发 Worker/Mailer | ❌ **禁止**直接依赖 HTTP Request/Header 对象；❌ **禁止**手动返回 HTTP StatusCode |
 | **Model 层** | `src/models/` | 数据库表操作、模型字段 Validation、单个实体的拓展 CRUD 方法 | ❌ **禁止**手动修改 `src/models/_entities/` 自动生成文件 |
 | **DTO 层** | `src/dtos/` | 定义 Request/Response 契约结构体、实现 `utoipa::ToSchema` 与 `From` 转换 | ❌ **禁止**放置复杂业务处理逻辑 |
-| **Common 层** | `src/common/` | 全局常量 (`consts.rs`)、统一日志系统 (`logger/`)、工具函数 (`utils/`) | ❌ **禁止**依赖上层 Controller 或 Service 模块 |
+| **Common 层** | `src/common/` | 全局常量 (`consts.rs`)、工具函数 (`utils/`) | ❌ **禁止**依赖上层 Controller 或 Service 模块 |
 | **Setup 层** | `src/setup/` | HTTP 中间件注册 (i18n, rate_limit, logger)、路由总装 | ❌ **禁止**将具体业务 Endpoint 逻辑写入中间件 |
 
 ---
@@ -68,7 +73,7 @@ AI Agent 在此项目中编写、重构代码或排查问题时，必须严格�
 ## 目录结构说明 (Directory Map)
 
 - `src/app.rs`：App 钩子实现与全局路由/Worker/Task 注册中心（全局枢纽）。
-- `src/common/`：全局通用基础设施 (常量定义 `consts.rs`，日志模块 `logger/`)。
+- `src/common/`：全局通用基础设施 (常量定义 `consts.rs`，工具函数 `utils/`)。
 - `src/controllers/`：HTTP 控制器与路由定义 (`v1/auth.rs`, `v1/admin/posts.rs`, `health.rs`)。
 - `src/dtos/`：请求与响应的数据传输对象 (`common/`, `posts.rs`)。
 - `src/services/`：核心业务逻辑服务 (`auth.rs`, `admin/posts.rs`)。

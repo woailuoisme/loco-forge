@@ -8,13 +8,13 @@ use serde_json::Value;
 /// 可全文检索的 ORM 模型或结构体接口 (Searchable Trait)
 pub trait Searchable: Send + Sync {
     /// 获取当前模型对应的 Meilisearch 索引名称 (如 "users", "posts")
-    fn searchable_as(&self) -> String;
+    fn searchable_as(&self) -> &str;
 
     /// 获取模型的主键唯一标识字符串 (如 "101", "uuid-v4-string")
     fn get_searchable_key(&self) -> String;
 
     /// 将模型转换为待索引的 JSON 文档对象
-    fn to_searchable_array(&self) -> Value;
+    fn to_searchable_value(&self) -> Result<Value>;
 }
 
 /// 全文搜索引擎驱动接口 (Engine Trait)

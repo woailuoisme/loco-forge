@@ -43,28 +43,37 @@ use axum::{
 /// // src/controllers/user.rs
 /// router.get("/users/export", export_users);
 /// ```
+enum ExcelResponseBody {
+    Bytes(Vec<u8>),
+    File(std::path::PathBuf),
+}
+
 pub struct ExcelResponse {
-    bytes: Vec<u8>,
+    body: ExcelResponseBody,
     filename: String,
 }
 
 impl ExcelResponse {
-    /// 构造 `.xlsx` 文件流式下载响应
+    /// 构造 `.xlsx` 文件内存字节流下载响应（适合小数据量导出）
     ///
     /// # 参数
     /// - `bytes`: 由 [`export_to_bytes`](crate::common::excel::export::export_to_bytes) 生成的 Excel 字节流
     /// - `filename`: 浏览器收到的文件名（如 `"users-2026-08-06.xlsx"`）
-    ///
-    /// # 响应头
-    ///
-    /// | Header | 值 |
-    /// |---|---|
-    /// | `Content-Type` | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` |
-    /// | `Content-Disposition` | `attachment; filename="<filename>"` |
-    /// | `Cache-Control` | `no-cache, no-store, must-revalidate` |
     pub fn download(bytes: Vec<u8>, filename: impl Into<String>) -> Self {
         Self {
-            bytes,
+            body: ExcelResponseBody::Bytes(bytes),
+            filename: filename.into(),
+        }
+    }
+
+    /// 构造 `.xlsx` 海量大文件物理/临时文件流式下载响应（适合 100 万+ 数据量导出）
+    ///
+    /// # 参数
+    /// - `path`: 本地物理或临时 Excel `.xlsx` 文件路径
+    /// - `filename`: 浏览器收到的文件名
+    pub fn download_file(path: impl AsRef<std::path::Path>, filename: impl Into<String>) -> Self {
+        Self {
+            body: ExcelResponseBody::File(path.as_ref().to_path_buf()),
             filename: filename.into(),
         }
     }
@@ -72,10 +81,24 @@ impl ExcelResponse {
 
 impl IntoResponse for ExcelResponse {
     fn into_response(self) -> Response {
-        // Content-Disposition: attachment; filename="<name>"
         let disposition_value = format!("attachment; filename=\"{}\"", self.filename);
 
-        let mut response = Response::new(Body::from(self.bytes));
+        let body = match self.body {
+            ExcelResponseBody::Bytes(b) => Body::from(b),
+            ExcelResponseBody::File(path) => match std::fs::File::open(&path) {
+                Ok(file) => {
+                    let tokio_file = tokio::fs::File::from_std(file);
+                    let stream = tokio_util::io::ReaderStream::new(tokio_file);
+                    Body::from_stream(stream)
+                }
+                Err(e) => {
+                    tracing::error!("打开 Excel 下载文件失败 [{:?}]: {:?}", path, e);
+                    return (StatusCode::INTERNAL_SERVER_ERROR, "无法读取文件").into_response();
+                }
+            },
+        };
+
+        let mut response = Response::new(body);
         *response.status_mut() = StatusCode::OK;
 
         let headers = response.headers_mut();

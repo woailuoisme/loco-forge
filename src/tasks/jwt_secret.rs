@@ -23,7 +23,7 @@ impl Task for JwtSecret {
         // 步骤 1: 使用双 UUID v4 拼接生成 64 字符密码学高强度密钥
         let new_secret = format!("{}{}", uuid::Uuid::new_v4().simple(), uuid::Uuid::new_v4().simple());
 
-        println!("已生成随机 JWT_SECRET 密钥: {}", new_secret);
+        tracing::info!(secret = %new_secret, "已生成随机 JWT_SECRET 密钥");
 
         // 步骤 2: 读取现有的 .env 配置文件
         if let Ok(content) = fs::read_to_string(".env") {
@@ -42,7 +42,7 @@ impl Task for JwtSecret {
 
             // 步骤 4: 写回更新后的内容至 .env 文件
             if fs::write(".env", format!("{}\n", updated_content.trim())).is_ok() {
-                println!("已成功同步更新 .env 中的 JWT_SECRET 配置！");
+                tracing::info!("已成功同步更新 .env 中的 JWT_SECRET 配置！");
             }
         }
         Ok(())

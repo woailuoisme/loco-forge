@@ -8,10 +8,7 @@ use serde::Serialize;
 use std::path::Path as StdPath;
 use uuid::Uuid;
 
-use crate::{
-    dtos::common::{ApiResponse, format_res},
-    errors::AppError,
-};
+use crate::dtos::common::{ApiResponse, format_res};
 
 /// 文件上传响应 Payload
 #[derive(Debug, Serialize, utoipa::ToSchema)]
@@ -54,7 +51,7 @@ pub async fn upload(_auth: auth::JWT, State(ctx): State<AppContext>, mut multipa
         let bytes = match field.bytes().await {
             Ok(b) => b,
             Err(err) => {
-                return Ok(AppError::BadRequest(format!("Failed to read file field: {err}")).into_response());
+                return format_res::bad_request(format!("Failed to read file field: {err}"));
             }
         };
 
@@ -70,7 +67,7 @@ pub async fn upload(_auth: auth::JWT, State(ctx): State<AppContext>, mut multipa
 
         if let Err(err) = ctx.storage.upload(path, &bytes).await {
             tracing::error!(key = %key, error = %err, "Failed to upload file to storage");
-            return Ok(AppError::internal(format!("Storage upload failed: {err}")).into_response());
+            return format_res::internal_error("An unexpected internal server error occurred");
         }
 
         uploaded_files.push(FileUploadResponse {
@@ -82,7 +79,7 @@ pub async fn upload(_auth: auth::JWT, State(ctx): State<AppContext>, mut multipa
     }
 
     if uploaded_files.is_empty() {
-        return Ok(AppError::BadRequest("No files were uploaded".to_string()).into_response());
+        return format_res::bad_request("No files were uploaded");
     }
 
     format_res::ok(uploaded_files)
@@ -109,7 +106,7 @@ pub async fn get_file(State(ctx): State<AppContext>, Path(key): Path<String>) ->
     let bytes: Vec<u8> = match ctx.storage.download(path).await {
         Ok(b) => b,
         Err(_) => {
-            return Ok(AppError::NotFound(format!("File not found: {key}")).into_response());
+            return format_res::not_found(format!("File not found: {key}"));
         }
     };
 

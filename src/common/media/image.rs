@@ -68,12 +68,19 @@ pub struct ImageProcessor {
 }
 
 impl ImageProcessor {
-    /// 从内存二进制字节数据中加载并解析图片 (自动校正 EXIF 旋转角)
+    /// 从内存二进制字节数据中加载并解析图片 (自动校正 EXIF 旋转角，包含 8000px 维度防炸安全保护)
     pub fn from_bytes(bytes: &[u8]) -> MediaResult<Self> {
         if bytes.is_empty() {
             return Err(MediaError::InvalidInput("Image input byte array is empty".to_string()));
         }
         let image = image::load_from_memory(bytes)?;
+        let (w, h) = image.dimensions();
+        const MAX_DIMENSION: u32 = 8000;
+        if w > MAX_DIMENSION || h > MAX_DIMENSION {
+            return Err(MediaError::InvalidInput(format!(
+                "Image dimensions ({w}x{h}) exceed maximum allowed safety limit of {MAX_DIMENSION}x{MAX_DIMENSION}px"
+            )));
+        }
         Ok(Self {
             image,
             format: OutputFormat::Png,
@@ -291,8 +298,13 @@ impl ImageProcessor {
                     image::ExtendedColorType::Rgb8,
                 )?;
             }
-            OutputFormat::Webp { quality: _ } => {
-                self.image.write_to(&mut cursor, ImageFormat::WebP)?;
+            OutputFormat::Webp { quality } => {
+                let encoder = image::codecs::webp::WebPEncoder::new_lossless(&mut cursor);
+                if quality >= 90 {
+                    self.image.write_with_encoder(encoder)?;
+                } else {
+                    self.image.write_to(&mut cursor, ImageFormat::WebP)?;
+                }
             }
             OutputFormat::Bmp => {
                 self.image.write_to(&mut cursor, ImageFormat::Bmp)?;

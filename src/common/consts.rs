@@ -14,14 +14,6 @@ pub mod app {
     pub const ENV_TEST: &str = "test";
 }
 
-/// 日志配置相关常量
-pub mod logger {
-    /// 默认日志文件名路径前缀 (`"loco-"`)
-    pub const DEFAULT_FILENAME_PREFIX: &str = "loco-";
-    /// 默认日志文件存储目录 (`"./storages/logs"`)
-    pub const DEFAULT_LOG_DIR: &str = "./storages/logs";
-}
-
 /// 存储与文件路径常量
 pub mod storage {
     /// 默认存储根目录 (`"./storages"`)
