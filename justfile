@@ -88,20 +88,23 @@ test:
 nextest:
     cargo nextest run
 
-# 运行全量代码静态规范检查 (Clippy 检查与 Rustfmt 格式验证)
+# 运行全量代码静态规范检查 (Clippy 检查、Rustfmt 与 Rumdl Markdown 审计)
 lint:
     cargo clippy --all-targets --all-features -- -D warnings
     cargo fmt --all --check
+    rumdl check
 
 alias check := lint
 
-# 格式化所有 Rust 源代码
+# 格式化所有 Rust 源代码与 Markdown 文档
 fmt:
     cargo fmt --all
+    rumdl fmt .
 
 # 自动修复格式（fmt）与 Clippy 警告（允许未提交/暂存的改动）
 fix:
     cargo clippy --fix --allow-dirty --allow-staged && cargo fmt --all
+    rumdl fmt .
 
 # 检查依赖包的安全漏洞 (RustSec 漏洞数据库)
 audit:

@@ -12,6 +12,10 @@ pre-commit:
       glob: "*.rs"
       run: cargo clippy -- -D warnings
 
+    - name: rumdl
+      glob: "*.md"
+      run: rumdl check {staged_files}
+
 pre-push:
   jobs:
     - name: test
