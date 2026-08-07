@@ -41,9 +41,10 @@ impl KeyExtractor for SmartIpKeyExtractor {
         }
 
         // 步骤 3: 降级尝试解析物理连接 Peer IP（在测试框架或内存 Mock 请求下如无法提取，降级保底为 127.0.0.1）
-        tower_governor::key_extractor::PeerIpKeyExtractor
-            .extract(req)
-            .or_else(|_| Ok("127.0.0.1".parse().unwrap()))
+        match tower_governor::key_extractor::PeerIpKeyExtractor.extract(req) {
+            Ok(ip) => Ok(ip),
+            Err(_) => Ok("127.0.0.1".parse().unwrap()),
+        }
     }
 }
 
