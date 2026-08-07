@@ -60,19 +60,18 @@ where
     type Rejection = Response;
 
     async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
-        let axum::Json(data) = axum::Json::<T>::from_request(req, state)
-            .await
-            .map_err(|err| {
-                super::format_res::bad_request(format!("Invalid JSON payload: {err}"))
-                    .unwrap_or_else(|_| (axum::http::StatusCode::BAD_REQUEST, "Invalid JSON").into_response())
-            })?;
+        let axum::Json(data) = axum::Json::<T>::from_request(req, state).await.map_err(|err| {
+            super::format_res::bad_request(format!("Invalid JSON payload: {err}"))
+                .unwrap_or_else(|_| (axum::http::StatusCode::BAD_REQUEST, "Invalid JSON").into_response())
+        })?;
 
         if let Err(validation_errors) = data.validate() {
             let details = serde_json::to_value(&validation_errors).ok();
-            return Err(
-                super::format_res::validation_error_with_details("Invalid request payload parameters", details)
-                    .unwrap_or_else(|_| (axum::http::StatusCode::UNPROCESSABLE_ENTITY, "Validation Error").into_response()),
-            );
+            return Err(super::format_res::validation_error_with_details(
+                "Invalid request payload parameters",
+                details,
+            )
+            .unwrap_or_else(|_| (axum::http::StatusCode::UNPROCESSABLE_ENTITY, "Validation Error").into_response()));
         }
 
         Ok(Self(data))
@@ -82,7 +81,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::{body::Body, http::Request, routing::post, Router};
+    use axum::{Router, body::Body, http::Request, routing::post};
     use serde::{Deserialize, Serialize};
     use tower::ServiceExt;
 
