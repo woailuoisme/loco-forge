@@ -87,6 +87,13 @@ pub enum AppError {
     Internal(#[from] eyre::Report),
 }
 
+impl From<validator::ValidationErrors> for AppError {
+    fn from(err: validator::ValidationErrors) -> Self {
+        let details = serde_json::to_value(&err).ok();
+        Self::Validation("Invalid request payload parameters".to_string(), details)
+    }
+}
+
 impl AppError {
     /// 便捷构造函数：从任何消息描述创建 Internal 异常
     pub fn internal<M: std::fmt::Display>(msg: M) -> Self {
@@ -184,11 +191,32 @@ impl IntoResponse for AppError {
             }
         }
 
-        let api_error = ApiError {
-            code: self.error_code(),
-            message: self.message(),
-            details: self.details(),
+        // 仅在开发/测试环境 (debug_assertions) 下收集 exception 与 trace 信息
+        let (exception, trace) = if cfg!(debug_assertions) {
+            let exception_name = match &self {
+                Self::NotFound(_) => "AppError::NotFound",
+                Self::BadRequest(_) => "AppError::BadRequest",
+                Self::Unauthorized(_) => "AppError::Unauthorized",
+                Self::Forbidden(_) => "AppError::Forbidden",
+                Self::Validation(_, _) => "AppError::Validation",
+                Self::Custom(_, _) => "AppError::Custom",
+                Self::Db(_) => "AppError::Db",
+                Self::Loco(_) => "AppError::Loco",
+                Self::Internal(_) => "AppError::Internal",
+            };
+            let stacktrace = match &self {
+                Self::Internal(report) => {
+                    let bt = format!("{report:?}");
+                    Some(bt.lines().map(String::from).collect())
+                }
+                _ => None,
+            };
+            (Some(exception_name.to_string()), stacktrace)
+        } else {
+            (None, None)
         };
+
+        let api_error = ApiError::error(self.error_code(), self.message(), self.details(), exception, trace);
 
         (status, Json(api_error)).into_response()
     }

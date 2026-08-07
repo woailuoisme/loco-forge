@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use chrono::{Duration, offset::Local};
 use loco_rs::{auth::jwt, hash, prelude::*};
+use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Map;
 use uuid::Uuid;
@@ -10,6 +11,28 @@ pub use super::_entities::users::{self, ActiveModel, Entity, Model};
 pub const MAGIC_LINK_LENGTH: i8 = 32;
 pub const MAGIC_LINK_EXPIRATION_MIN: i8 = 5;
 pub const RESET_TOKEN_EXPIRATION_MIN: i64 = 30;
+
+/// 用户角色枚举定义
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, EnumIter, DeriveActiveEnum, Serialize, Deserialize, utoipa::ToSchema,
+)]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::None)")]
+pub enum UserRole {
+    #[sea_orm(string_value = "user")]
+    #[default]
+    User,
+    #[sea_orm(string_value = "admin")]
+    Admin,
+}
+
+impl std::fmt::Display for UserRole {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::User => write!(f, "user"),
+            Self::Admin => write!(f, "admin"),
+        }
+    }
+}
 
 /// 登录请求参数
 #[derive(Debug, Deserialize, Serialize, utoipa::ToSchema)]
@@ -54,11 +77,14 @@ impl ActiveModelBehavior for super::_entities::users::ActiveModel {
     where
         C: ConnectionTrait,
     {
-        self.validate()?;
         if insert {
+            self.validate()?;
             let mut this = self;
             this.pid = ActiveValue::Set(Uuid::new_v4());
             this.api_key = ActiveValue::Set(format!("lo-{}", Uuid::new_v4()));
+            if !this.role.is_set() {
+                this.role = ActiveValue::Set("user".to_string());
+            }
             Ok(this)
         } else {
             Ok(self)
@@ -78,6 +104,16 @@ impl Authenticable for Model {
 }
 
 impl Model {
+    /// 判断是否为管理员角色
+    pub fn is_admin(&self) -> bool {
+        self.role == "admin"
+    }
+
+    /// 判断是否包含指定角色
+    pub fn has_role(&self, role: &str) -> bool {
+        self.role == role
+    }
+
     /// finds a user by the provided email
     ///
     /// # Errors
@@ -245,6 +281,48 @@ impl Model {
         jwt::JWT::new(secret)
             .generate_token(expiration, self.pid.to_string(), Map::new())
             .map_err(ModelError::from)
+    }
+
+    /// 清理数据库中已过期的重置密码 Token 与魔术链接 Token
+    ///
+    /// # Errors
+    ///
+    /// 当数据库查询或更新失败时返回 `ModelError`
+    pub async fn clean_expired_tokens(db: &DatabaseConnection) -> ModelResult<u64> {
+        let now = Local::now();
+        let reset_threshold = now - Duration::minutes(RESET_TOKEN_EXPIRATION_MIN);
+
+        let mut cleaned_count = 0u64;
+
+        // 查找带有过期 reset_token 的用户并清理
+        let expired_reset_users = users::Entity::find()
+            .filter(users::Column::ResetSentAt.lt(reset_threshold))
+            .all(db)
+            .await?;
+
+        for user in expired_reset_users {
+            let mut active: users::ActiveModel = user.into();
+            active.reset_token = ActiveValue::Set(None);
+            active.reset_sent_at = ActiveValue::Set(None);
+            active.update(db).await?;
+            cleaned_count += 1;
+        }
+
+        // 查找带有过期 magic_link_token 的用户并清理
+        let expired_magic_users = users::Entity::find()
+            .filter(users::Column::MagicLinkExpiration.lt(now))
+            .all(db)
+            .await?;
+
+        for user in expired_magic_users {
+            let mut active: users::ActiveModel = user.into();
+            active.magic_link_token = ActiveValue::Set(None);
+            active.magic_link_expiration = ActiveValue::Set(None);
+            active.update(db).await?;
+            cleaned_count += 1;
+        }
+
+        Ok(cleaned_count)
     }
 }
 

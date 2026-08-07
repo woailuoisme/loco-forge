@@ -1,3 +1,3 @@
-pub mod auth;
+pub mod health;
 pub mod home;
-pub mod posts;
+pub mod v1;

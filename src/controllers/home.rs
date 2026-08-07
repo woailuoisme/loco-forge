@@ -35,7 +35,7 @@ pub struct HomeResponse {
 )]
 #[debug_handler]
 pub async fn index() -> Result<Response> {
-    format::json(HomeResponse {
+    crate::dtos::common::format_res::ok(HomeResponse {
         name: env!("CARGO_CRATE_NAME").to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
         status: "ok".to_string(),

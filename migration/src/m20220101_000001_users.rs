@@ -18,17 +18,17 @@ impl MigrationTrait for Migration {
                 ("api_key", ColType::StringUniq),
                 ("name", ColType::String),
                 ("reset_token", ColType::StringNull),
-                ("reset_sent_at", ColType::TimestampWithTimeZoneNull),
+                ("reset_sent_at", ColType::DateTimeNull),
                 ("email_verification_token", ColType::StringNull),
-                ("email_verification_sent_at", ColType::TimestampWithTimeZoneNull),
-                ("email_verified_at", ColType::TimestampWithTimeZoneNull),
+                ("email_verification_sent_at", ColType::DateTimeNull),
+                ("email_verified_at", ColType::DateTimeNull),
                 ("magic_link_token", ColType::StringNull),
-                ("magic_link_expiration", ColType::TimestampWithTimeZoneNull),
+                ("magic_link_expiration", ColType::DateTimeNull),
+                ("role", ColType::String),
             ],
             &[],
         )
-        .await?;
-        Ok(())
+        .await
     }
 
     async fn down(&self, m: &SchemaManager) -> Result<(), DbErr> {

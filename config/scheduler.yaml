@@ -4,10 +4,12 @@ jobs:
       shell: true
       run: "echo loco >> ./scheduler.txt"
       schedule: run every 1 second
-      # schedule: "* * * * * * *"
       output: silent
       tags: ['base', 'infra']
 
-  # run_task:
-  #     run: "foo"
-  #     schedule: "at 10:00 am"
+  clean_expired_tokens:
+      run: "clean_expired_tokens"
+      schedule: "at 03:00 am"
+      output: silent
+      tags: ['maintenance', 'cleanup']
+

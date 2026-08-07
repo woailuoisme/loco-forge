@@ -29,9 +29,11 @@ tokio = { version = "1.53", default-features = false, features = [
   "sync",            # 启用异步同步原语与通道 (mpsc, oneshot, watch, Mutex, RwLock)
   "signal",          # 启用操作系统信号监听 (SIGINT/SIGTERM, 优雅停机 Graceful Shutdown)
 ] }
-tokio-util = { version="0.7" }
-async-trait = { version = "0.1" }
-axum = { version = "0.8", features = ["multipart"] }
+tokio-util = { version = "0.7" } # Tokio 异步工具库扩展 (包含 CancellationToken/Codec/TaskTracker)
+async-trait = { version = "0.1" } # 允许在 Trait 中定义 async 方法的属性宏 (Hooks/Initializer 必须)
+axum = { version = "0.8", features = ["multipart"] } # 底层 Web 框架支持 (开启 multipart 支持表单文件上传)
+governor = "0.10" # 高性能 Token/Leaky Bucket 频控算法核心库
+tower_governor = { version = "0.8" } # 基于 Governor 算法的 Tower/Axum 速率限制中间件 (Rate Limiting)
 
 # 2. 网络与 HTTP 客户端 (Networking & HTTP Client)
 reqwest = { version = "0.13.4", features = ["json"] }

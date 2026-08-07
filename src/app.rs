@@ -44,14 +44,18 @@ impl Hooks for App {
         create_app::<Self, Migrator>(mode, environment, config).await
     }
 
-    /// 绑定全局 HTTP 中间件与请求日志钩子 (委托给 `setup::logger`)
+    /// 绑定全局 HTTP 中间件与请求日志钩子 (委托给 `setup::middleware::logger`)
     async fn after_routes(router: axum::Router, ctx: &AppContext) -> Result<axum::Router> {
-        setup::logger::after_routes(router, ctx).await
+        setup::middleware::logger::after_routes(router, ctx).await
     }
 
-    /// 加载系统 Initializer 插件 (例如 OpenAPI 接口文档)
+    /// 加载系统 Initializer 插件 (例如 OpenAPI 接口文档、配置校验、日志系统)
     async fn initializers(_ctx: &AppContext) -> Result<Vec<Box<dyn Initializer>>> {
-        Ok(vec![Box::new(crate::initializers::openapi::OpenApiInitializer)])
+        Ok(vec![
+            Box::new(crate::initializers::config_validator::ConfigValidatorInitializer),
+            Box::new(crate::initializers::logger::LoggerInitializer),
+            Box::new(crate::initializers::openapi::OpenApiInitializer),
+        ])
     }
 
     /// 绑定并返回全局控制器路由 (委托给 `setup::routes`)

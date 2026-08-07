@@ -21,5 +21,6 @@ pub fn register_tasks(tasks: &mut Tasks) {
 
     // 步骤 4: 保留 Loco 脚手架注入锚点 (新增 task 生成器自动插入点)
     // tasks-inject (do not remove)
+    tasks.register(tasks::clean_expired_tokens::CleanExpiredTokens);
     tasks.register(tasks::user_create::UserCreate);
 }

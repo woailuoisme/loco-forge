@@ -1,0 +1,41 @@
+validation:
+  # 通用与非空
+  required: "该字段为必填项。"
+  not_empty: "该字段不能为空。"
+  invalid: "输入的字段值无效。"
+
+  # 格式与类型
+  email: "邮箱地址格式不正确。"
+  url: "URL 链接格式不正确。"
+  phone: "手机/电话号码格式不正确。"
+  ip: "IP 地址格式不正确。"
+  uuid: "UUID 格式不正确。"
+  json: "JSON 格式不正确。"
+
+  # 字符串长度
+  min_length: "长度至少为 %{min} 个字符。"
+  max_length: "长度不能超过 %{max} 个字符。"
+  length_range: "长度必须在 %{min} 至 %{max} 个字符之间。"
+  exact_length: "长度必须刚好为 %{length} 个字符。"
+
+  # 数值与范围
+  numeric: "必须为有效的数字。"
+  integer: "必须为整数。"
+  min_value: "数值必须大于等于 %{min}。"
+  max_value: "数值必须小于等于 %{max}。"
+  range: "数值必须在 %{min} 至 %{max} 之间。"
+  positive: "必须为正数。"
+
+  # 模式与匹配
+  alphanumeric: "仅能包含字母和数字。"
+  alpha: "仅能包含字母。"
+  digits: "仅能包含数字。"
+  must_match: "两次输入的内容不一致。"
+  regex: "内容格式不符合要求。"
+
+  # 业务约束
+  unique: "该值已被使用，不可重复。"
+  exists: "所选记录不存在或已失效。"
+  invalid_choice: "所选选项不在允许的范围内。"
+  future_date: "时间必须在未来。"
+  past_date: "时间必须在过去。"

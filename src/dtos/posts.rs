@@ -1,8 +1,21 @@
+//! # 文章模块 DTO 定义
+//!
+//! 本文件包含文章模块的数据传输对象 (DTO)，实现请求解析与响应解耦：
+//! - **Response DTO**：用于将数据库 Model 转换为前端展示对象。
+//! - **Request DTO**：用于解析客户端提交的 Payload。
+
 use sea_orm::prelude::DateTimeWithTimeZone;
 use ts_rs::TS;
 use utoipa::ToSchema;
+use validator::Validate;
 
-/// 文章详情数据对象
+// ============================================================================
+// Response DTOs (响应数据对象)
+// ============================================================================
+
+/// 文章响应数据传输对象 [Response DTO]
+///
+/// 用于将数据库 SeaORM 实体模型解耦并格式化为标准 JSON 响应。
 #[derive(serde::Serialize, serde::Deserialize, TS, ToSchema)]
 pub struct PostDto {
     /// 文章 ID
@@ -34,19 +47,29 @@ impl From<crate::models::_entities::posts::Model> for PostDto {
     }
 }
 
-/// 创建文章请求参数
-#[derive(serde::Serialize, serde::Deserialize, TS, ToSchema)]
+// ============================================================================
+// Request DTOs (请求数据对象)
+// ============================================================================
+
+/// 创建文章请求参数 [Request DTO]
+///
+/// 用于接收和反序列化客户端创建文章时提交的 JSON Payload。
+#[derive(serde::Serialize, serde::Deserialize, Validate, TS, ToSchema)]
 pub struct CreatePost {
     /// 文章标题
+    #[validate(length(min = 1, message = "文章标题不能为空"))]
     pub title: Option<String>,
     /// 文章内容
     pub content: Option<String>,
 }
 
-/// 更新文章请求参数
-#[derive(serde::Serialize, serde::Deserialize, TS, ToSchema)]
+/// 更新文章请求参数 [Request DTO]
+///
+/// 用于接收和反序列化客户端更新文章时提交的 JSON Payload。
+#[derive(serde::Serialize, serde::Deserialize, Validate, TS, ToSchema)]
 pub struct UpdatePost {
     /// 文章标题
+    #[validate(length(min = 1, message = "文章标题不能为空"))]
     pub title: Option<String>,
     /// 文章内容
     pub content: Option<String>,

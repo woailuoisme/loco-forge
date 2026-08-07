@@ -1,0 +1,41 @@
+validation:
+  # General & Presence
+  required: "This field is required."
+  not_empty: "This field cannot be empty."
+  invalid: "Invalid field value."
+
+  # Format & Types
+  email: "Invalid email address format."
+  url: "Invalid URL format."
+  phone: "Invalid phone number format."
+  ip: "Invalid IP address."
+  uuid: "Invalid UUID format."
+  json: "Invalid JSON format."
+
+  # String Length & Size
+  min_length: "Must be at least %{min} characters long."
+  max_length: "Cannot exceed %{max} characters."
+  length_range: "Must be between %{min} and %{max} characters long."
+  exact_length: "Must be exactly %{length} characters long."
+
+  # Numerical Values & Range
+  numeric: "Must be a valid number."
+  integer: "Must be an integer."
+  min_value: "Must be greater than or equal to %{min}."
+  max_value: "Must be less than or equal to %{max}."
+  range: "Must be between %{min} and %{max}."
+  positive: "Must be a positive number."
+
+  # Pattern & Comparison
+  alphanumeric: "Must contain only letters and numbers."
+  alpha: "Must contain only letters."
+  digits: "Must contain only digits."
+  must_match: "Does not match the target field."
+  regex: "Format does not match required pattern."
+
+  # Custom & Business Constraints
+  unique: "This value has already been taken."
+  exists: "The selected value is invalid."
+  invalid_choice: "Selected value is not in the allowed options."
+  future_date: "Date must be in the future."
+  past_date: "Date must be in the past."
