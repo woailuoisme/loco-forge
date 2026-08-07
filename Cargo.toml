@@ -51,6 +51,7 @@ base64 = { version = "0.23" } # Base64 数据编解码工具 (用于二进制/To
 secrecy = { version = "0.10.3", features = ["serde"] }
 regex = { version = "1.13" } # 高性能正则表达式匹配工具
 rust-i18n = {version="4"} # 多语言国际化 (i18n) 翻译框架
+jsonwebtoken = { version = "10.4", features = ["rust_crypto"] }
 
 # 4. 数据库与数据迁移 (Database & ORM)
 migration = { path = "migration" }
@@ -87,6 +88,7 @@ required-features = []
 
 [dev-dependencies]
 loco-rs = { workspace = true, features = ["testing"] }
+tower = { version = "0.5" }
 serial_test = { version = "4.0.1" }
 rstest = { version = "0.26" }
 insta = { version = "1.48", features = [

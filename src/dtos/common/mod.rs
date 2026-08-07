@@ -17,6 +17,7 @@
 //! ```
 
 pub mod error_code;
+pub mod extract;
 pub mod format_res;
 pub mod pagination;
 pub mod rbac;
@@ -24,6 +25,7 @@ pub mod response;
 
 // 扁平化 re-export：对外公开常用类型
 pub use error_code::ErrorCode;
+pub use extract::ValidJson;
 pub use pagination::{Page, PageMeta, PaginatedData, PaginationQuery};
 pub use rbac::{AdminUser, AuthenticatedUser};
 pub use response::{ApiError, ApiResponse};

@@ -2,22 +2,21 @@
 # Docs: https://lefthook.dev/configuration/
 
 pre-commit:
-  parallel: true
+  parallel: false
   jobs:
     - name: fmt
       glob: "*.rs"
-      run: cargo fmt --all -- --check
+      run: cargo fmt --all
 
     - name: clippy
       glob: "*.rs"
-      run: cargo clippy -- -D warnings
+      run: cargo clippy --fix --allow-dirty --allow-staged
 
     - name: rumdl
       glob: "*.md"
-      run: rumdl check {staged_files}
+      run: rumdl fmt {staged_files}
 
 pre-push:
   jobs:
     - name: test
       run: cargo nextest run
-

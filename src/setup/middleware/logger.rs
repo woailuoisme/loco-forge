@@ -3,7 +3,6 @@
 //! 提供 HTTP 请求响应统计、耗时测量与日志输出中间件。
 
 use axum::response::IntoResponse;
-use loco_rs::{Result, app::AppContext};
 
 /// 全局未匹配路由 (404 Not Found) Fallback 处理器
 ///
@@ -47,21 +46,4 @@ pub async fn log_request(req: axum::extract::Request, next: axum::middleware::Ne
     );
 
     response
-}
-
-/// 路由组装后的中间件挂载钩子
-///
-/// 根据配置文件 `server.middlewares.logger` 的开关状态，决定是否挂载 `log_request` 全局中间件。
-pub async fn after_routes(router: axum::Router, ctx: &AppContext) -> Result<axum::Router> {
-    let enabled = ctx.config.server.middlewares.logger.as_ref().is_none_or(|m| m.enable);
-
-    let router = router.fallback(not_found_fallback).layer(axum::middleware::from_fn(
-        crate::setup::middleware::i18n::i18n_middleware,
-    ));
-
-    if enabled {
-        Ok(router.layer(axum::middleware::from_fn(log_request)))
-    } else {
-        Ok(router)
-    }
 }

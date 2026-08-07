@@ -44,9 +44,9 @@ impl Hooks for App {
         create_app::<Self, Migrator>(mode, environment, config).await
     }
 
-    /// 绑定全局 HTTP 中间件与请求日志钩子 (委托给 `setup::middleware::logger`)
+    /// 绑定全局 HTTP 中间件与请求日志钩子 (委托给 `setup::middleware::register`)
     async fn after_routes(router: axum::Router, ctx: &AppContext) -> Result<axum::Router> {
-        setup::middleware::logger::after_routes(router, ctx).await
+        setup::middleware::register(router, ctx).await
     }
 
     /// 加载系统 Initializer 插件 (例如 OpenAPI 接口文档、配置校验、日志系统)

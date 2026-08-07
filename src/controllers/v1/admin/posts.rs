@@ -2,7 +2,7 @@ use loco_rs::prelude::*;
 
 use crate::{
     dtos::{
-        common::{AdminUser, ApiError, ApiResponse, PaginatedData, PaginationQuery, format_res},
+        common::{AdminUser, ApiError, ApiResponse, PaginatedData, PaginationQuery, ValidJson, format_res},
         posts::{CreatePost, PostDto, UpdatePost},
     },
     services::admin::PostService,
@@ -78,13 +78,8 @@ pub async fn get_one(_auth: auth::JWT, State(ctx): State<AppContext>, Path(id): 
 pub async fn create(
     _auth: auth::JWT,
     State(ctx): State<AppContext>,
-    Json(params): Json<CreatePost>,
+    ValidJson(params): ValidJson<CreatePost>,
 ) -> Result<Response> {
-    if let Err(err) = validator::Validate::validate(&params) {
-        let details = serde_json::to_value(&err).ok();
-        return format_res::validation_error_with_details("Invalid request payload parameters", details);
-    }
-
     let dto = PostService::create(&ctx, params).await?;
     format_res::created(dto)
 }
@@ -113,13 +108,8 @@ pub async fn update(
     _auth: auth::JWT,
     State(ctx): State<AppContext>,
     Path(id): Path<i64>,
-    Json(params): Json<UpdatePost>,
+    ValidJson(params): ValidJson<UpdatePost>,
 ) -> Result<Response> {
-    if let Err(err) = validator::Validate::validate(&params) {
-        let details = serde_json::to_value(&err).ok();
-        return format_res::validation_error_with_details("Invalid request payload parameters", details);
-    }
-
     let Some(dto) = PostService::update(&ctx, id, params).await? else {
         return format_res::not_found("post not found");
     };

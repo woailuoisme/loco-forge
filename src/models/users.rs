@@ -285,6 +285,7 @@ impl Model {
     ///
     /// when could not convert user claims to jwt token
     pub fn generate_jwt(&self, secret: &str, expiration: u64) -> ModelResult<String> {
+        let _ = jsonwebtoken::crypto::rust_crypto::DEFAULT_PROVIDER.install_default();
         jwt::JWT::new(secret)
             .generate_token(expiration, self.pid.to_string(), Map::new())
             .map_err(ModelError::from)
