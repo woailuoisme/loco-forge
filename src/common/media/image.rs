@@ -1,4 +1,4 @@
-use image::{codecs::jpeg::JpegEncoder, imageops, DynamicImage, GenericImageView, ImageFormat};
+use image::{DynamicImage, GenericImageView, ImageFormat, codecs::jpeg::JpegEncoder, imageops};
 use std::io::Cursor;
 
 use crate::common::media::error::{MediaError, MediaResult};

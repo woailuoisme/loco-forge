@@ -1,6 +1,6 @@
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
-use image::{imageops, DynamicImage, GenericImageView, ImageFormat, Rgba, RgbaImage};
-use qrcode::{render::svg, EcLevel, QrCode};
+use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
+use image::{DynamicImage, GenericImageView, ImageFormat, Rgba, RgbaImage, imageops};
+use qrcode::{EcLevel, QrCode, render::svg};
 use std::io::Cursor;
 
 use crate::common::media::error::{MediaError, MediaResult};

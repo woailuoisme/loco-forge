@@ -3,28 +3,35 @@
 [package]
 name = "locos"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 publish = false
+rust-version = "1.97.1"
 default-run = "locos"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace.dependencies]
 loco-rs = { version = "1.0" }
+sea-orm = { version = "2.0" }
+sea-orm-migration = { version = "2.0" }
 
 [dependencies]
 # 1. 核心框架与异步运行时 (Core Framework & Async Runtime)
 loco-rs = { workspace = true, features = [
   "storage_aws_s3",
   "cache_redis",
-  "worker_redis",
-  "testing",
+  "worker_redis"
 ] }
 tokio = { version = "1.53", default-features = false, features = [
-  "rt-multi-thread",
+  "rt-multi-thread", # 启用 Tokio 多线程 Work-Stealing 异步运行时调度器 (Loco/Axum 必须)
+  "macros",          # 启用 Tokio 过程宏支持 (#[tokio::main], #[tokio::test], select!)
+  "time",            # 启用异步定时器与超时控制 (sleep, timeout, interval)
+  "sync",            # 启用异步同步原语与通道 (mpsc, oneshot, watch, Mutex, RwLock)
+  "signal",          # 启用操作系统信号监听 (SIGINT/SIGTERM, 优雅停机 Graceful Shutdown)
 ] }
+tokio-util = { version="0.7" }
 async-trait = { version = "0.1" }
-axum = { version = "0.8" }
+axum = { version = "0.8", features = ["multipart"] }
 
 # 2. 网络与 HTTP 客户端 (Networking & HTTP Client)
 reqwest = { version = "0.13.4", features = ["json"] }
@@ -33,17 +40,18 @@ reqwest = { version = "0.13.4", features = ["json"] }
 serde = { version = "1", features = ["derive"] } # 通用数据序列化与反序列化框架
 serde_json = { version = "1" } # JSON 数据格式化与解析工具
 thiserror = { version = "2" } # 自定义错误类型派生宏 (std::error::Error)
-chrono = { version = "0.4" } # 日期与时间跨时区处理库 (Loco/SeaORM/utoipa 全栈统一标准)
-uuid = { version = "1.24", features = ["v4"] } # 通用唯一标识符 (UUID v4) 生成器
+eyre = { version="0.6" } # 不透明动态异常堆栈捕获库
+chrono = { version = "0.4", features = ["serde"] } # 日期与时间跨时区处理库 (Loco/SeaORM/utoipa 全栈统一标准)
+uuid = { version = "1.24", features = ["v4", "serde"] } # 通用唯一标识符 (UUID v4) 生成器
 validator = { version = "0.20" } # DTO 请求参数格式校验器 (锁定 0.20.x 需与 loco-rs 1.0 的 Validate Trait 保持一致)
-base64 = { version = "0.23" }
-argon2 = { version = "0.5" }
+base64 = { version = "0.23" } # Base64 数据编解码工具 (用于二进制/Token/图片数据编解码)
+argon2 = { version = "0.5" } # OWASP 推荐的密码哈希算法库 (用户密码安全哈希与校验)
 regex = { version = "1.13" } # 高性能正则表达式匹配工具
-rust-i18n = "4" # 多语言国际化 (i18n) 翻译框架
+rust-i18n = {version="4"} # 多语言国际化 (i18n) 翻译框架
 
 # 4. 数据库与数据迁移 (Database & ORM)
 migration = { path = "migration" }
-sea-orm = { version = "2.0", features = [
+sea-orm = { workspace = true, features = [
   "sqlx-sqlite",
   "sqlx-postgres",
   "runtime-tokio-rustls",
@@ -79,7 +87,13 @@ required-features = []
 loco-rs = { workspace = true, features = ["testing"] }
 serial_test = { version = "4.0.1" }
 rstest = { version = "0.26" }
-insta = { version = "1.48", features = ["redactions", "yaml", "filters"] }
+insta = { version = "1.48", features = [
+  "redactions",
+  "yaml",
+  "json",
+  "glob",
+  "filters",
+] }
 
 # 优化开发构建体积 (把调试信息级别降为 1 并在 macOS 开启 unpacked 符号拆分，同时保留 panic 堆栈追踪)
 [profile.dev]

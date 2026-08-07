@@ -49,11 +49,7 @@ impl MeilisearchConfig {
             cfg.index_prefix = Some(prefix);
         }
 
-        if !cfg.host.is_empty() {
-            Some(cfg)
-        } else {
-            None
-        }
+        if !cfg.host.is_empty() { Some(cfg) } else { None }
     }
 
     /// 获取附带前缀后的最终 Meilisearch 索引名

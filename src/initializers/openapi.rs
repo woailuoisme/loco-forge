@@ -1,12 +1,12 @@
 use async_trait::async_trait;
-use axum::{routing::get, Json, Router};
+use axum::{Json, Router, routing::get};
 use loco_rs::{
-    app::{AppContext, Initializer},
     Result,
+    app::{AppContext, Initializer},
 };
 use utoipa::{
-    openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme},
     Modify, OpenApi,
+    openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme},
 };
 use utoipa_scalar::{Scalar, Servable as ScalarServable};
 

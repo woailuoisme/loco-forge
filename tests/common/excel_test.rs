@@ -1,4 +1,4 @@
-use locos::common::excel::{export_to_bytes, spawn_excel_export, CellValue, ExcelExport};
+use locos::common::excel::{CellValue, ExcelExport, export_to_bytes, spawn_excel_export};
 
 struct TestUserExport {
     id: i64,

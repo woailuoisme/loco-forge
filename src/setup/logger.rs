@@ -2,7 +2,7 @@
 //!
 //! 提供 HTTP 请求响应统计、耗时测量与日志输出中间件。
 
-use loco_rs::{app::AppContext, Result};
+use loco_rs::{Result, app::AppContext};
 
 /// 全局 HTTP 请求日志处理中间件
 ///

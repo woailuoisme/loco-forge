@@ -33,7 +33,7 @@ pub struct ListParams {
 /// 构建包含 [`ApiError`] 规范的 404 错误响应
 fn not_found(message: &str) -> Response {
     let error = ApiError {
-        code: "not_found".to_string(),
+        code: StatusCode::NOT_FOUND.as_u16() as u32,
         message: message.to_string(),
         details: None,
     };

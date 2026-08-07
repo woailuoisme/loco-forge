@@ -4,9 +4,9 @@
 //! 以及自定义渠道 (Custom Channel) 发送各类通知消息，实现业务逻辑与消息投递的解耦。
 
 use crate::common::notifications::{
+    Channel,
     channels::{EmailChannel, TelegramChannel},
     messages::{MailMessage, TelegramMessage},
-    Channel,
 };
 use loco_rs::prelude::*;
 use serde::{Deserialize, Serialize};

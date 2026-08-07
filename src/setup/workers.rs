@@ -4,9 +4,9 @@
 
 use crate::workers::{downloader::DownloadWorker, notification::NotificationWorker, scout::ScoutWorker};
 use loco_rs::{
+    Result,
     app::AppContext,
     bgworker::{BackgroundWorker, Queue},
-    Result,
 };
 
 /// 连接与注册后台 Worker 队列

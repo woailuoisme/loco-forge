@@ -20,8 +20,8 @@ pub struct Page<T: TS> {
 /// 通用 API 错误响应
 #[derive(serde::Serialize, serde::Deserialize, TS, ToSchema)]
 pub struct ApiError {
-    /// 错误码标识
-    pub code: String,
+    /// 错误码数字 (默认使用 HTTP 状态码数值如 404, 400，或自定义业务错误码如 404001)
+    pub code: u32,
     /// 错误详细信息
     pub message: String,
     /// 附加错误细节

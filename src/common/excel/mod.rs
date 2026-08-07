@@ -38,6 +38,6 @@ pub mod response;
 
 // 便捷 re-export —— 最常用的类型无需深层 use 路径
 pub use async_task::{spawn_excel_export, spawn_excel_import};
-pub use export::{export_to_bytes, CellValue, ExcelExport};
-pub use import::{import_from_bytes, ExcelImport, ImportResult, RowError};
+pub use export::{CellValue, ExcelExport, export_to_bytes};
+pub use import::{ExcelImport, ImportResult, RowError, import_from_bytes};
 pub use response::ExcelResponse;

@@ -10,3 +10,9 @@ newline_style = "Unix"          # 强制统一使用 Unix (LF) 换行符
 use_small_heuristics = "Default" # 保持 Rust 官方平衡折行密度
 reorder_imports = true          # 自动按字母顺序对导入路径 (use) 进行排序
 reorder_modules = true          # 自动按字母顺序对模块声明 (mod) 进行排序
+
+# 3. 高级导入分组与注释归并 (Imports Structuring & Comment Wrapping)
+unstable_features = true           # 开启 rustfmt 高级特性支持
+imports_granularity = "Crate"      # 统一按 Crate 合并导入路径 (如 use crate::{a, b})
+group_imports = "StdExternalCrate" # 分组归类：std 标准库 -> 第三方外部库 -> crate 本地模块
+wrap_comments = true               # 超长文档注释自动折行（限制在 120 字符内）

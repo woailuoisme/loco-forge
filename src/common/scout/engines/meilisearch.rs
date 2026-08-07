@@ -7,7 +7,7 @@ use crate::common::scout::{
 };
 use async_trait::async_trait;
 use loco_rs::prelude::*;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::sync::LazyLock;
 use std::time::Duration;
 

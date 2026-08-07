@@ -1,8 +1,8 @@
 use axum::http::header;
 use image::{ImageFormat, Rgba, RgbaImage};
 use locos::common::media::{
-    spawn_media_task, ImageProcessor, MediaResponse, OutputFormat, QrCodeBuilder, QrLogoConfig, ResizeMode,
-    WatermarkPosition,
+    ImageProcessor, MediaResponse, OutputFormat, QrCodeBuilder, QrLogoConfig, ResizeMode, WatermarkPosition,
+    spawn_media_task,
 };
 use rstest::{fixture, rstest};
 use std::io::Cursor;

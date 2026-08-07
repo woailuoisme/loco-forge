@@ -2,11 +2,43 @@
 //!
 //! 提供全项目通用的 `AppError` 枚举与 `AppResult<T>` 类型别名。
 //! 自动实现 `axum::response::IntoResponse`，统一输出标准 JSON 格式 [`crate::dtos::common::ApiError`]。
+//!
+//! ## JSON 响应契约示例 (JSON Response Examples)
+//!
+//! ### 1. 404 / 400 / 401 普通业务异常 (默认使用 HTTP 状态码数字)
+//! ```json
+//! {
+//!   "code": 404,
+//!   "message": "Resource not found: User with pid_123 does not exist",
+//!   "details": null
+//! }
+//! ```
+//!
+//! ### 2. 422 参数校验错误 / 细粒度自定义数字错误码 (如 400001)
+//! ```json
+//! {
+//!   "code": 422,
+//!   "message": "Invalid request payload parameters",
+//!   "details": {
+//!     "email": ["email format is invalid"],
+//!     "password": ["password must be at least 8 characters"]
+//!   }
+//! }
+//! ```
+//!
+//! ### 3. 500 未知系统内部错误 (自动敏感信息脱敏)
+//! ```json
+//! {
+//!   "code": 500,
+//!   "message": "An unexpected internal server error occurred",
+//!   "details": null
+//! }
+//! ```
 
 use axum::{
+    Json,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use loco_rs::Error as LocoError;
 use sea_orm::DbErr;
@@ -17,25 +49,29 @@ use crate::dtos::common::ApiError;
 /// 全局统一应用异常枚举
 #[derive(Debug, Error)]
 pub enum AppError {
-    /// 资源未找到 (404 Not Found)
+    /// 资源未找到 (默认错误码 404)
     #[error("Resource not found: {0}")]
     NotFound(String),
 
-    /// 请求参数不合法或无法处理 (400 Bad Request)
+    /// 请求参数不合法或无法处理 (默认错误码 400)
     #[error("Bad request: {0}")]
     BadRequest(String),
 
-    /// 身份未认证 / Token 无效或过期 (401 Unauthorized)
+    /// 身份未认证 / Token 无效或过期 (默认错误码 401)
     #[error("Unauthorized: {0}")]
     Unauthorized(String),
 
-    /// 权限不足被拒绝访问 (403 Forbidden)
+    /// 权限不足被拒绝访问 (默认错误码 403)
     #[error("Forbidden: {0}")]
     Forbidden(String),
 
-    /// 数据校验错误 (422 Unprocessable Entity)
+    /// 数据校验错误 (默认错误码 422)
     #[error("Validation error: {0}")]
     Validation(String, Option<serde_json::Value>),
+
+    /// 业务/自定义特定数字错误码的异常 (如 400001, 10001 等)
+    #[error("Custom error ({0}): {1}")]
+    Custom(u32, String),
 
     /// 数据库操作失败 (500 Internal Server Error)
     #[error("Database error: {0}")]
@@ -46,11 +82,17 @@ pub enum AppError {
     Loco(#[from] LocoError),
 
     /// 通用未捕获系统内部错误 (500 Internal Server Error)
-    #[error("Internal server error: {0}")]
-    Internal(String),
+    /// 自动从 eyre::Report 转换，保留完整的堆栈追踪 (Backtrace)
+    #[error(transparent)]
+    Internal(#[from] eyre::Report),
 }
 
 impl AppError {
+    /// 便捷构造函数：从任何消息描述创建 Internal 异常
+    pub fn internal<M: std::fmt::Display>(msg: M) -> Self {
+        Self::Internal(eyre::eyre!("{}", msg))
+    }
+
     /// 获取对应的 HTTP 状态码
     pub fn status_code(&self) -> StatusCode {
         match self {
@@ -59,8 +101,8 @@ impl AppError {
             Self::Unauthorized(_) => StatusCode::UNAUTHORIZED,
             Self::Forbidden(_) => StatusCode::FORBIDDEN,
             Self::Validation(_, _) => StatusCode::UNPROCESSABLE_ENTITY,
-            Self::Db(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Custom(code, _) => parse_custom_status_code(*code),
+            Self::Db(_) | Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Loco(err) => match err {
                 LocoError::NotFound => StatusCode::NOT_FOUND,
                 LocoError::Unauthorized(_) => StatusCode::UNAUTHORIZED,
@@ -71,37 +113,27 @@ impl AppError {
         }
     }
 
-    /// 获取标准错误码标识 (如 "not_found", "unauthorized", "internal_server_error")
-    pub fn error_code(&self) -> &'static str {
+    /// 获取标准错误码数字
+    /// 支持自定义数字错误码；若未指定则默认回退到 HTTP 状态码数字 (如 404, 400, 401, 403, 422, 500)
+    pub fn error_code(&self) -> u32 {
         match self {
-            Self::NotFound(_) => "not_found",
-            Self::BadRequest(_) => "bad_request",
-            Self::Unauthorized(_) => "unauthorized",
-            Self::Forbidden(_) => "forbidden",
-            Self::Validation(_, _) => "validation_error",
-            Self::Db(_) => "database_error",
-            Self::Internal(_) => "internal_server_error",
-            Self::Loco(err) => match err {
-                LocoError::NotFound => "not_found",
-                LocoError::Unauthorized(_) => "unauthorized",
-                LocoError::BadRequest(_) => "bad_request",
-                LocoError::Validation(..) => "validation_error",
-                _ => "internal_server_error",
-            },
+            Self::Custom(code, _) => *code,
+            _ => self.status_code().as_u16() as u32,
         }
     }
 
-    /// 提取详细错误描述消息
+    /// 提取详细错误描述消息 (内部未捕获错误自动脱敏，防止敏感数据泄露给客户端)
     pub fn message(&self) -> String {
         match self {
             Self::NotFound(msg)
             | Self::BadRequest(msg)
             | Self::Unauthorized(msg)
             | Self::Forbidden(msg)
-            | Self::Internal(msg) => msg.clone(),
-            Self::Validation(msg, _) => msg.clone(),
-            Self::Db(err) => format!("Database operation failed: {}", err),
+            | Self::Validation(msg, _)
+            | Self::Custom(_, msg) => msg.clone(),
+            Self::Db(err) => format!("Database operation failed: {err}"),
             Self::Loco(err) => err.to_string(),
+            Self::Internal(_) => "An unexpected internal server error occurred".to_string(),
         }
     }
 
@@ -114,20 +146,49 @@ impl AppError {
     }
 }
 
+/// 帮助解析自定义错误码对应的 HTTP 状态码
+fn parse_custom_status_code(code: u32) -> StatusCode {
+    u16::try_from(code)
+        .ok()
+        .and_then(|c| StatusCode::from_u16(c).ok())
+        .unwrap_or_else(|| {
+            if (100_000..=599_999).contains(&code) {
+                u16::try_from(code / 1000)
+                    .ok()
+                    .and_then(|s| StatusCode::from_u16(s).ok())
+                    .unwrap_or(StatusCode::BAD_REQUEST)
+            } else {
+                StatusCode::BAD_REQUEST
+            }
+        })
+}
+
 /// 实现 Axum `IntoResponse` Trait，将 AppError 统一渲染为标准 JSON [`ApiError`]
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let status = self.status_code();
+
+        // 如果是 500 内部系统错误，记录 Error 级别的 Tracing 日志 (包含 eyre 错误链与堆栈) 以便追溯诊断
+        if status.is_server_error() {
+            match &self {
+                Self::Internal(report) => {
+                    tracing::error!(
+                        target: "app",
+                        error_chain = ?report,
+                        "Internal server error occurred"
+                    );
+                }
+                err => {
+                    tracing::error!(target: "app", error = %err, "Internal server error occurred");
+                }
+            }
+        }
+
         let api_error = ApiError {
-            code: self.error_code().to_string(),
+            code: self.error_code(),
             message: self.message(),
             details: self.details(),
         };
-
-        // 如果是 500 内部系统错误，记录 Error 级别的 Tracing 日志以便追溯诊断
-        if status.is_server_error() {
-            tracing::error!(target: "app", error = %self, "Internal server error occurred");
-        }
 
         (status, Json(api_error)).into_response()
     }
@@ -144,23 +205,45 @@ mod tests {
     fn test_error_status_codes_and_codes() {
         let err = AppError::NotFound("item missing".to_string());
         assert_eq!(err.status_code(), StatusCode::NOT_FOUND);
-        assert_eq!(err.error_code(), "not_found");
+        assert_eq!(err.error_code(), 404);
         assert_eq!(err.message(), "item missing");
 
         let err = AppError::BadRequest("invalid query".to_string());
         assert_eq!(err.status_code(), StatusCode::BAD_REQUEST);
-        assert_eq!(err.error_code(), "bad_request");
+        assert_eq!(err.error_code(), 400);
 
         let err = AppError::Unauthorized("expired token".to_string());
         assert_eq!(err.status_code(), StatusCode::UNAUTHORIZED);
-        assert_eq!(err.error_code(), "unauthorized");
+        assert_eq!(err.error_code(), 401);
 
         let err = AppError::Forbidden("access denied".to_string());
         assert_eq!(err.status_code(), StatusCode::FORBIDDEN);
-        assert_eq!(err.error_code(), "forbidden");
+        assert_eq!(err.error_code(), 403);
 
-        let err = AppError::Internal("db crash".to_string());
+        let err = AppError::Custom(400001, "insufficient balance".to_string());
+        assert_eq!(err.status_code(), StatusCode::BAD_REQUEST);
+        assert_eq!(err.error_code(), 400001);
+        assert_eq!(err.message(), "insufficient balance");
+
+        let err = AppError::internal("db crash");
         assert_eq!(err.status_code(), StatusCode::INTERNAL_SERVER_ERROR);
-        assert_eq!(err.error_code(), "internal_server_error");
+        assert_eq!(err.error_code(), 500);
+        assert_eq!(err.message(), "An unexpected internal server error occurred");
+    }
+
+    #[test]
+    fn test_custom_status_code_parsing() {
+        // 直接使用 HTTP 状态码作为错误码
+        assert_eq!(parse_custom_status_code(404), StatusCode::NOT_FOUND);
+        assert_eq!(parse_custom_status_code(400), StatusCode::BAD_REQUEST);
+
+        // 6 位自定义错误码，从前 3 位推导 HTTP 状态码
+        assert_eq!(parse_custom_status_code(404001), StatusCode::NOT_FOUND);
+        assert_eq!(parse_custom_status_code(401002), StatusCode::UNAUTHORIZED);
+        assert_eq!(parse_custom_status_code(422005), StatusCode::UNPROCESSABLE_ENTITY);
+
+        // 无效错误码默认回退为 400 BAD_REQUEST
+        assert_eq!(parse_custom_status_code(999999), StatusCode::BAD_REQUEST);
+        assert_eq!(parse_custom_status_code(99), StatusCode::BAD_REQUEST);
     }
 }
