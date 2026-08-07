@@ -1,6 +1,7 @@
 use loco_rs::prelude::*;
 
 use crate::{
+    common::consts::openapi::TAG_POSTS,
     dtos::{
         common::{AdminUser, ApiError, ApiResponse, PaginatedData, PaginationQuery, ValidJson, format_res},
         posts::{CreatePost, PostDto, UpdatePost},
@@ -21,7 +22,7 @@ use crate::{
     security(
         ("bearer_auth" = [])
     ),
-    tag = "posts"
+    tag = TAG_POSTS
 )]
 #[debug_handler]
 pub async fn list(
@@ -43,13 +44,13 @@ pub async fn list(
         ("id" = i64, Path, description = "文章 ID")
     ),
     responses(
-        (status = 200, description = "获取成功", body = PostDto),
+        (status = 200, description = "获取成功", body = ApiResponse<PostDto>),
         (status = 404, description = "文章不存在", body = ApiError)
     ),
     security(
         ("bearer_auth" = [])
     ),
-    tag = "posts"
+    tag = TAG_POSTS
 )]
 #[debug_handler]
 pub async fn get_one(_auth: auth::JWT, State(ctx): State<AppContext>, Path(id): Path<i64>) -> Result<Response> {
@@ -67,12 +68,12 @@ pub async fn get_one(_auth: auth::JWT, State(ctx): State<AppContext>, Path(id): 
     description = "提交标题与内容创建新文章",
     request_body = CreatePost,
     responses(
-        (status = 201, description = "创建成功", body = PostDto)
+        (status = 201, description = "创建成功", body = ApiResponse<PostDto>)
     ),
     security(
         ("bearer_auth" = [])
     ),
-    tag = "posts"
+    tag = TAG_POSTS
 )]
 #[debug_handler]
 pub async fn create(
@@ -95,13 +96,13 @@ pub async fn create(
     ),
     request_body = UpdatePost,
     responses(
-        (status = 200, description = "更新成功", body = PostDto),
+        (status = 200, description = "更新成功", body = ApiResponse<PostDto>),
         (status = 404, description = "文章不存在", body = ApiError)
     ),
     security(
         ("bearer_auth" = [])
     ),
-    tag = "posts"
+    tag = TAG_POSTS
 )]
 #[debug_handler]
 pub async fn update(
@@ -127,13 +128,13 @@ pub async fn update(
         ("id" = i64, Path, description = "文章 ID")
     ),
     responses(
-        (status = 200, description = "删除成功"),
+        (status = 200, description = "删除成功", body = ApiError),
         (status = 404, description = "文章不存在", body = ApiError)
     ),
     security(
         ("bearer_auth" = [])
     ),
-    tag = "posts"
+    tag = TAG_POSTS
 )]
 #[debug_handler]
 pub async fn remove(_admin: AdminUser, State(ctx): State<AppContext>, Path(id): Path<i64>) -> Result<Response> {

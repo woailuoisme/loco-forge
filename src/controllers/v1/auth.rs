@@ -1,5 +1,6 @@
 use crate::{
-    dtos::common::format_res,
+    common::consts::openapi::TAG_AUTH,
+    dtos::common::{ApiError, ApiResponse, format_res},
     models::users::{LoginParams, RegisterParams},
     services::AuthService,
     views::auth::{CurrentResponse, LoginResponse},
@@ -41,9 +42,9 @@ pub struct ResendVerificationParams {
     description = "注册新用户并发送邮箱验证邮件",
     request_body = RegisterParams,
     responses(
-        (status = 200, description = "注册请求已受理")
+        (status = 200, description = "注册请求已受理", body = ApiError)
     ),
-    tag = "auth"
+    tag = TAG_AUTH
 )]
 #[debug_handler]
 pub async fn register(State(ctx): State<AppContext>, Json(params): Json<RegisterParams>) -> Result<Response> {
@@ -61,10 +62,10 @@ pub async fn register(State(ctx): State<AppContext>, Json(params): Json<Register
         ("token" = String, Path, description = "邮箱验证 Token")
     ),
     responses(
-        (status = 200, description = "邮箱验证成功"),
-        (status = 401, description = "验证 Token 无效或已过期")
+        (status = 200, description = "邮箱验证成功", body = ApiError),
+        (status = 401, description = "验证 Token 无效或已过期", body = ApiError)
     ),
-    tag = "auth"
+    tag = TAG_AUTH
 )]
 #[debug_handler]
 pub async fn verify(State(ctx): State<AppContext>, Path(token): Path<String>) -> Result<Response> {
@@ -82,9 +83,9 @@ pub async fn verify(State(ctx): State<AppContext>, Path(token): Path<String>) ->
     description = "提交邮箱请求发送密码重置邮件",
     request_body = ForgotParams,
     responses(
-        (status = 200, description = "重置密码邮件请求已受理")
+        (status = 200, description = "重置密码邮件请求已受理", body = ApiError)
     ),
-    tag = "auth"
+    tag = TAG_AUTH
 )]
 #[debug_handler]
 pub async fn forgot(State(ctx): State<AppContext>, Json(params): Json<ForgotParams>) -> Result<Response> {
@@ -100,9 +101,9 @@ pub async fn forgot(State(ctx): State<AppContext>, Json(params): Json<ForgotPara
     description = "提交重置 Token 与新密码完成修改",
     request_body = ResetParams,
     responses(
-        (status = 200, description = "密码重置成功")
+        (status = 200, description = "密码重置成功", body = ApiError)
     ),
-    tag = "auth"
+    tag = TAG_AUTH
 )]
 #[debug_handler]
 pub async fn reset(State(ctx): State<AppContext>, Json(params): Json<ResetParams>) -> Result<Response> {
@@ -118,10 +119,10 @@ pub async fn reset(State(ctx): State<AppContext>, Json(params): Json<ResetParams
     description = "校验邮箱密码并返回登录凭证 JWT",
     request_body = LoginParams,
     responses(
-        (status = 200, description = "登录成功", body = LoginResponse),
-        (status = 401, description = "邮箱或密码错误")
+        (status = 200, description = "登录成功", body = ApiResponse<LoginResponse>),
+        (status = 401, description = "邮箱或密码错误", body = ApiError)
     ),
-    tag = "auth"
+    tag = TAG_AUTH
 )]
 #[debug_handler]
 pub async fn login(State(ctx): State<AppContext>, Json(params): Json<LoginParams>) -> Result<Response> {
@@ -138,13 +139,13 @@ pub async fn login(State(ctx): State<AppContext>, Json(params): Json<LoginParams
     summary = "获取当前用户信息",
     description = "根据 JWT 获取当前登录用户的个人资料",
     responses(
-        (status = 200, description = "获取成功", body = CurrentResponse),
-        (status = 401, description = "未授权或 Token 无效")
+        (status = 200, description = "获取成功", body = ApiResponse<CurrentResponse>),
+        (status = 401, description = "未授权或 Token 无效", body = ApiError)
     ),
     security(
         ("bearer_auth" = [])
     ),
-    tag = "auth"
+    tag = TAG_AUTH
 )]
 #[debug_handler]
 pub async fn current(auth: auth::JWT, State(ctx): State<AppContext>) -> Result<Response> {
@@ -160,9 +161,9 @@ pub async fn current(auth: auth::JWT, State(ctx): State<AppContext>) -> Result<R
     description = "向指定邮箱发送免密登录魔术链接",
     request_body = MagicLinkParams,
     responses(
-        (status = 200, description = "魔术链接发送请求已受理")
+        (status = 200, description = "魔术链接发送请求已受理", body = ApiError)
     ),
-    tag = "auth"
+    tag = TAG_AUTH
 )]
 pub async fn magic_link(State(ctx): State<AppContext>, Json(params): Json<MagicLinkParams>) -> Result<Response> {
     if !AuthService::magic_link(&ctx, &params.email).await? {
@@ -181,10 +182,10 @@ pub async fn magic_link(State(ctx): State<AppContext>, Json(params): Json<MagicL
         ("token" = String, Path, description = "魔术链接 Token")
     ),
     responses(
-        (status = 200, description = "验证登录成功", body = LoginResponse),
-        (status = 401, description = "魔术链接无效或已过期")
+        (status = 200, description = "验证登录成功", body = ApiResponse<LoginResponse>),
+        (status = 401, description = "魔术链接无效或已过期", body = ApiError)
     ),
-    tag = "auth"
+    tag = TAG_AUTH
 )]
 pub async fn magic_link_verify(Path(token): Path<String>, State(ctx): State<AppContext>) -> Result<Response> {
     let Some(res) = AuthService::magic_link_verify(&ctx, &token).await? else {
@@ -201,9 +202,9 @@ pub async fn magic_link_verify(Path(token): Path<String>, State(ctx): State<AppC
     description = "重新向未验证的用户发送验证邮件",
     request_body = ResendVerificationParams,
     responses(
-        (status = 200, description = "重发验证邮件成功")
+        (status = 200, description = "重发验证邮件成功", body = ApiError)
     ),
-    tag = "auth"
+    tag = TAG_AUTH
 )]
 #[debug_handler]
 pub async fn resend_verification_email(

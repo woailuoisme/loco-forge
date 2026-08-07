@@ -29,7 +29,7 @@ pub struct HomeResponse {
     summary = "获取根路由信息",
     description = "返回应用基本信息、运行状态及交互式 API 文档入口",
     responses(
-        (status = 200, description = "获取成功", body = HomeResponse)
+        (status = 200, description = "获取成功", body = crate::dtos::common::ApiResponse<HomeResponse>)
     ),
     tag = "home"
 )]
@@ -46,6 +46,13 @@ pub async fn index() -> Result<Response> {
     })
 }
 
+#[debug_handler]
+pub async fn favicon() -> axum::http::StatusCode {
+    axum::http::StatusCode::NO_CONTENT
+}
+
 pub fn routes() -> Routes {
-    Routes::new().add("/", get(index))
+    Routes::new()
+        .add("/", get(index))
+        .add("/favicon.ico", get(favicon))
 }

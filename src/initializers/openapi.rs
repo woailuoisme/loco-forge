@@ -10,14 +10,14 @@ use utoipa::{
 };
 use utoipa_scalar::{Scalar, Servable as ScalarServable};
 
-use crate::{controllers, dtos, models, views};
+use crate::{
+    common::consts::openapi::{TAG_AUTH, TAG_FILES, TAG_POSTS},
+    controllers, dtos, models, views,
+};
 
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        controllers::home::index,
-        controllers::health::liveness,
-        controllers::health::readiness,
         controllers::v1::auth::register,
         controllers::v1::auth::verify,
         controllers::v1::auth::login,
@@ -37,9 +37,6 @@ use crate::{controllers, dtos, models, views};
     ),
     components(
         schemas(
-            controllers::home::HomeResponse,
-            controllers::home::DocsLocation,
-            controllers::health::ReadinessData,
             controllers::v1::files::FileUploadResponse,
             dtos::common::ApiError,
             dtos::common::Page<dtos::posts::PostDto>,
@@ -59,11 +56,9 @@ use crate::{controllers, dtos, models, views};
     ),
     modifiers(&SecurityAddon),
     tags(
-        (name = "home", description = "应用系统入口接口"),
-        (name = "health", description = "服务存活与就绪健康探针接口"),
-        (name = "files", description = "文件上传与静态资源下载服务接口"),
-        (name = "auth", description = "用户认证与账号管理接口"),
-        (name = "posts", description = "文章管理与增删改查接口")
+        (name = TAG_AUTH, description = "用户认证与账号管理接口"),
+        (name = TAG_POSTS, description = "文章管理与增删改查接口"),
+        (name = TAG_FILES, description = "文件上传与静态资源下载服务接口"),
     ),
     info(
         title = "Loco RESTful API 文档",
@@ -110,7 +105,26 @@ impl Initializer for OpenApiInitializer {
                     move || async move { Json(openapi_json) }
                 }),
             )
-            .merge(Scalar::with_url("/docs", openapi));
+            .merge(Scalar::with_url("/docs", openapi).custom_html(
+                r#"<!doctype html>
+<html>
+<head>
+    <title>Loco RESTful API 文档</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+</head>
+<body>
+
+<script
+        id="api-reference"
+        data-configuration='{"hideModels": true}'
+        type="application/json">
+    $spec
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+</body>
+</html>"#,
+            ));
 
         Ok(router)
     }

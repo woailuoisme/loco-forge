@@ -8,7 +8,10 @@ use serde::Serialize;
 use std::path::Path as StdPath;
 use uuid::Uuid;
 
-use crate::dtos::common::{ApiResponse, format_res};
+use crate::{
+    common::consts::openapi::TAG_FILES,
+    dtos::common::{ApiResponse, format_res},
+};
 
 /// 文件上传响应 Payload
 #[derive(Debug, Serialize, utoipa::ToSchema)]
@@ -37,7 +40,7 @@ pub struct FileUploadResponse {
     security(
         ("bearer_auth" = [])
     ),
-    tag = "files"
+    tag = TAG_FILES
 )]
 #[debug_handler]
 pub async fn upload(_auth: auth::JWT, State(ctx): State<AppContext>, mut multipart: Multipart) -> Result<Response> {
@@ -98,7 +101,7 @@ pub async fn upload(_auth: auth::JWT, State(ctx): State<AppContext>, mut multipa
         (status = 200, description = "获取成功"),
         (status = 404, description = "文件不存在")
     ),
-    tag = "files"
+    tag = TAG_FILES
 )]
 #[debug_handler]
 pub async fn get_file(State(ctx): State<AppContext>, Path(key): Path<String>) -> Result<Response> {

@@ -27,3 +27,13 @@ pub mod pagination {
     /// 单页允许查询的最大记录条数
     pub const MAX_PAGE_SIZE: u64 = 100;
 }
+
+/// OpenAPI 与 Scalar 交互式文档 Tag 标签常量
+pub mod openapi {
+    /// 用户认证与账号管理接口 Tag ("用户认证")
+    pub const TAG_AUTH: &str = "用户认证";
+    /// 文章管理接口 Tag ("文章管理")
+    pub const TAG_POSTS: &str = "文章管理";
+    /// 文件存储与下载服务接口 Tag ("文件存储")
+    pub const TAG_FILES: &str = "文件存储";
+}

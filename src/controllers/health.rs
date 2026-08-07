@@ -15,7 +15,7 @@ pub struct ReadinessData {
     summary = "Liveness 存活探针",
     description = "用于 Kubernetes livenessProbe 检查服务进程是否处于存活状态",
     responses(
-        (status = 200, description = "服务存活")
+        (status = 200, description = "服务存活", body = crate::dtos::common::ApiError)
     ),
     tag = "health"
 )]
@@ -31,8 +31,8 @@ pub async fn liveness() -> Result<Response> {
     summary = "Readiness 就绪探针",
     description = "用于 Kubernetes readinessProbe 检查数据库等下游依赖是否就绪",
     responses(
-        (status = 200, description = "服务已就绪", body = ReadinessData),
-        (status = 503, description = "服务不可用")
+        (status = 200, description = "服务已就绪", body = crate::dtos::common::ApiResponse<ReadinessData>),
+        (status = 503, description = "服务不可用", body = crate::dtos::common::ApiError)
     ),
     tag = "health"
 )]
