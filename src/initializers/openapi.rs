@@ -8,8 +8,8 @@ use utoipa::{
     Modify, OpenApi,
     openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme},
 };
-use utoipa_scalar::{Scalar, Servable as ScalarServable};
 use utoipa_redoc::{Redoc, Servable as RedocServable};
+use utoipa_scalar::{Scalar, Servable as ScalarServable};
 
 use crate::{
     common::consts::openapi::{TAG_AUTH, TAG_FILES, TAG_POSTS},
