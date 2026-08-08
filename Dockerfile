@@ -1,5 +1,8 @@
 # ── 阶段 1：安装 cargo-chef ────────────────────────────────────────────────────
-FROM rust:1.97.1-slim AS chef
+FROM --platform=$BUILDPLATFORM rust:1.97.1-slim AS chef
+ENV CARGO_INCREMENTAL=0 \
+    CARGO_NET_GIT_FETCH_WITH_CLI=false \
+    CARGO_TERM_COLOR=never
 RUN cargo install cargo-chef --locked
 WORKDIR /src
 
@@ -15,7 +18,7 @@ COPY --from=planner /src/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 
 COPY . .
-RUN cargo build --release --bin lococ
+RUN cargo build --release --bin locos
 
 # ── 阶段 4：最小化 runtime 镜像 ───────────────────────────────────────────────
 FROM debian:trixie-slim AS runtime
@@ -24,8 +27,8 @@ RUN groupadd -g 10001 app && useradd -u 10001 -g 10001 --no-create-home --shell 
 
 WORKDIR /app
 
-COPY --from=builder /src/target/release/lococ lococ
+COPY --from=builder /src/target/release/locos locos
 
 USER 10001:10001
 
-ENTRYPOINT ["/app/lococ"]
+ENTRYPOINT ["/app/locos"]

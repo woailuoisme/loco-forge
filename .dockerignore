@@ -46,6 +46,7 @@ AGENTS.md
 CLAUDE.md
 GEMINI.md
 Dockerfile
+Dockerfile.alpine
 docker-compose.yml
 
 # ── Local Databases, Logs & Temporary Files ──────────────────────────────────

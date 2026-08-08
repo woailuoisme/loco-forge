@@ -8,15 +8,45 @@ on:
   #   tags:
   #     - 'v*'
   workflow_dispatch:
+    inputs:
+      variants:
+        description: "选择要构建的镜像变体"
+        required: true
+        type: choice
+        default: trixie
+        options:
+          - trixie
+          - alpine
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-push:
-    name: Build & Push Docker Image
+  # ── 根据手动输入计算要构建的矩阵 ──────────────────────────────────────────
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Set build matrix
+        id: set-matrix
+        run: |
+          INPUT="${{ github.event.inputs.variants }}"
+          if [ "$INPUT" = "alpine" ]; then
+            echo 'matrix={"include":[{"variant":"alpine","dockerfile":"Dockerfile.alpine","platforms":"linux/amd64"}]}' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix={"include":[{"variant":"trixie","dockerfile":"Dockerfile","platforms":"linux/amd64"}]}' >> "$GITHUB_OUTPUT"
+          fi
+
+  # ── 矩阵并行构建 ───────────────────────────────────────────────────────────
+  build-and-push:
+    name: Build & Push (${{ matrix.variant }})
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
 
     permissions:
       contents: read
@@ -45,18 +75,23 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
-            type=sha,prefix=sha-
-            type=ref,event=tag
+            # 发行版固定 tag：:trixie 或 :alpine
+            type=raw,value=${{ matrix.variant }}
+            # latest 仅 trixie 变体在 main/master 分支时附加
+            type=raw,value=latest,enable=${{ matrix.variant == 'trixie' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') }}
+            # commit sha 带变体后缀：sha-abc1234-trixie
+            type=sha,prefix=sha-,suffix=-${{ matrix.variant }}
+            # Git tag（如 v1.0.0）带变体后缀：v1.0.0-trixie
+            type=ref,event=tag,suffix=-${{ matrix.variant }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile
-          platforms: linux/amd64
+          file: ./${{ matrix.dockerfile }}
+          platforms: ${{ matrix.platforms }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.variant }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.variant }}
