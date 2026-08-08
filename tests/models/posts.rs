@@ -1,31 +1,38 @@
 use loco_rs::testing::prelude::*;
-use locos::app::App;
+use locos::{app::App, models::posts};
+use sea_orm::{ActiveModelTrait, ActiveValue, EntityTrait};
 use serial_test::serial;
-
-macro_rules! configure_insta {
-    ($($expr:expr),*) => {
-        let mut settings = insta::Settings::clone_current();
-        settings.set_prepend_module_to_snapshot(false);
-        let _guard = settings.bind_to_scope();
-    };
-}
 
 #[tokio::test]
 #[serial]
 async fn test_model() {
-    configure_insta!();
-
     let boot = boot_test::<App>().await.unwrap();
-    seed::<App>(&boot.app_context).await.unwrap();
 
-    // query your model, e.g.:
-    //
-    // let item = models::posts::Model::find_by_pid(
-    //     &boot.app_context.db,
-    //     "11111111-1111-1111-1111-111111111111",
-    // )
-    // .await;
+    // 插入一条 Post 记录并断言持久化结果
+    let new_post = posts::ActiveModel {
+        title: ActiveValue::Set(Some("Loco 最佳实践".to_string())),
+        content: ActiveValue::Set(Some("通过生成器生成的测试文章".to_string())),
+        ..Default::default()
+    };
 
-    // snapshot the result:
-    // assert_debug_snapshot!(item);
+    let inserted = new_post
+        .insert(&boot.app_context.db)
+        .await
+        .expect("Failed to insert post");
+
+    assert!(inserted.id > 0, "Auto-increment id should be assigned");
+    assert_eq!(inserted.title.as_deref(), Some("Loco 最佳实践"));
+
+    // 按主键回查，校验持久化数据一致
+    let fetched = posts::Entity::find_by_id(inserted.id)
+        .one(&boot.app_context.db)
+        .await
+        .expect("Failed to fetch inserted post")
+        .expect("Inserted post should exist");
+
+    assert_eq!(fetched.title.as_deref(), Some("Loco 最佳实践"));
+    assert_eq!(
+        fetched.content.as_deref(),
+        Some("通过生成器生成的测试文章")
+    );
 }

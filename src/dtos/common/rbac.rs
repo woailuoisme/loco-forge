@@ -8,6 +8,25 @@ use loco_rs::prelude::*;
 
 use crate::{errors::AppError, models::users};
 
+/// 从请求中提取并校验 JWT，再从数据库加载对应用户 Model
+///
+/// 为 [`AdminUser`] 与 [`AuthenticatedUser`] 两个提取器共用的公共逻辑：
+/// 1. 提取并校验客户端请求中的 JWT；
+/// 2. 从数据库查找用户 Model，失败统一返回 401 Unauthorized。
+async fn find_user_from_request<S>(parts: &mut Parts, state: &S) -> Result<users::Model, AppError>
+where
+    S: Send + Sync,
+    AppContext: FromRef<S>,
+{
+    let auth = auth::JWT::from_request_parts(parts, state)
+        .await
+        .map_err(|e| AppError::Custom(StatusCode::UNAUTHORIZED, e.to_string()))?;
+    let ctx = AppContext::from_ref(state);
+    users::Model::find_by_pid(&ctx.db, &auth.claims.pid)
+        .await
+        .map_err(|_| AppError::Custom(StatusCode::UNAUTHORIZED, "User not found".to_string()))
+}
+
 /// 管理员用户提取器 (Admin User Extractor)
 ///
 /// 提取逻辑：
@@ -25,13 +44,7 @@ where
     type Rejection = AppError;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let auth = auth::JWT::from_request_parts(parts, state)
-            .await
-            .map_err(|e| AppError::Custom(StatusCode::UNAUTHORIZED, e.to_string()))?;
-        let ctx = AppContext::from_ref(state);
-        let user = users::Model::find_by_pid(&ctx.db, &auth.claims.pid)
-            .await
-            .map_err(|_| AppError::Custom(StatusCode::UNAUTHORIZED, "User not found".to_string()))?;
+        let user = find_user_from_request(parts, state).await?;
 
         if !user.is_admin() {
             return Err(AppError::Custom(
@@ -56,14 +69,7 @@ where
     type Rejection = AppError;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let auth = auth::JWT::from_request_parts(parts, state)
-            .await
-            .map_err(|e| AppError::Custom(StatusCode::UNAUTHORIZED, e.to_string()))?;
-        let ctx = AppContext::from_ref(state);
-        let user = users::Model::find_by_pid(&ctx.db, &auth.claims.pid)
-            .await
-            .map_err(|_| AppError::Custom(StatusCode::UNAUTHORIZED, "User not found".to_string()))?;
-
+        let user = find_user_from_request(parts, state).await?;
         Ok(AuthenticatedUser(user))
     }
 }

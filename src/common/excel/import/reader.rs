@@ -89,7 +89,9 @@ pub fn resolve_target_sheets(
         Some(target) => {
             let matched: Vec<String> = all_sheet_names
                 .iter()
-                .filter(|&name| name == target || name.starts_with(&format!("{target}_")))
+                .filter(|&name| {
+                    name == target || name.strip_prefix(target).is_some_and(|rest| rest.starts_with('_'))
+                })
                 .cloned()
                 .collect();
             if matched.is_empty() {
@@ -114,4 +116,21 @@ pub fn format_cell_value(cell: &Data) -> String {
         Data::DurationIso(d) => d.clone(),
         Data::Error(e) => format!("ERROR: {e:?}"),
     }
+}
+
+/// 构建「表头名 → 列索引」映射（自动跳过空白表头单元格）
+pub fn build_headers_map(header_row: &[Data]) -> HashMap<String, usize> {
+    header_row
+        .iter()
+        .enumerate()
+        .filter_map(|(col_idx, cell)| {
+            let header_name = format_cell_value(cell).trim().to_string();
+            (!header_name.is_empty()).then_some((header_name, col_idx))
+        })
+        .collect()
+}
+
+/// 判断整行是否全部为空单元格（空行应直接跳过）
+pub fn is_empty_row(row_cells: &[Data]) -> bool {
+    row_cells.iter().all(|cell| matches!(cell, Data::Empty))
 }

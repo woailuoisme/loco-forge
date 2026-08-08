@@ -49,26 +49,12 @@ impl Default for ExportStyles {
     }
 }
 
-/// 辅助函数：创建并初始化新的 Worksheet（常数级低内存模式）
-pub fn init_worksheet<'a>(
-    wb: &'a mut Workbook,
-    idx: usize,
-    base_sheet_name: &str,
+/// 辅助函数：将表头数组写入 Worksheet 首行
+pub fn write_header_row(
+    worksheet: &mut Worksheet,
     headings: &[&'static str],
     header_format: &Format,
-    column_widths: Option<&[f64]>,
-) -> Result<&'a mut Worksheet, Error> {
-    let worksheet = wb.add_worksheet_with_constant_memory();
-
-    let name = if idx == 1 {
-        base_sheet_name.to_string()
-    } else {
-        format!("{base_sheet_name}_{idx}")
-    };
-
-    let _ = worksheet.set_name(&name);
-
-    // 写入表头 (Header Row)
+) -> Result<(), Error> {
     for (col_idx, heading) in headings.iter().enumerate() {
         worksheet
             .write_string_with_format(0, col_idx as u16, *heading, header_format)
@@ -77,6 +63,32 @@ pub fn init_worksheet<'a>(
                 Error::InternalServerError
             })?;
     }
+    Ok(())
+}
+
+/// 辅助函数：创建并初始化新的 Worksheet（常数级低内存模式）
+///
+/// `sheet_no` 为 1 基工作表序号：1 使用基础名，大于 1 时自动追加 `_N` 后缀命名。
+pub fn init_worksheet<'a>(
+    wb: &'a mut Workbook,
+    sheet_no: usize,
+    base_sheet_name: &str,
+    headings: &[&'static str],
+    header_format: &Format,
+    column_widths: Option<&[f64]>,
+) -> Result<&'a mut Worksheet, Error> {
+    let worksheet = wb.add_worksheet_with_constant_memory();
+
+    let name = if sheet_no == 1 {
+        base_sheet_name.to_string()
+    } else {
+        format!("{base_sheet_name}_{sheet_no}")
+    };
+
+    let _ = worksheet.set_name(&name);
+
+    // 写入表头 (Header Row)
+    write_header_row(worksheet, headings, header_format)?;
 
     // 配置自定义列宽
     if let Some(widths) = column_widths {

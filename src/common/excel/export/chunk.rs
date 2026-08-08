@@ -9,7 +9,7 @@ use super::{ExcelExport, ExportOptions, engine};
 ///
 /// # 特性
 /// 1. **游标分批 Fetch**：传入 `fetch_chunk(page, page_size)` 闭包，避免全量数据驻留内存。
-/// 2. **Zip 大文件模式**：开启 `worksheet.use_zip_large_file(true)`，数据流式落盘，内存占用维持在 几 MB 级别。
+/// 2. **低内存流式模式**：使用 `worksheet.add_worksheet_with_constant_memory()` 常数级内存写入，数据流式落盘，内存占用维持在几 MB 级别。
 /// 3. **自动分 Sheet 规避 104 万行上限**：当数据行数达到 `max_rows_per_sheet`（默认 100 万），自动平滑无缝创建 `Sheet2`, `Sheet3`...
 ///
 /// # 返回

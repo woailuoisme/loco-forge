@@ -83,6 +83,7 @@ fn test_meilisearch_config_prefix() {
 
 #[tokio::test]
 #[serial_test::serial]
+#[ignore = "requires a running Meilisearch instance"]
 async fn test_scout_builder_query_chaining() {
     request::<App, _, _>(|_request, ctx| async move {
         let builder = ScoutBuilder::new(&ctx, "articles")

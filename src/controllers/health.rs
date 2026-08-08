@@ -1,3 +1,4 @@
+use crate::common::consts::openapi::TAG_HEALTH;
 use loco_rs::prelude::*;
 use serde::Serialize;
 use utoipa::ToSchema;
@@ -15,9 +16,9 @@ pub struct ReadinessData {
     summary = "Liveness 存活探针",
     description = "用于 Kubernetes livenessProbe 检查服务进程是否处于存活状态",
     responses(
-        (status = 200, description = "服务存活", body = crate::dtos::common::ApiError)
+        (status = 200, description = "服务存活", body = crate::dtos::common::ApiResponse<serde_json::Value>)
     ),
-    tag = "health"
+    tag = TAG_HEALTH
 )]
 #[debug_handler]
 pub async fn liveness() -> Result<Response> {
@@ -34,7 +35,7 @@ pub async fn liveness() -> Result<Response> {
         (status = 200, description = "服务已就绪", body = crate::dtos::common::ApiResponse<ReadinessData>),
         (status = 503, description = "服务不可用", body = crate::dtos::common::ApiError)
     ),
-    tag = "health"
+    tag = TAG_HEALTH
 )]
 #[debug_handler]
 pub async fn readiness(State(ctx): State<AppContext>) -> Result<Response> {

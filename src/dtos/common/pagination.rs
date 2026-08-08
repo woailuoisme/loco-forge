@@ -2,13 +2,10 @@
 //!
 //! 提供标准分页元数据 [`PageMeta`]、分页响应容器 [`PaginatedData`] 与标准分页查询提取器 [`PaginationQuery`]。
 
+use crate::common::consts::pagination::{DEFAULT_PAGE, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 use utoipa::ToSchema;
-
-const DEFAULT_PAGE: u64 = 1;
-const DEFAULT_PER_PAGE: u64 = 20;
-const MAX_PER_PAGE: u64 = 100;
 
 /// 通用分页查询提取参数 (Pagination Query Params)
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, utoipa::IntoParams, utoipa::ToSchema)]
@@ -32,7 +29,7 @@ impl PaginationQuery {
 
     /// 获取合法化的每页数量 (1..=100)
     pub fn per_page(&self) -> u64 {
-        self.per_page.unwrap_or(DEFAULT_PER_PAGE).clamp(1, MAX_PER_PAGE)
+        self.per_page.unwrap_or(DEFAULT_PAGE_SIZE).clamp(1, MAX_PAGE_SIZE)
     }
 
     /// 获取 SQL 数据库查询 offset 偏移量
@@ -45,7 +42,7 @@ impl Default for PaginationQuery {
     fn default() -> Self {
         Self {
             page: Some(DEFAULT_PAGE),
-            per_page: Some(DEFAULT_PER_PAGE),
+            per_page: Some(DEFAULT_PAGE_SIZE),
         }
     }
 }
@@ -106,7 +103,7 @@ mod tests {
 
         let q = PaginationQuery::new(Some(0), Some(500));
         assert_eq!(q.page(), 1);
-        assert_eq!(q.per_page(), 100); // capped at MAX_PER_PAGE
+        assert_eq!(q.per_page(), 100); // capped at MAX_PAGE_SIZE
 
         let q = PaginationQuery::new(Some(3), Some(15));
         assert_eq!(q.page(), 3);

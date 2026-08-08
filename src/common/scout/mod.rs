@@ -52,11 +52,16 @@ use loco_rs::prelude::*;
 pub struct Scout;
 
 impl Scout {
+    /// 从 AppContext 解析 Meilisearch 配置并创建引擎（配置缺失时返回统一错误）
+    fn engine_from_ctx(ctx: &AppContext) -> Result<MeilisearchEngine> {
+        let config = MeilisearchConfig::from_ctx(ctx)
+            .ok_or_else(|| Error::string("Meilisearch config is not set"))?;
+        MeilisearchEngine::new(config)
+    }
+
     /// 同步/异步更新单个模型记录至 Meilisearch 索引
     pub async fn searchable<T: Searchable + ?Sized>(ctx: &AppContext, model: &T) -> Result<()> {
-        let config = MeilisearchConfig::from_ctx(ctx).ok_or_else(|| Error::string("Meilisearch config is not set"))?;
-
-        let engine = MeilisearchEngine::new(config)?;
+        let engine = Self::engine_from_ctx(ctx)?;
         let docs = vec![model.to_searchable_value()?];
         engine.update(model.searchable_as(), &docs).await?;
         Ok(())
@@ -68,9 +73,7 @@ impl Scout {
             return Ok(());
         }
 
-        let config = MeilisearchConfig::from_ctx(ctx).ok_or_else(|| Error::string("Meilisearch config is not set"))?;
-
-        let engine = MeilisearchEngine::new(config)?;
+        let engine = Self::engine_from_ctx(ctx)?;
         let index_name = models[0].searchable_as();
         let mut docs = Vec::with_capacity(models.len());
         for m in models {
@@ -83,9 +86,7 @@ impl Scout {
 
     /// 从 Meilisearch 索引中删除单个模型记录
     pub async fn unsearchable<T: Searchable + ?Sized>(ctx: &AppContext, model: &T) -> Result<()> {
-        let config = MeilisearchConfig::from_ctx(ctx).ok_or_else(|| Error::string("Meilisearch config is not set"))?;
-
-        let engine = MeilisearchEngine::new(config)?;
+        let engine = Self::engine_from_ctx(ctx)?;
         let key = model.get_searchable_key();
         engine.delete(model.searchable_as(), &[&key]).await?;
         Ok(())

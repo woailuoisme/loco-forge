@@ -1,38 +1,14 @@
 use crate::{
     common::consts::openapi::TAG_AUTH,
-    dtos::common::{ApiError, ApiResponse, format_res},
+    dtos::{
+        auth::{ForgotParams, MagicLinkParams, ResetParams, ResendVerificationParams},
+        common::{ApiError, ApiResponse, format_res},
+    },
     models::users::{LoginParams, RegisterParams},
     services::AuthService,
     views::auth::{CurrentResponse, LoginResponse},
 };
 use loco_rs::prelude::*;
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Deserialize, Serialize, utoipa::ToSchema)]
-pub struct ForgotParams {
-    /// 注册邮箱
-    pub email: String,
-}
-
-#[derive(Debug, Deserialize, Serialize, utoipa::ToSchema)]
-pub struct ResetParams {
-    /// 重置密码 Token
-    pub token: String,
-    /// 新密码
-    pub password: String,
-}
-
-#[derive(Debug, Deserialize, Serialize, utoipa::ToSchema)]
-pub struct MagicLinkParams {
-    /// 注册邮箱
-    pub email: String,
-}
-
-#[derive(Debug, Deserialize, Serialize, utoipa::ToSchema)]
-pub struct ResendVerificationParams {
-    /// 注册邮箱
-    pub email: String,
-}
 
 /// 用户注册
 #[utoipa::path(
@@ -70,7 +46,7 @@ pub async fn register(State(ctx): State<AppContext>, Json(params): Json<Register
 #[debug_handler]
 pub async fn verify(State(ctx): State<AppContext>, Path(token): Path<String>) -> Result<Response> {
     if !AuthService::verify(&ctx, &token).await? {
-        return format_res::unauthorized("invalid token");
+        return format_res::unauthorized("Invalid token");
     }
     format_res::empty_msg("邮箱验证成功")
 }
@@ -165,9 +141,10 @@ pub async fn current(auth: auth::JWT, State(ctx): State<AppContext>) -> Result<R
     ),
     tag = TAG_AUTH
 )]
+#[debug_handler]
 pub async fn magic_link(State(ctx): State<AppContext>, Json(params): Json<MagicLinkParams>) -> Result<Response> {
     if !AuthService::magic_link(&ctx, &params.email).await? {
-        return format_res::bad_request("invalid request");
+        return format_res::bad_request("Invalid request");
     }
     format_res::empty_msg("魔术链接已发送")
 }
@@ -187,9 +164,10 @@ pub async fn magic_link(State(ctx): State<AppContext>, Json(params): Json<MagicL
     ),
     tag = TAG_AUTH
 )]
+#[debug_handler]
 pub async fn magic_link_verify(Path(token): Path<String>, State(ctx): State<AppContext>) -> Result<Response> {
     let Some(res) = AuthService::magic_link_verify(&ctx, &token).await? else {
-        return format_res::unauthorized("unauthorized!");
+        return format_res::unauthorized("Unauthorized");
     };
     format_res::ok(res)
 }

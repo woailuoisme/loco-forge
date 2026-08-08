@@ -11,7 +11,7 @@ use utoipa::{
 use utoipa_scalar::{Scalar, Servable as ScalarServable};
 
 use crate::{
-    common::consts::openapi::{TAG_AUTH, TAG_FILES, TAG_POSTS},
+    common::consts::openapi::{TAG_AUTH, TAG_FILES, TAG_HEALTH, TAG_HOME, TAG_POSTS},
     controllers, dtos, models, views,
 };
 
@@ -44,10 +44,10 @@ use crate::{
             dtos::posts::PostDto,
             dtos::posts::CreatePost,
             dtos::posts::UpdatePost,
-            controllers::v1::auth::ForgotParams,
-            controllers::v1::auth::ResetParams,
-            controllers::v1::auth::MagicLinkParams,
-            controllers::v1::auth::ResendVerificationParams,
+            dtos::auth::ForgotParams,
+            dtos::auth::ResetParams,
+            dtos::auth::MagicLinkParams,
+            dtos::auth::ResendVerificationParams,
             models::users::LoginParams,
             models::users::RegisterParams,
             views::auth::LoginResponse,
@@ -59,6 +59,8 @@ use crate::{
         (name = TAG_AUTH, description = "用户认证与账号管理接口"),
         (name = TAG_POSTS, description = "文章管理与增删改查接口"),
         (name = TAG_FILES, description = "文件上传与静态资源下载服务接口"),
+        (name = TAG_HEALTH, description = "健康检查与存活探针接口"),
+        (name = TAG_HOME, description = "根路由信息与 API 导航接口"),
     ),
     info(
         title = "Loco RESTful API 文档",

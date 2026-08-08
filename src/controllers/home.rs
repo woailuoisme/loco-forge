@@ -1,3 +1,4 @@
+use crate::common::consts::openapi::TAG_HOME;
 use loco_rs::prelude::*;
 use serde::Serialize;
 use utoipa::ToSchema;
@@ -31,7 +32,7 @@ pub struct HomeResponse {
     responses(
         (status = 200, description = "获取成功", body = crate::dtos::common::ApiResponse<HomeResponse>)
     ),
-    tag = "home"
+    tag = TAG_HOME
 )]
 #[debug_handler]
 pub async fn index() -> Result<Response> {

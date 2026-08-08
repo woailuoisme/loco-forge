@@ -6,10 +6,10 @@ pub mod reader;
 pub use chunk::{ChunkImportSummary, import_in_chunks_from_reader};
 pub use reader::ExcelRow;
 
-use calamine::{Data, Reader, Xlsx};
+use crate::common::consts;
+use calamine::{Reader, Xlsx};
 use loco_rs::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::io::Cursor;
 
 /// 校验失败的单行错误明细（类似于 Laravel Excel `ValidationException` 结构）
@@ -64,8 +64,8 @@ pub struct ImportOptions {
 impl Default for ImportOptions {
     fn default() -> Self {
         Self {
-            chunk_size: 1000,
-            max_errors: 100,
+            chunk_size: consts::excel::DEFAULT_CHUNK_SIZE,
+            max_errors: consts::excel::MAX_IMPORT_ERRORS,
         }
     }
 }
@@ -97,18 +97,12 @@ pub fn import_from_bytes<T: ExcelImport>(bytes: &[u8]) -> Result<ImportResult<T>
             continue;
         };
 
-        let mut headers_map = HashMap::new();
-        for (col_idx, cell) in header_row.iter().enumerate() {
-            let header_name = reader::format_cell_value(cell).trim().to_string();
-            if !header_name.is_empty() {
-                headers_map.insert(header_name, col_idx);
-            }
-        }
+        let headers_map = reader::build_headers_map(header_row);
 
         for (row_idx, row_cells) in rows_iter.enumerate() {
             let line_number = row_idx + 2;
 
-            if row_cells.iter().all(|cell| matches!(cell, Data::Empty)) {
+            if reader::is_empty_row(row_cells) {
                 continue;
             }
 

@@ -1,4 +1,5 @@
 use crate::{
+    common::consts::auth::ALLOW_EMAIL_DOMAIN_PATTERN,
     mailers::auth::AuthMailer,
     models::{
         _entities::users,
@@ -13,7 +14,7 @@ use std::sync::OnceLock;
 pub static EMAIL_DOMAIN_RE: OnceLock<Regex> = OnceLock::new();
 
 fn get_allow_email_domain_re() -> &'static Regex {
-    EMAIL_DOMAIN_RE.get_or_init(|| Regex::new(r"@example\.com$|@gmail\.com$").expect("Failed to compile regex"))
+    EMAIL_DOMAIN_RE.get_or_init(|| Regex::new(ALLOW_EMAIL_DOMAIN_PATTERN).expect("Failed to compile regex"))
 }
 
 pub struct AuthService;
@@ -85,17 +86,17 @@ impl AuthService {
 
         let Ok(user) = users::Model::find_by_email(&ctx.db, &params.email).await else {
             tracing::debug!(email = params.email, "login attempt with non-existent email");
-            return Ok(Err("Invalid credentials!"));
+            return Ok(Err("Invalid credentials"));
         };
 
         if !user.verify_password(params.password.expose_secret()) {
-            return Ok(Err("unauthorized!"));
+            return Ok(Err("Unauthorized"));
         }
 
         let jwt_secret = ctx.config.get_jwt_config()?;
         let token = match user.generate_jwt(&jwt_secret.secret, jwt_secret.expiration) {
             Ok(t) => t,
-            Err(_) => return Ok(Err("unauthorized!")),
+            Err(_) => return Ok(Err("Unauthorized")),
         };
 
         Ok(Ok(LoginResponse::new(&user, &token)))

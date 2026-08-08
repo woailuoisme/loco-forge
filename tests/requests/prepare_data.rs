@@ -46,7 +46,7 @@ pub async fn init_admin_login(request: &TestServer, ctx: &AppContext) -> LoggedI
     use sea_orm::{ActiveModelTrait, IntoActiveModel};
     let logged = init_user_login(request, ctx).await;
     let mut active = logged.user.into_active_model();
-    active.role = sea_orm::ActiveValue::Set("admin".to_string());
+    active.role = sea_orm::ActiveValue::Set(locos::common::consts::auth::ROLE_ADMIN.to_string());
     let admin_user = active.update(&ctx.db).await.unwrap();
     LoggedInUser {
         user: admin_user,

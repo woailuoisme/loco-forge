@@ -6,6 +6,7 @@ pub mod engine;
 pub use chunk::export_chunked_to_file;
 pub use engine::ExportStyles;
 
+use crate::common::consts;
 use loco_rs::prelude::*;
 use rust_xlsxwriter::Workbook;
 
@@ -43,8 +44,8 @@ pub struct ExportOptions {
 impl Default for ExportOptions {
     fn default() -> Self {
         Self {
-            chunk_size: 1000,
-            max_rows_per_sheet: 1_000_000,
+            chunk_size: consts::excel::DEFAULT_CHUNK_SIZE,
+            max_rows_per_sheet: consts::excel::MAX_ROWS_PER_SHEET,
         }
     }
 }
@@ -59,14 +60,7 @@ pub fn export_to_bytes<T: ExcelExport>(items: &[T]) -> Result<Vec<u8>, Error> {
 
     // 1. 写入表头 (Header Row)
     let headings = T::headings();
-    for (col_idx, heading) in headings.iter().enumerate() {
-        worksheet
-            .write_string_with_format(0, col_idx as u16, *heading, &styles.header_format)
-            .map_err(|e| {
-                tracing::error!("写入 Excel 表头失败: {:?}", e);
-                Error::InternalServerError
-            })?;
-    }
+    engine::write_header_row(worksheet, &headings, &styles.header_format)?;
 
     // 2. 写入数据行 (Data Rows)
     for (row_offset, item) in items.iter().enumerate() {

@@ -6,7 +6,8 @@ db-tests = { max-threads = 1 }
 # 默认按 CPU 核心数全速并发运行普通/无状态单元测试
 test-threads = "num-cpus"
 
-# 针对触碰测试数据库与 IO 资源的集成测试，指派至 db-tests 单线程组
+# 仅将触碰数据库 / AppContext 的集成测试指派至 db-tests 单线程组，
+# 纯逻辑测试（excel / media / utils）保持默认并发以充分利用并行度
 [[profile.default.overrides]]
-filter = 'test(models::) or test(requests::) or test(tasks::) or test(common::)'
+filter = 'test(models::) or test(requests::) or test(tasks::) or test(workers::) or test(common::notification_test) or test(common::scout_test)'
 test-group = 'db-tests'

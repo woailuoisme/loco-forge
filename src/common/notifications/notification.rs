@@ -28,10 +28,64 @@ pub trait Notification: Send + Sync {
     }
 }
 
+/// 单渠道分发载荷（已解析的消息与收件人目标）
+enum ChannelDispatch {
+    Email {
+        message: MailMessage,
+        recipient: String,
+    },
+    Telegram {
+        message: TelegramMessage,
+        recipient: String,
+    },
+}
+
 /// 通知分发调度器 (NotificationManager)
 pub struct NotificationManager;
 
 impl NotificationManager {
+    /// 解析指定渠道的消息与收件人目标
+    ///
+    /// - 消息未实现或收件人缺失时返回 `None`（调用方跳过该渠道）。
+    /// - `warn_on_missing_email_route` 控制邮件路由缺失时是否输出告警日志
+    ///   （`send` 需要告警，`send_queued` 保持静默跳过，维持原有行为差异）。
+    fn resolve_dispatch<N, T>(
+        notifiable: &N,
+        notification: &T,
+        channel: &Channel,
+        warn_on_missing_email_route: bool,
+    ) -> Option<ChannelDispatch>
+    where
+        N: Notifiable + ?Sized,
+        T: Notification + ?Sized,
+    {
+        match channel {
+            Channel::Email => {
+                let message = notification.to_mail()?;
+                let recipient = match notifiable.route_notification_for_mail() {
+                    Some(recipient) => recipient,
+                    None => {
+                        if warn_on_missing_email_route {
+                            tracing::warn!("跳过 Email 通知发送: Notifiable 目标未路由邮箱地址");
+                        }
+                        return None;
+                    }
+                };
+                Some(ChannelDispatch::Email { message, recipient })
+            }
+            Channel::Telegram => {
+                let message = notification.to_telegram()?;
+                Some(ChannelDispatch::Telegram {
+                    message,
+                    recipient: notifiable
+                        .route_notification_for_telegram()
+                        .unwrap_or_default(),
+                })
+            }
+            Channel::Custom(_) => None,
+        }
+    }
+
     /// 立即同步/异步分发通知给指定的 Notifiable 目标
     ///
     /// 依次遍历 `notification.via()` 定义的所有渠道进行分发。
@@ -45,29 +99,21 @@ impl NotificationManager {
         N: Notifiable + ?Sized,
         T: Notification + ?Sized,
     {
-        let channels = notification.via();
-
-        for channel in channels {
-            match channel {
-                Channel::Email => {
-                    let Some(mail_msg) = notification.to_mail() else {
-                        continue;
-                    };
-                    let Some(email) = notifiable.route_notification_for_mail() else {
-                        tracing::warn!("跳过 Email 通知发送: Notifiable 目标未路由邮箱地址");
-                        continue;
-                    };
-                    EmailChannel::send(ctx, &email, &mail_msg).await?;
+        for channel in notification.via() {
+            if let Channel::Custom(name) = &channel {
+                tracing::info!("自定义通知渠道暂无扩展处理器: {}", name);
+                continue;
+            }
+            let Some(dispatch) = Self::resolve_dispatch(notifiable, notification, &channel, true)
+            else {
+                continue;
+            };
+            match dispatch {
+                ChannelDispatch::Email { message, recipient } => {
+                    EmailChannel::send(ctx, &recipient, &message).await?;
                 }
-                Channel::Telegram => {
-                    let Some(tg_msg) = notification.to_telegram() else {
-                        continue;
-                    };
-                    let target_chat = notifiable.route_notification_for_telegram().unwrap_or_default();
-                    TelegramChannel::send(ctx, &target_chat, &tg_msg).await?;
-                }
-                Channel::Custom(name) => {
-                    tracing::info!("自定义通知渠道暂无扩展处理器: {}", name);
+                ChannelDispatch::Telegram { message, recipient } => {
+                    TelegramChannel::send(ctx, &recipient, &message).await?;
                 }
             }
         }
@@ -86,42 +132,34 @@ impl NotificationManager {
         N: Notifiable + ?Sized,
         T: Notification + ?Sized,
     {
-        let channels = notification.via();
-
-        for channel in channels {
-            match channel {
-                Channel::Email => {
-                    let Some(mail_msg) = notification.to_mail() else {
-                        continue;
-                    };
-                    let Some(email) = notifiable.route_notification_for_mail() else {
-                        continue;
-                    };
-                    let job_args = crate::workers::notification::NotificationJobArgs {
-                        channel: Channel::Email,
-                        recipient: email,
-                        mail_message: Some(mail_msg),
-                        telegram_message: None,
-                    };
-                    crate::workers::notification::NotificationWorker::perform_later(ctx, job_args).await?;
-                }
-                Channel::Telegram => {
-                    let Some(tg_msg) = notification.to_telegram() else {
-                        continue;
-                    };
-                    let target_chat = notifiable.route_notification_for_telegram().unwrap_or_default();
-                    let job_args = crate::workers::notification::NotificationJobArgs {
-                        channel: Channel::Telegram,
-                        recipient: target_chat,
-                        mail_message: None,
-                        telegram_message: Some(tg_msg),
-                    };
-                    crate::workers::notification::NotificationWorker::perform_later(ctx, job_args).await?;
-                }
-                Channel::Custom(name) => {
-                    tracing::info!("自定义通知渠道暂无队列分发: {}", name);
-                }
+        for channel in notification.via() {
+            if let Channel::Custom(name) = &channel {
+                tracing::info!("自定义通知渠道暂无队列分发: {}", name);
+                continue;
             }
+            let Some(dispatch) = Self::resolve_dispatch(notifiable, notification, &channel, false)
+            else {
+                continue;
+            };
+            let job_args = match dispatch {
+                ChannelDispatch::Email { message, recipient } => {
+                    crate::workers::notification::NotificationJobArgs {
+                        channel: Channel::Email,
+                        recipient,
+                        mail_message: Some(message),
+                        telegram_message: None,
+                    }
+                }
+                ChannelDispatch::Telegram { message, recipient } => {
+                    crate::workers::notification::NotificationJobArgs {
+                        channel: Channel::Telegram,
+                        recipient,
+                        mail_message: None,
+                        telegram_message: Some(message),
+                    }
+                }
+            };
+            crate::workers::notification::NotificationWorker::perform_later(ctx, job_args).await?;
         }
 
         Ok(())

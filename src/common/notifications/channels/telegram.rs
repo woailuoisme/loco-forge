@@ -1,5 +1,6 @@
 //! # Telegram Bot 通知渠道实现 (Telegram Channel)
 
+use crate::common::consts;
 use crate::common::notifications::{config::TelegramConfig, messages::TelegramMessage};
 use loco_rs::prelude::*;
 use serde_json::json;
@@ -9,7 +10,7 @@ use std::time::Duration;
 // 共享的复用 HTTP 客户端 (支持 HTTP 连接池与 Keep-Alive 复用，避免频繁创建客户端造成 Socket 瓶颈)
 static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
     reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
+        .timeout(Duration::from_secs(consts::telegram::REQUEST_TIMEOUT_SECS))
         .build()
         .expect("Failed to initialize Telegram HTTP client")
 });

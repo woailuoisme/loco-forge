@@ -5,22 +5,12 @@ use rstest::rstest;
 use serial_test::serial;
 
 use super::prepare_data;
-
-// TODO: see how to dedup / extract this to app-local test utils
-// not to framework, because that would require a runtime dep on insta
-macro_rules! configure_insta {
-    ($($expr:expr),*) => {
-        let mut settings = insta::Settings::clone_current();
-        settings.set_prepend_module_to_snapshot(false);
-        settings.set_snapshot_suffix("auth_request");
-        let _guard = settings.bind_to_scope();
-    };
-}
+use crate::configure_insta;
 
 #[tokio::test]
 #[serial]
 async fn can_register() {
-    configure_insta!();
+    configure_insta!("auth_request");
 
     request::<App, _, _>(|request, ctx| async move {
         let email = "test@loco.com";
@@ -112,14 +102,14 @@ async fn can_login_with_verify(#[case] test_name: &str, #[case] password: &str) 
 
 #[tokio::test]
 #[serial]
-async fn login_with_un_existing_email() {
-    configure_insta!();
+async fn login_with_non_existing_email() {
+    configure_insta!("auth_request");
 
     request::<App, _, _>(|request, _ctx| async move {
         let login_response = request
             .post("/api/v1/auth/login")
             .json(&serde_json::json!({
-                "email": "un_existing@loco.rs",
+                "email": "non_existing@loco.rs",
                 "password":  "1234"
             }))
             .await;

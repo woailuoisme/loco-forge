@@ -118,7 +118,7 @@ use locos::common::excel::{ExportOptions, ImportOptions, export_chunked_to_file,
 #[test]
 fn test_excel_export_chunked_to_file_and_chunked_import() {
     let temp_dir = std::env::temp_dir();
-    let file_path = temp_dir.join("test_chunked_export.xlsx");
+    let file_path = temp_dir.join(format!("test_chunked_export_{}.xlsx", std::process::id()));
 
     let total_mock_items = 2500usize;
     let chunk_size = 1000usize;

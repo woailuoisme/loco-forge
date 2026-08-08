@@ -3,7 +3,13 @@ use image::{DynamicImage, GenericImageView, ImageFormat, Rgba, RgbaImage, imageo
 use qrcode::{EcLevel, QrCode, render::svg};
 use std::io::Cursor;
 
+use crate::common::consts;
 use crate::common::media::error::{MediaError, MediaResult};
+
+/// 将 RGBA 颜色转换为 CSS 十六进制字符串（如 `#FF8800`）
+fn rgba_to_hex(rgba: Rgba<u8>) -> String {
+    format!("#{:02X}{:02X}{:02X}", rgba[0], rgba[1], rgba[2])
+}
 
 /// 二维码 Logo 配置结构体
 #[derive(Debug, Clone)]
@@ -20,13 +26,13 @@ impl QrLogoConfig {
     pub fn new(logo_bytes: impl Into<Vec<u8>>) -> Self {
         Self {
             logo_bytes: logo_bytes.into(),
-            scale_ratio: 0.20,
-            border_padding: 4,
+            scale_ratio: consts::qrcode::LOGO_DEFAULT_SCALE,
+            border_padding: consts::qrcode::DEFAULT_BORDER_PADDING,
         }
     }
 
     pub fn with_scale_ratio(mut self, ratio: f32) -> Self {
-        self.scale_ratio = ratio.clamp(0.10, 0.35);
+        self.scale_ratio = ratio.clamp(consts::qrcode::LOGO_MIN_SCALE, consts::qrcode::LOGO_MAX_SCALE);
         self
     }
 
@@ -53,8 +59,8 @@ impl QrCodeBuilder {
     pub fn new(content: impl Into<String>) -> Self {
         Self {
             content: content.into(),
-            size: 256,
-            margin: 4,
+            size: consts::qrcode::DEFAULT_SIZE,
+            margin: consts::qrcode::DEFAULT_MARGIN,
             ec_level: EcLevel::M,
             fg_color: Rgba([0, 0, 0, 255]),
             bg_color: Rgba([255, 255, 255, 255]),
@@ -64,7 +70,7 @@ impl QrCodeBuilder {
 
     /// 设置图像导出像素目标尺寸 (默认 256px)
     pub fn size(mut self, size: u32) -> Self {
-        self.size = size.max(32);
+        self.size = size.max(consts::qrcode::MIN_SIZE);
         self
     }
 
@@ -195,14 +201,8 @@ impl QrCodeBuilder {
         }
 
         let code = QrCode::with_error_correction_level(self.content.as_bytes(), self.ec_level)?;
-        let fg_hex = format!(
-            "#{:02X}{:02X}{:02X}",
-            self.fg_color[0], self.fg_color[1], self.fg_color[2]
-        );
-        let bg_hex = format!(
-            "#{:02X}{:02X}{:02X}",
-            self.bg_color[0], self.bg_color[1], self.bg_color[2]
-        );
+        let fg_hex = rgba_to_hex(self.fg_color);
+        let bg_hex = rgba_to_hex(self.bg_color);
 
         let svg_str = code
             .render::<svg::Color>()

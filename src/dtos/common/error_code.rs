@@ -24,10 +24,7 @@ impl ErrorCode {
 
     /// 获取 HTTP 状态码（根据错误码前 3 位解析，若未匹配则默认 400 BAD_REQUEST）
     pub fn status_code(&self) -> StatusCode {
-        u16::try_from(self.code / 1000)
-            .ok()
-            .and_then(|s| StatusCode::from_u16(s).ok())
-            .unwrap_or(StatusCode::BAD_REQUEST)
+        status_from_code(self.code)
     }
 
     // =========================================================================
@@ -71,4 +68,12 @@ impl ErrorCode {
 
     // 503xxx 服务维护与不可用 (HTTP 503)
     pub const SERVICE_UNAVAILABLE: Self = Self::new(503000, "系统服务维护中，暂不可用");
+}
+
+/// 根据 6 位业务错误码解析 HTTP 状态码（取前 3 位，未匹配则默认 400 BAD_REQUEST）
+pub fn status_from_code(code: u32) -> StatusCode {
+    u16::try_from(code / 1000)
+        .ok()
+        .and_then(|s| StatusCode::from_u16(s).ok())
+        .unwrap_or(StatusCode::BAD_REQUEST)
 }

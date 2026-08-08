@@ -1,12 +1,6 @@
 {
   "version": 1,
   "skills": {
-    "m15-anti-pattern": {
-      "source": "zhanghandong/rust-skills",
-      "sourceType": "github",
-      "skillPath": "skills/m15-anti-pattern/SKILL.md",
-      "computedHash": "d9f5d80bd2ab49f063a61d90a96100298788ea0e1e5bd5e917be3c7e124078a2"
-    },
     "openapi-spec-generation": {
       "source": "wshobson/agents",
       "sourceType": "github",
@@ -18,6 +12,18 @@
       "sourceType": "github",
       "skillPath": "skills/rust-best-practices/SKILL.md",
       "computedHash": "0ac6606adb27e64a31bdc8c1ed34e446ae0c14bff1c7648867c46e106adc048f"
+    },
+    "rust-skills": {
+      "source": "leonardomso/rust-skills",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "9719e9ebd94783d3436ed26156bf9bf2e4c7f63b3220d9d17ff90cba55c92bb8"
+    },
+    "rust-testing": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "skillPath": "skills/rust-testing/SKILL.md",
+      "computedHash": "9a8f2bb0e7aa498b56af699e4673fd3ec1f50c5cfe9019c86dc80a93ccd08e66"
     }
   }
 }

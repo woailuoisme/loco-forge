@@ -1,7 +1,7 @@
 use loco_rs::prelude::*;
 
 use crate::{
-    common::consts::openapi::TAG_POSTS,
+    common::consts::{message::POST_NOT_FOUND, openapi::TAG_POSTS},
     dtos::{
         common::{AdminUser, ApiError, ApiResponse, PaginatedData, PaginationQuery, ValidJson, format_res},
         posts::{CreatePost, PostDto, UpdatePost},
@@ -55,7 +55,7 @@ pub async fn list(
 #[debug_handler]
 pub async fn get_one(_auth: auth::JWT, State(ctx): State<AppContext>, Path(id): Path<i64>) -> Result<Response> {
     let Some(dto) = PostService::get_one(&ctx, id).await? else {
-        return format_res::not_found("post not found");
+        return format_res::not_found(POST_NOT_FOUND);
     };
     format_res::ok(dto)
 }
@@ -112,7 +112,7 @@ pub async fn update(
     ValidJson(params): ValidJson<UpdatePost>,
 ) -> Result<Response> {
     let Some(dto) = PostService::update(&ctx, id, params).await? else {
-        return format_res::not_found("post not found");
+        return format_res::not_found(POST_NOT_FOUND);
     };
 
     format_res::ok(dto)
@@ -139,7 +139,7 @@ pub async fn update(
 #[debug_handler]
 pub async fn remove(_admin: AdminUser, State(ctx): State<AppContext>, Path(id): Path<i64>) -> Result<Response> {
     if !PostService::remove(&ctx, id).await? {
-        return format_res::not_found("post not found");
+        return format_res::not_found(POST_NOT_FOUND);
     }
 
     format_res::empty_msg("删除成功")

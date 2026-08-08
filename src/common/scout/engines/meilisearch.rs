@@ -51,6 +51,14 @@ impl MeilisearchEngine {
     }
 }
 
+/// 构造 Meilisearch 异步任务响应 JSON（task_uid + index_uid）
+fn task_response(task_uid: u32, index_uid: Option<String>) -> Value {
+    serde_json::json!({
+        "task_uid": task_uid,
+        "index_uid": index_uid,
+    })
+}
+
 #[async_trait]
 impl Engine for MeilisearchEngine {
     async fn update(&self, index_name: &str, docs: &[Value]) -> Result<Value> {
@@ -69,10 +77,7 @@ impl Engine for MeilisearchEngine {
             "Meilisearch 文档已提交索引任务"
         );
 
-        Ok(serde_json::json!({
-            "task_uid": task_info.task_uid,
-            "index_uid": task_info.index_uid,
-        }))
+        Ok(task_response(task_info.task_uid, task_info.index_uid))
     }
 
     async fn delete(&self, index_name: &str, ids: &[&str]) -> Result<Value> {
@@ -91,10 +96,7 @@ impl Engine for MeilisearchEngine {
             "Meilisearch 文档批量删除请求已提交"
         );
 
-        Ok(serde_json::json!({
-            "task_uid": task_info.task_uid,
-            "index_uid": task_info.index_uid,
-        }))
+        Ok(task_response(task_info.task_uid, task_info.index_uid))
     }
 
     async fn flush(&self, index_name: &str) -> Result<Value> {
@@ -112,10 +114,7 @@ impl Engine for MeilisearchEngine {
             "Meilisearch 索引清空请求已提交"
         );
 
-        Ok(serde_json::json!({
-            "task_uid": task_info.task_uid,
-            "index_uid": task_info.index_uid,
-        }))
+        Ok(task_response(task_info.task_uid, task_info.index_uid))
     }
 
     async fn search(&self, index_name: &str, query: &ScoutQuery) -> Result<SearchResult> {

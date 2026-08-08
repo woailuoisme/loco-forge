@@ -1,6 +1,7 @@
 use image::{DynamicImage, GenericImageView, ImageFormat, codecs::jpeg::JpegEncoder, imageops};
 use std::io::Cursor;
 
+use crate::common::consts;
 use crate::common::media::error::{MediaError, MediaResult};
 
 /// 图像缩放与裁剪模式 (Resize Mode)
@@ -75,10 +76,10 @@ impl ImageProcessor {
         }
         let image = image::load_from_memory(bytes)?;
         let (w, h) = image.dimensions();
-        const MAX_DIMENSION: u32 = 8000;
-        if w > MAX_DIMENSION || h > MAX_DIMENSION {
+        if w > consts::media::MAX_DIMENSION || h > consts::media::MAX_DIMENSION {
             return Err(MediaError::InvalidInput(format!(
-                "Image dimensions ({w}x{h}) exceed maximum allowed safety limit of {MAX_DIMENSION}x{MAX_DIMENSION}px"
+                "Image dimensions ({w}x{h}) exceed maximum allowed safety limit of {}x{}px",
+                consts::media::MAX_DIMENSION, consts::media::MAX_DIMENSION
             )));
         }
         Ok(Self {
@@ -230,8 +231,8 @@ impl ImageProcessor {
             return Ok(self);
         }
 
-        let max_wm_w = (base_w as f32 * 0.35) as u32;
-        let max_wm_h = (base_h as f32 * 0.35) as u32;
+        let max_wm_w = (base_w as f32 * consts::media::WATERMARK_MAX_RATIO) as u32;
+        let max_wm_h = (base_h as f32 * consts::media::WATERMARK_MAX_RATIO) as u32;
 
         let final_wm_dynamic = if wm_w > max_wm_w || wm_h > max_wm_h {
             watermark_dynamic.resize(max_wm_w.max(1), max_wm_h.max(1), imageops::FilterType::Lanczos3)
@@ -249,7 +250,7 @@ impl ImageProcessor {
             }
         }
 
-        let padding = 10u32;
+        let padding = consts::media::WATERMARK_PADDING;
         let center_x = (base_w.saturating_sub(cur_wm_w)) / 2;
         let center_y = (base_h.saturating_sub(cur_wm_h)) / 2;
         let right_x = base_w.saturating_sub(cur_wm_w).saturating_sub(padding);
@@ -300,7 +301,7 @@ impl ImageProcessor {
             }
             OutputFormat::Webp { quality } => {
                 let encoder = image::codecs::webp::WebPEncoder::new_lossless(&mut cursor);
-                if quality >= 90 {
+                if quality >= consts::media::WEBP_LOSSLESS_QUALITY {
                     self.image.write_with_encoder(encoder)?;
                 } else {
                     self.image.write_to(&mut cursor, ImageFormat::WebP)?;

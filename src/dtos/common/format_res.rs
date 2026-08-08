@@ -28,7 +28,7 @@ use axum::{
 use serde::Serialize;
 use ts_rs::TS;
 
-use super::error_code::ErrorCode;
+use super::error_code::{ErrorCode, status_from_code};
 use super::response::ApiResponse;
 
 /// 内部通用辅助：快速构建 HTTP 响应
@@ -203,13 +203,6 @@ pub fn service_unavailable(message: impl Into<String>) -> loco_rs::prelude::Resu
 // =========================================================================
 // 自定义业务错误码响应 (如 400001 用户冻结, 404001 用户不存在)
 // =========================================================================
-
-fn status_from_code(code: u32) -> StatusCode {
-    u16::try_from(code / 1000)
-        .ok()
-        .and_then(|s| StatusCode::from_u16(s).ok())
-        .unwrap_or(StatusCode::BAD_REQUEST)
-}
 
 /// 格式化带自定义业务错误码 (如 400001) 的错误响应
 pub fn custom_error(code: u32, message: impl Into<String>) -> loco_rs::prelude::Result<Response> {
