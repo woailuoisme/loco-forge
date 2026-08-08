@@ -30,10 +30,7 @@ async fn test_can_run_user_create() {
     let deliveries = boot.app_context.mailer.unwrap().deliveries();
     // 仅校验本次创建触发了欢迎邮件，不依赖全局 mailer 投递计数（会随其他测试累积）。
     assert!(
-        deliveries
-            .messages
-            .iter()
-            .any(|m| m.contains(&email)),
+        deliveries.messages.iter().any(|m| m.contains(&email)),
         "welcome email for {email} should be delivered"
     );
 

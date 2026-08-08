@@ -18,7 +18,10 @@ use loco_rs::{
 use migration::Migrator;
 use std::path::Path;
 
-use crate::{models::_entities::users, setup};
+use crate::{
+    models::_entities::{posts, users},
+    setup,
+};
 
 /// Loco 应用主结构体
 pub struct App;
@@ -74,8 +77,9 @@ impl Hooks for App {
 
     /// 清空数据库数据 (主要用于测试数据重置)
     async fn truncate(ctx: &AppContext) -> Result<()> {
-        // 步骤 1: 截断/清空 User 数据库表
+        // 步骤 1: 截断/清空数据库关联表
         truncate_table(&ctx.db, users::Entity).await?;
+        truncate_table(&ctx.db, posts::Entity).await?;
         Ok(())
     }
 

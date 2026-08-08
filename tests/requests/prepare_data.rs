@@ -14,11 +14,7 @@ pub async fn init_user_login(request: &TestServer, ctx: &AppContext) -> LoggedIn
     init_user_login_with_email(request, ctx, USER_EMAIL).await
 }
 
-pub async fn init_user_login_with_email(
-    request: &TestServer,
-    ctx: &AppContext,
-    email: &str,
-) -> LoggedInUser {
+pub async fn init_user_login_with_email(request: &TestServer, ctx: &AppContext, email: &str) -> LoggedInUser {
     let register_payload = serde_json::json!({
         "name": "loco",
         "email": email,

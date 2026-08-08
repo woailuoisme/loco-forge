@@ -62,13 +62,13 @@ impl IntoResponse for MediaResponse {
             response.headers_mut().insert(header::CONTENT_TYPE, val);
         }
 
-        let cache_str = self
-            .cache_control
-            .unwrap_or_else(|| "public, max-age=86400".to_string());
+        let cache_val = match self.cache_control {
+            Some(ref cache_str) => HeaderValue::from_str(cache_str)
+                .unwrap_or_else(|_| HeaderValue::from_static("public, max-age=86400")),
+            None => HeaderValue::from_static("public, max-age=86400"),
+        };
 
-        if let Ok(val) = HeaderValue::from_str(&cache_str) {
-            response.headers_mut().insert(header::CACHE_CONTROL, val);
-        }
+        response.headers_mut().insert(header::CACHE_CONTROL, cache_val);
 
         response
     }

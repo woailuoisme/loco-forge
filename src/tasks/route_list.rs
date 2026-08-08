@@ -19,22 +19,26 @@ impl Task for RouteList {
         }
     }
 
-    /// 执行路由收集与表格打印
+    /// 执行路由收集与日志打印
     async fn run(&self, app_context: &AppContext, _vars: &task::Vars) -> Result<()> {
         // 步骤 1: 调用 App::routes 收集全局组装好的路由集合
         let routes = App::routes(app_context);
 
-        // 步骤 2: 打印表格 Header 头格式
-        println!("\n+------------+---------------------------------------------------------+");
-        println!("| {:<10} | {:<55} |", "Method", "URI");
-        println!("+------------+---------------------------------------------------------+");
+        // 步骤 2: 格式化路由表格 Header 头
+        let mut output = String::from(
+            "\n+------------+---------------------------------------------------------+\n",
+        );
+        output.push_str(&format!("| {:<10} | {:<55} |\n", "Method", "URI"));
+        output.push_str("+------------+---------------------------------------------------------+\n");
 
         // 步骤 3: 遍历路由项并按 HTTP 方法与 URI 格式化输出
         for route in routes.collect() {
             let methods = route.actions.iter().map(|a| a.as_str()).collect::<Vec<_>>().join("|");
-            println!("| {:<10} | {:<55} |", methods, route.uri);
+            output.push_str(&format!("| {:<10} | {:<55} |\n", methods, route.uri));
         }
-        println!("+------------+---------------------------------------------------------+\n");
+        output.push_str("+------------+---------------------------------------------------------+");
+
+        tracing::info!(target: "app", "{}", output);
         Ok(())
     }
 }

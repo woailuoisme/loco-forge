@@ -99,14 +99,14 @@ async fn check_storage(ctx: &AppContext) -> std::result::Result<Duration, String
         return Ok(start.elapsed());
     }
 
-    // 2. 降级备用: 从环境变量构建 S3 Garage 存储驱动进行二次探针检测
+    // 2. 降级备用: 从环境变量构建 S3 Storage 驱动进行二次探针检测
     let bucket = std::env::var("STORAGE_S3_BUCKET").unwrap_or_else(|_| "default".to_string());
     let region = std::env::var("STORAGE_S3_REGION").unwrap_or_else(|_| "garage".to_string());
     let endpoint = std::env::var("STORAGE_S3_ENDPOINT").unwrap_or_else(|_| "http://127.0.0.1:3900".to_string());
-    let key_id =
-        std::env::var("STORAGE_S3_ACCESS_KEY").unwrap_or_else(|_| "GKfd16f76e81fb861a868a01b9b19452ad".to_string());
+    let key_id = std::env::var("STORAGE_S3_ACCESS_KEY")
+        .map_err(|_| "S3 存储密钥未配置 (需设置 STORAGE_S3_ACCESS_KEY 环境变量)".to_string())?;
     let secret_key = std::env::var("STORAGE_S3_SECRET_KEY")
-        .unwrap_or_else(|_| "18d5eda476ff7fb88f0bec38eae3a5e468020ae6dfc610defe2f3f72a65c4339".to_string());
+        .map_err(|_| "S3 存储密钥未配置 (需设置 STORAGE_S3_SECRET_KEY 环境变量)".to_string())?;
 
     let credential = loco_rs::storage::drivers::aws::Credential {
         key_id,

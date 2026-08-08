@@ -95,10 +95,18 @@ impl OrderUtil {
         let sequence_digits = opts.sequence_digits.unwrap_or(4);
         let max_capacity = 10u32.pow(sequence_digits as u32);
 
-        let mut lock = GENERATOR_STATE.lock().unwrap();
+        let mut lock = GENERATOR_STATE.lock().unwrap_or_else(|e| e.into_inner());
 
         let mut now_dt = Local::now();
         let mut now_ms = now_dt.timestamp_millis();
+
+        // 针对 NTP 时钟回拨 (Clock Skew) 保护：如果系统时间倒退，强制逻辑时间继承上次时间戳，防止产生重复单号
+        if now_ms < lock.last_timestamp {
+            now_ms = lock.last_timestamp;
+            if let Some(dt) = chrono::DateTime::from_timestamp_millis(now_ms) {
+                now_dt = dt.with_timezone(&Local);
+            }
+        }
 
         if now_ms == lock.last_timestamp {
             lock.sequence += 1;
@@ -122,10 +130,9 @@ impl OrderUtil {
 
         // 一次性格式化 17 位时间戳 (YYYYMMDDHHmmssSSS) 与完整订单号，避免重复分配内存
         format!(
-            "{}{}{:03}{:02}{:0width$}",
+            "{}{}{:02}{:0width$}",
             prefix.as_ref(),
-            now_dt.format("%Y%m%d%H%M%S"),
-            now_dt.timestamp_subsec_millis(),
+            now_dt.format("%Y%m%d%H%M%S%3f"),
             machine_id,
             seq,
             width = sequence_digits

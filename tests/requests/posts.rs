@@ -44,8 +44,7 @@ async fn non_admin_cannot_delete_post() {
             }))
             .await;
         create_res.assert_status(axum::http::StatusCode::CREATED);
-        let create_api_res: ApiResponse<Value> =
-            serde_json::from_str(&create_res.text()).unwrap();
+        let create_api_res: ApiResponse<Value> = serde_json::from_str(&create_res.text()).unwrap();
         let post_id = create_api_res.data.unwrap()["id"].as_i64().unwrap();
 
         // 普通用户尝试删除，被 RBAC AdminUser 提取器拦截，返回 403 Forbidden。

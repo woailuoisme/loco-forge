@@ -122,23 +122,20 @@ pub async fn get_file(State(ctx): State<AppContext>, Path(key): Path<String>) ->
 
 /// 简易 Content-Type 推导辅助函数
 fn guess_content_type(filename: &str) -> &'static str {
-    let lower = filename.to_lowercase();
-    if lower.ends_with(".png") {
-        "image/png"
-    } else if lower.ends_with(".jpg") || lower.ends_with(".jpeg") {
-        "image/jpeg"
-    } else if lower.ends_with(".gif") {
-        "image/gif"
-    } else if lower.ends_with(".svg") {
-        "image/svg+xml"
-    } else if lower.ends_with(".json") {
-        "application/json"
-    } else if lower.ends_with(".pdf") {
-        "application/pdf"
-    } else if lower.ends_with(".txt") {
-        "text/plain; charset=utf-8"
-    } else {
-        "application/octet-stream"
+    let ext = StdPath::new(filename)
+        .extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("");
+
+    match ext.to_lowercase().as_str() {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "svg" => "image/svg+xml",
+        "json" => "application/json",
+        "pdf" => "application/pdf",
+        "txt" => "text/plain; charset=utf-8",
+        _ => "application/octet-stream",
     }
 }
 

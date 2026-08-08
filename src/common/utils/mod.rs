@@ -14,6 +14,8 @@
 //! assert_eq!(parsed.prefix, "ORD");
 //! ```
 
+pub mod code;
 pub mod order_no;
 
+pub use code::CodeUtil;
 pub use order_no::{OrderNoOptions, OrderPrefix, OrderUtil, ParsedOrderNo};

@@ -50,9 +50,9 @@ impl AppError {
     }
 
     /// 提取错误消息
-    pub fn message(&self) -> String {
+    pub fn message(&self) -> &str {
         match self {
-            Self::Custom(_, msg) => msg.clone(),
+            Self::Custom(_, msg) => msg.as_str(),
         }
     }
 }
@@ -69,7 +69,7 @@ impl IntoResponse for AppError {
             None
         };
 
-        let api_error = ApiError::error(self.error_code(), self.message(), None, exception, None);
+        let api_error = ApiError::error(self.error_code(), self.message().to_string(), None, exception, None);
 
         (status, Json(api_error)).into_response()
     }

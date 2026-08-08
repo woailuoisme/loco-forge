@@ -52,6 +52,7 @@ secrecy = { version = "0.10.3", features = ["serde"] }
 regex = { version = "1.13" } # 高性能正则表达式匹配工具
 rust-i18n = {version="4"} # 多语言国际化 (i18n) 翻译框架
 jsonwebtoken = { version = "10.4", features = ["rust_crypto"] }
+rand = { version="0.10" } # 加密安全伪随机数生成器 (OTP/Token/随机验证码生成)
 
 # 4. 数据库与数据迁移 (Database & ORM)
 migration = { path = "migration" }

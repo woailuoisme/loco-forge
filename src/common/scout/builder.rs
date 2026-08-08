@@ -149,19 +149,18 @@ impl<'a> ScoutBuilder<'a> {
             .map_err(|e| Error::string(&format!("Database query failed: {e}")))?;
 
         // 建立 ID -> Model 映射表，保持 Meilisearch 命中得分与排序关系
-        let mut model_map: std::collections::HashMap<String, E::Model> = models
+        let mut model_map: std::collections::HashMap<i64, E::Model> = models
             .into_iter()
             .filter_map(|m| {
                 let val = serde_json::to_value(&m).ok()?;
-                let id_val = val.get("id")?;
-                let id_str = id_val.to_string().trim_matches('"').to_string();
-                Some((id_str, m))
+                let id = val.get("id")?.as_i64()?;
+                Some((id, m))
             })
             .collect();
 
         let ordered_models = ids
             .into_iter()
-            .filter_map(|id| model_map.remove(&id.to_string()))
+            .filter_map(|id| model_map.remove(&id))
             .collect();
 
         Ok(ordered_models)

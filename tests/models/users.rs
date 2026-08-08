@@ -82,14 +82,9 @@ async fn can_find_by_email() {
     let non_existing_user_results = Model::find_by_email(&boot.app_context.db, "un@existing-email.com").await;
 
     // 仅快照稳定字段，避免受其他测试修改同用户的影响。
-    let stable = existing_user.as_ref().map(|u| {
-        (
-            u.pid.to_string(),
-            u.email.clone(),
-            u.name.clone(),
-            u.role.clone(),
-        )
-    });
+    let stable = existing_user
+        .as_ref()
+        .map(|u| (u.pid.to_string(), u.email.clone(), u.name.clone(), u.role.clone()));
     assert_debug_snapshot!(stable);
     assert_debug_snapshot!(non_existing_user_results);
 }
@@ -107,14 +102,9 @@ async fn can_find_by_pid() {
         Model::find_by_pid(&boot.app_context.db, "23232323-2323-2323-2323-232323232323").await;
 
     // 仅快照稳定字段（pid/email/name/role），避免受其他测试修改同 PID 用户的影响。
-    let stable = existing_user.as_ref().map(|u| {
-        (
-            u.pid.to_string(),
-            u.email.clone(),
-            u.name.clone(),
-            u.role.clone(),
-        )
-    });
+    let stable = existing_user
+        .as_ref()
+        .map(|u| (u.pid.to_string(), u.email.clone(), u.name.clone(), u.role.clone()));
     assert_debug_snapshot!(stable);
     assert_debug_snapshot!(non_existing_user_results);
 }
