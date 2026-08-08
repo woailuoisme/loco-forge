@@ -16,7 +16,6 @@ config/production.yaml
 .env.*
 !.env.example
 
-
 # ── Databases & Dynamic Storage ───────────────────────────────────────────────
 *.sqlite
 *.sqlite-*
@@ -37,7 +36,18 @@ Thumbs.db
 *.swp
 *.swo
 .mise.local.toml
+secrets.ini
+
+# ── AI Coding Tools (all private, not committed) ──────────────────────────────
 .agents
 .claude
-secrets.ini
+.gemini
+.codex
+.cursor
+.windsurf
+.opencode
+.continue
+.kiro
+.qoder
 .codebuddy
+.code-review-graph/

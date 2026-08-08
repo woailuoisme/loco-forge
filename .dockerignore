@@ -17,13 +17,34 @@ debug/
 .idea/
 .mise.toml
 .mise.local.toml
+lefthook.yml
+secrets.ini
+
+# ── AI Coding Tools & MCP Configs ─────────────────────────────────────────────
+.claude/
+.gemini/
+.codex/
+.cursor/
+.windsurf/
+.opencode/
+.continue/
+.kiro/
+.qoder/
+.codebuddy/
+.code-review-graph/
 .mcp.json
 skills-lock.json
-lefthook.yml
+opencode.jsonc
+.cursorrules
+.windsurfrules
+CODEBUDDY.md
+QODER.md
 
-# ── Documentation & Docker Specs ─────────────────────────────────────────────
+# ── Documentation & Specs ─────────────────────────────────────────────────────
 README.md
 AGENTS.md
+CLAUDE.md
+GEMINI.md
 Dockerfile
 docker-compose.yml
 
