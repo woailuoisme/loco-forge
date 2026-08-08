@@ -86,7 +86,7 @@ test:
 
 # 使用 nextest 运行极速并行测试
 nextest:
-    cargo nextest run
+    cargo nextest run --no-fail-fast
 
 # 运行全量代码静态规范检查 (Clippy 检查、Rustfmt 与 Rumdl Markdown 审计)
 lint:

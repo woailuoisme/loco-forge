@@ -48,7 +48,7 @@ async fn can_register() {
 #[tokio::test]
 #[serial]
 async fn can_login_with_verify(#[case] test_name: &str, #[case] password: &str) {
-    configure_insta!();
+    configure_insta!("auth_request");
 
     request::<App, _, _>(|request, ctx| async move {
         let email = "test@loco.com";
@@ -125,7 +125,7 @@ async fn login_with_non_existing_email() {
 #[tokio::test]
 #[serial]
 async fn can_login_without_verify() {
-    configure_insta!();
+    configure_insta!("auth_request");
 
     request::<App, _, _>(|request, _ctx| async move {
         let email = "test@loco.com";
@@ -164,7 +164,7 @@ async fn can_login_without_verify() {
 #[tokio::test]
 #[serial]
 async fn invalid_verification_token() {
-    configure_insta!();
+    configure_insta!("auth_request");
 
     request::<App, _, _>(|request, _ctx| async move {
         let response = request.get("/api/v1/auth/verify/invalid-token").await;
@@ -177,7 +177,7 @@ async fn invalid_verification_token() {
 #[tokio::test]
 #[serial]
 async fn can_reset_password() {
-    configure_insta!();
+    configure_insta!("auth_request");
 
     request::<App, _, _>(|request, ctx| async move {
         let login_data = prepare_data::init_user_login(&request, &ctx).await;
@@ -253,7 +253,7 @@ async fn can_reset_password() {
 #[tokio::test]
 #[serial]
 async fn can_get_current_user() {
-    configure_insta!();
+    configure_insta!("auth_request");
 
     request::<App, _, _>(|request, ctx| async move {
         let user = prepare_data::init_user_login(&request, &ctx).await;
@@ -279,7 +279,7 @@ async fn can_get_current_user() {
 #[tokio::test]
 #[serial]
 async fn can_auth_with_magic_link() {
-    configure_insta!();
+    configure_insta!("auth_request");
     request::<App, _, _>(|request, ctx| async move {
         seed::<App>(&ctx).await.unwrap();
 
@@ -329,7 +329,7 @@ async fn can_auth_with_magic_link() {
 #[tokio::test]
 #[serial]
 async fn can_reject_invalid_email() {
-    configure_insta!();
+    configure_insta!("auth_request");
     request::<App, _, _>(|request, _ctx| async move {
         let invalid_email = "user1@temp-mail.com";
         let payload = serde_json::json!({
@@ -348,7 +348,7 @@ async fn can_reject_invalid_email() {
 #[tokio::test]
 #[serial]
 async fn can_reject_invalid_magic_link_token() {
-    configure_insta!();
+    configure_insta!("auth_request");
     request::<App, _, _>(|request, ctx| async move {
         seed::<App>(&ctx).await.unwrap();
 
@@ -365,7 +365,7 @@ async fn can_reject_invalid_magic_link_token() {
 #[tokio::test]
 #[serial]
 async fn can_resend_verification_email() {
-    configure_insta!();
+    configure_insta!("auth_request");
 
     request::<App, _, _>(|request, ctx| async move {
         let email = "test@loco.com";
@@ -414,7 +414,7 @@ async fn can_resend_verification_email() {
 #[tokio::test]
 #[serial]
 async fn cannot_resend_email_if_already_verified() {
-    configure_insta!();
+    configure_insta!("auth_request");
 
     request::<App, _, _>(|request, ctx| async move {
         let email = "verified@loco.com";

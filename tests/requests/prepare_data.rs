@@ -11,15 +11,23 @@ pub struct LoggedInUser {
 }
 
 pub async fn init_user_login(request: &TestServer, ctx: &AppContext) -> LoggedInUser {
+    init_user_login_with_email(request, ctx, USER_EMAIL).await
+}
+
+pub async fn init_user_login_with_email(
+    request: &TestServer,
+    ctx: &AppContext,
+    email: &str,
+) -> LoggedInUser {
     let register_payload = serde_json::json!({
         "name": "loco",
-        "email": USER_EMAIL,
+        "email": email,
         "password": USER_PASSWORD
     });
 
     //Creating a new user
     request.post("/api/v1/auth/register").json(&register_payload).await;
-    let user = users::Model::find_by_email(&ctx.db, USER_EMAIL).await.unwrap();
+    let user = users::Model::find_by_email(&ctx.db, email).await.unwrap();
 
     if let Some(token) = &user.email_verification_token {
         request.get(&format!("/api/v1/auth/verify/{token}")).await;
@@ -28,7 +36,7 @@ pub async fn init_user_login(request: &TestServer, ctx: &AppContext) -> LoggedIn
     let response = request
         .post("/api/v1/auth/login")
         .json(&serde_json::json!({
-            "email": USER_EMAIL,
+            "email": email,
             "password": USER_PASSWORD
         }))
         .await;
@@ -37,14 +45,14 @@ pub async fn init_user_login(request: &TestServer, ctx: &AppContext) -> LoggedIn
     let login_response = api_res.data.expect("Login response data expected");
 
     LoggedInUser {
-        user: users::Model::find_by_email(&ctx.db, USER_EMAIL).await.unwrap(),
+        user: users::Model::find_by_email(&ctx.db, email).await.unwrap(),
         token: login_response.token,
     }
 }
 
 pub async fn init_admin_login(request: &TestServer, ctx: &AppContext) -> LoggedInUser {
     use sea_orm::{ActiveModelTrait, IntoActiveModel};
-    let logged = init_user_login(request, ctx).await;
+    let logged = init_user_login_with_email(request, ctx, "admin@loco.com").await;
     let mut active = logged.user.into_active_model();
     active.role = sea_orm::ActiveValue::Set(locos::common::consts::auth::ROLE_ADMIN.to_string());
     let admin_user = active.update(&ctx.db).await.unwrap();

@@ -1,5 +1,6 @@
 use loco_rs::{task, testing::prelude::*};
 use locos::{app::App, models::users};
+use uuid::Uuid;
 
 use loco_rs::boot::run_task;
 use serial_test::serial;
@@ -9,8 +10,10 @@ use serial_test::serial;
 async fn test_can_run_user_create() {
     let boot = boot_test::<App>().await.unwrap();
 
-    let email = "test@example.com";
-    let user = users::Model::find_by_email(&boot.app_context.db, email).await;
+    // 使用带加号的唯一邮箱（test+<uuid>@example.com），既满足邮箱格式校验，
+    // 又避免与其他测试/历史运行共享持久化测试库导致的冲突。
+    let email = format!("test+{}@example.com", Uuid::new_v4().simple());
+    let user = users::Model::find_by_email(&boot.app_context.db, &email).await;
     assert!(user.is_err());
 
     let vars = task::Vars::from_cli_args(vec![
@@ -25,9 +28,16 @@ async fn test_can_run_user_create() {
     );
 
     let deliveries = boot.app_context.mailer.unwrap().deliveries();
-    assert_eq!(deliveries.count, 1, "Exactly one email should be sent");
+    // 仅校验本次创建触发了欢迎邮件，不依赖全局 mailer 投递计数（会随其他测试累积）。
+    assert!(
+        deliveries
+            .messages
+            .iter()
+            .any(|m| m.contains(&email)),
+        "welcome email for {email} should be delivered"
+    );
 
-    let user = users::Model::find_by_email(&boot.app_context.db, email).await;
+    let user = users::Model::find_by_email(&boot.app_context.db, &email).await;
     assert!(user.is_ok());
 }
 
@@ -54,5 +64,9 @@ async fn test_user_email_already_exists() {
     );
 
     let deliveries = boot.app_context.mailer.unwrap().deliveries();
-    assert_eq!(deliveries.count, 0, "No email should be sent");
+    // 重复创建不应发送欢迎邮件（不依赖全局计数，避免其他测试累积投递造成误报）。
+    assert!(
+        !deliveries.messages.iter().any(|m| m.contains(email)),
+        "no welcome email should be sent for duplicate {email}"
+    );
 }

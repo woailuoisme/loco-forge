@@ -31,15 +31,32 @@ async fn can_list_posts_with_pagination() {
 #[serial_test::serial]
 async fn non_admin_cannot_delete_post() {
     request::<App, _, _>(|request, ctx| async move {
+        let admin = init_admin_login(&request, &ctx).await;
+        let (admin_name, admin_value) = auth_header(&admin.token);
+
+        // 管理员先创建一篇文章，保证后续删除目标一定存在。
+        let create_res = request
+            .post("/api/v1/admin/posts")
+            .add_header(admin_name.clone(), admin_value.clone())
+            .json(&serde_json::json!({
+                "title": "NonAdmin Delete Target",
+                "content": "Content"
+            }))
+            .await;
+        create_res.assert_status(axum::http::StatusCode::CREATED);
+        let create_api_res: ApiResponse<Value> =
+            serde_json::from_str(&create_res.text()).unwrap();
+        let post_id = create_api_res.data.unwrap()["id"].as_i64().unwrap();
+
+        // 普通用户尝试删除，被 RBAC AdminUser 提取器拦截，返回 403 Forbidden。
         let user = init_user_login(&request, &ctx).await;
         let (header_name, header_value) = auth_header(&user.token);
 
         let res = request
-            .delete("/api/v1/admin/posts/1")
+            .delete(&format!("/api/v1/admin/posts/{post_id}"))
             .add_header(header_name, header_value)
             .await;
 
-        // 普通用户无 admin 角色，被 RBAC AdminUser 提取器拦截，返回 403 Forbidden
         res.assert_status(axum::http::StatusCode::FORBIDDEN);
     })
     .await;
