@@ -6,12 +6,16 @@ use serde::{Deserialize, Serialize};
 use serde_json::Map;
 use uuid::Uuid;
 
-use secrecy::{ExposeSecret, SecretString};
+use secrecy::ExposeSecret;
 
 pub use super::_entities::users::{self, ActiveModel, Entity, Model};
+pub use crate::dtos::auth::{LoginRequest, RegisterRequest};
 
+/// 魔术链接 Token 随机字符串长度
 pub const MAGIC_LINK_LENGTH: i8 = 32;
+/// 魔术链接 Token 过期时间 (分钟)
 pub const MAGIC_LINK_EXPIRATION_MIN: i8 = 5;
+/// 重置密码 Token 过期时间 (分钟)
 pub const RESET_TOKEN_EXPIRATION_MIN: i64 = 30;
 
 /// 用户角色枚举定义
@@ -36,30 +40,7 @@ impl std::fmt::Display for UserRole {
     }
 }
 
-/// 登录请求参数
-#[derive(Debug, Deserialize, Serialize, utoipa::ToSchema)]
-pub struct LoginRequest {
-    /// 注册邮箱
-    pub email: String,
-    /// 密码
-    #[schema(value_type = String, format = Password)]
-    #[serde(skip_serializing)]
-    pub password: SecretString,
-}
-
-/// 注册请求参数
-#[derive(Debug, Deserialize, Serialize, utoipa::ToSchema)]
-pub struct RegisterRequest {
-    /// 注册邮箱
-    pub email: String,
-    /// 密码
-    #[schema(value_type = String, format = Password)]
-    #[serde(skip_serializing)]
-    pub password: SecretString,
-    /// 用户姓名
-    pub name: String,
-}
-
+/// 用户模型字段校验器
 #[derive(Debug, Validate, Deserialize)]
 pub struct Validator {
     #[validate(length(min = 2, message = "Name must be at least 2 characters long."))]
@@ -111,53 +92,51 @@ impl Authenticable for Model {
 
 impl Model {
     /// 判断是否为管理员角色
+    #[must_use]
     pub fn is_admin(&self) -> bool {
         self.role == "admin"
     }
 
     /// 判断是否包含指定角色
+    #[must_use]
     pub fn has_role(&self, role: &str) -> bool {
         self.role == role
     }
 
-    /// finds a user by the provided email
+    /// 根据电子邮箱地址查找用户对象
     ///
     /// # Errors
     ///
-    /// When could not find user by the given token or DB query error
+    /// 当未找到对应用户记录或发生数据库查询错误时返回 `ModelError::EntityNotFound`
     pub async fn find_by_email(db: &DatabaseConnection, email: &str) -> ModelResult<Self> {
         let user = users::Entity::find()
-            .filter(model::query::condition().eq(users::Column::Email, email).build())
+            .filter(users::Column::Email.eq(email))
             .one(db)
             .await?;
         user.ok_or_else(|| ModelError::EntityNotFound)
     }
 
-    /// finds a user by the provided verification token
+    /// 根据邮箱验证 Token 查找用户对象
     ///
     /// # Errors
     ///
-    /// When could not find user by the given token or DB query error
+    /// 当未找到对应用户记录或发生数据库查询错误时返回 `ModelError::EntityNotFound`
     pub async fn find_by_verification_token(db: &DatabaseConnection, token: &str) -> ModelResult<Self> {
         let user = users::Entity::find()
-            .filter(
-                model::query::condition()
-                    .eq(users::Column::EmailVerificationToken, token)
-                    .build(),
-            )
+            .filter(users::Column::EmailVerificationToken.eq(token))
             .one(db)
             .await?;
         user.ok_or_else(|| ModelError::EntityNotFound)
     }
 
-    /// finds a user by the magic token and verify and token expiration
+    /// 根据魔术链接 Token 查找用户对象并验证其有效性与过期时间
     ///
     /// # Errors
     ///
-    /// When could not find user by the given token or DB query error ot token expired
+    /// 当未找到对应用户记录、Token 已过期或发生数据库查询错误时返回 `ModelError`
     pub async fn find_by_magic_token(db: &DatabaseConnection, token: &str) -> ModelResult<Self> {
         let user = users::Entity::find()
-            .filter(query::condition().eq(users::Column::MagicLinkToken, token).build())
+            .filter(users::Column::MagicLinkToken.eq(token))
             .one(db)
             .await?;
 
@@ -166,27 +145,27 @@ impl Model {
             if expired_at >= Local::now() {
                 Ok(user)
             } else {
-                tracing::debug!(
-                    user_pid = user.pid.to_string(),
-                    token_expiration = expired_at.to_string(),
-                    "magic token expired for the user."
+                tracing::warn!(
+                    user_pid = %user.pid,
+                    token_expiration = %expired_at,
+                    "Magic token expired for user"
                 );
                 Err(ModelError::msg("magic token expired"))
             }
         } else {
-            tracing::error!(user_pid = user.pid.to_string(), "magic link expiration time not exists");
+            tracing::warn!(user_pid = %user.pid, "Magic link expiration timestamp missing");
             Err(ModelError::msg("expiration token not exists"))
         }
     }
 
-    /// finds a user by the provided reset token
+    /// 根据密码重置 Token 查找用户对象并验证其有效性与过期时间
     ///
     /// # Errors
     ///
-    /// When could not find user by the given token or DB query error
+    /// 当未找到对应用户记录、Token 已过期或发生数据库查询错误时返回 `ModelError`
     pub async fn find_by_reset_token(db: &DatabaseConnection, token: &str) -> ModelResult<Self> {
         let user = users::Entity::find()
-            .filter(model::query::condition().eq(users::Column::ResetToken, token).build())
+            .filter(users::Column::ResetToken.eq(token))
             .one(db)
             .await?;
 
@@ -195,67 +174,58 @@ impl Model {
             if sent_at + Duration::minutes(RESET_TOKEN_EXPIRATION_MIN) >= Local::now() {
                 Ok(user)
             } else {
-                tracing::debug!(user_pid = user.pid.to_string(), "reset token expired for the user.");
+                tracing::warn!(user_pid = %user.pid, "Reset token expired for user");
                 Err(ModelError::msg("reset token expired"))
             }
         } else {
-            tracing::error!(user_pid = user.pid.to_string(), "reset token sent time does not exist");
+            tracing::warn!(user_pid = %user.pid, "Reset token sent timestamp missing");
             Err(ModelError::msg("reset token sent time not exists"))
         }
     }
 
-    /// finds a user by the provided pid
+    /// 根据 UUID 字符串 (PID) 查找用户对象
     ///
     /// # Errors
     ///
-    /// When could not find user  or DB query error
+    /// 当 PID 无法解析为 UUID、未找到对应用户记录或发生数据库查询错误时返回 `ModelError`
     pub async fn find_by_pid(db: &DatabaseConnection, pid: &str) -> ModelResult<Self> {
         let parse_uuid = Uuid::parse_str(pid).map_err(|e| ModelError::Any(e.into()))?;
         let user = users::Entity::find()
-            .filter(model::query::condition().eq(users::Column::Pid, parse_uuid).build())
+            .filter(users::Column::Pid.eq(parse_uuid))
             .one(db)
             .await?;
         user.ok_or_else(|| ModelError::EntityNotFound)
     }
 
-    /// finds a user by the provided api key
+    /// 根据 API Key 查找用户对象
     ///
     /// # Errors
     ///
-    /// When could not find user by the given token or DB query error
+    /// 当未找到对应用户记录或发生数据库查询错误时返回 `ModelError::EntityNotFound`
     pub async fn find_by_api_key(db: &DatabaseConnection, api_key: &str) -> ModelResult<Self> {
         let user = users::Entity::find()
-            .filter(model::query::condition().eq(users::Column::ApiKey, api_key).build())
+            .filter(users::Column::ApiKey.eq(api_key))
             .one(db)
             .await?;
         user.ok_or_else(|| ModelError::EntityNotFound)
     }
 
-    /// Verifies whether the provided plain password matches the hashed password
-    ///
-    /// # Errors
-    ///
-    /// when could not verify password
+    /// 校验明文密码是否与哈希密码匹配
     #[must_use]
     pub fn verify_password(&self, password: &str) -> bool {
         hash::verify_password(password, &self.password)
     }
 
-    /// Asynchronously creates a user with a password and saves it to the
-    /// database.
+    /// 异步创建包含密码哈希的新用户记录并持久化到数据库
     ///
     /// # Errors
     ///
-    /// When could not save the user into the DB
+    /// 当邮箱已被占用或数据库写入失败时返回 `ModelError`
     pub async fn create_with_password(db: &DatabaseConnection, params: &RegisterRequest) -> ModelResult<Self> {
         let txn = db.begin().await?;
 
         if users::Entity::find()
-            .filter(
-                model::query::condition()
-                    .eq(users::Column::Email, &params.email)
-                    .build(),
-            )
+            .filter(users::Column::Email.eq(&params.email))
             .one(&txn)
             .await?
             .is_some()
@@ -279,11 +249,11 @@ impl Model {
         Ok(user)
     }
 
-    /// Creates a JWT
+    /// 为当前用户生成指定有效期的 JWT 认证 Token
     ///
     /// # Errors
     ///
-    /// when could not convert user claims to jwt token
+    /// 当生成 JWT Claims 错误或签署签名失败时返回 `ModelError`
     pub fn generate_jwt(&self, secret: &str, expiration: u64) -> ModelResult<String> {
         let _ = jsonwebtoken::crypto::rust_crypto::DEFAULT_PROVIDER.install_default();
         jwt::JWT::new(secret)
@@ -291,108 +261,92 @@ impl Model {
             .map_err(ModelError::from)
     }
 
-    /// 清理数据库中已过期的重置密码 Token 与魔术链接 Token
+    /// 清理数据库中已过期的重置密码 Token 与魔术链接 Token（单条 SQL 批量优化）
     ///
     /// # Errors
     ///
     /// 当数据库查询或更新失败时返回 `ModelError`
     pub async fn clean_expired_tokens(db: &DatabaseConnection) -> ModelResult<u64> {
+        use sea_orm::sea_query::Expr;
+
         let now = Local::now();
         let reset_threshold = now - Duration::minutes(RESET_TOKEN_EXPIRATION_MIN);
 
         let mut cleaned_count = 0u64;
 
-        // 查找带有过期 reset_token 的用户并清理
-        let expired_reset_users = users::Entity::find()
+        // 批量置空过期的 reset_token
+        let res1 = users::Entity::update_many()
+            .col_expr(users::Column::ResetToken, Expr::value(Option::<String>::None))
+            .col_expr(
+                users::Column::ResetSentAt,
+                Expr::value(Option::<chrono::DateTime<chrono::FixedOffset>>::None),
+            )
             .filter(users::Column::ResetSentAt.lt(reset_threshold))
-            .all(db)
+            .exec(db)
             .await?;
+        cleaned_count += res1.rows_affected;
 
-        for user in expired_reset_users {
-            let mut active: users::ActiveModel = user.into();
-            active.reset_token = ActiveValue::Set(None);
-            active.reset_sent_at = ActiveValue::Set(None);
-            active.update(db).await?;
-            cleaned_count += 1;
-        }
-
-        // 查找带有过期 magic_link_token 的用户并清理
-        let expired_magic_users = users::Entity::find()
+        // 批量置空过期的 magic_link_token
+        let res2 = users::Entity::update_many()
+            .col_expr(users::Column::MagicLinkToken, Expr::value(Option::<String>::None))
+            .col_expr(
+                users::Column::MagicLinkExpiration,
+                Expr::value(Option::<chrono::DateTime<chrono::FixedOffset>>::None),
+            )
             .filter(users::Column::MagicLinkExpiration.lt(now))
-            .all(db)
+            .exec(db)
             .await?;
+        cleaned_count += res2.rows_affected;
 
-        for user in expired_magic_users {
-            let mut active: users::ActiveModel = user.into();
-            active.magic_link_token = ActiveValue::Set(None);
-            active.magic_link_expiration = ActiveValue::Set(None);
-            active.update(db).await?;
-            cleaned_count += 1;
-        }
+        tracing::info!(
+            cleaned_count = cleaned_count,
+            "Successfully cleaned expired tokens in batch"
+        );
 
         Ok(cleaned_count)
     }
 }
 
 impl ActiveModel {
-    /// Sets the email verification information for the user and
-    /// updates it in the database.
-    ///
-    /// This method is used to record the timestamp when the email verification
-    /// was sent and generate a unique verification token for the user.
+    /// 设置邮箱验证发送状态，生成唯一验证 Token 与时间戳并更新到数据库
     ///
     /// # Errors
     ///
-    /// when has DB query error
+    /// 当数据库更新失败时返回 `ModelError`
     pub async fn set_email_verification_sent(mut self, db: &DatabaseConnection) -> ModelResult<Model> {
         self.email_verification_sent_at = ActiveValue::set(Some(Local::now().into()));
         self.email_verification_token = ActiveValue::Set(Some(Uuid::new_v4().to_string()));
         self.update(db).await.map_err(ModelError::from)
     }
 
-    /// Sets the information for a reset password request,
-    /// generates a unique reset password token, and updates it in the
-    /// database.
-    ///
-    /// This method records the timestamp when the reset password token is sent
-    /// and generates a unique token for the user.
-    ///
-    /// # Arguments
+    /// 设置忘记密码重置状态，生成唯一重置 Token 与时间戳并更新到数据库
     ///
     /// # Errors
     ///
-    /// when has DB query error
+    /// 当数据库更新失败时返回 `ModelError`
     pub async fn set_forgot_password_sent(mut self, db: &DatabaseConnection) -> ModelResult<Model> {
         self.reset_sent_at = ActiveValue::set(Some(Local::now().into()));
         self.reset_token = ActiveValue::Set(Some(Uuid::new_v4().to_string()));
         self.update(db).await.map_err(ModelError::from)
     }
 
-    /// Records the verification time when a user verifies their
-    /// email and updates it in the database.
-    ///
-    /// This method sets the timestamp when the user successfully verifies their
-    /// email.
+    /// 记录用户通过邮箱验证的时间戳并置空验证 Token（防重放）
     ///
     /// # Errors
     ///
-    /// when has DB query error
+    /// 当数据库更新失败时返回 `ModelError`
     pub async fn verified(mut self, db: &DatabaseConnection) -> ModelResult<Model> {
         self.email_verified_at = ActiveValue::set(Some(Local::now().into()));
-        // Invalidate the verification token so it cannot be replayed after use.
+        // 使验证 Token 失效，避免二次防重放
         self.email_verification_token = ActiveValue::Set(None);
         self.update(db).await.map_err(ModelError::from)
     }
 
-    /// Resets the current user password with a new password and
-    /// updates it in the database.
-    ///
-    /// This method hashes the provided password and sets it as the new password
-    /// for the user.
+    /// 使用新密码对当前用户进行重置，哈希化密码并清除重置 Token
     ///
     /// # Errors
     ///
-    /// when has DB query error or could not hashed the given password
+    /// 当密码哈希计算失败或数据库更新失败时返回 `ModelError`
     pub async fn reset_password(mut self, db: &DatabaseConnection, password: &str) -> ModelResult<Model> {
         self.password = ActiveValue::set(hash::hash_password(password).map_err(|e| ModelError::Any(e.into()))?);
         self.reset_token = ActiveValue::Set(None);
@@ -400,13 +354,11 @@ impl ActiveModel {
         self.update(db).await.map_err(ModelError::from)
     }
 
-    /// Creates a magic link token for passwordless authentication.
-    ///
-    /// Generates a random token with a specified length and sets an expiration time
-    /// for the magic link. This method is used to initiate the magic link authentication flow.
+    /// 为无密码登录生成随机魔术链接 Token 与过期时间戳并保存到数据库
     ///
     /// # Errors
-    /// - Returns an error if database update fails
+    ///
+    /// 当数据库更新失败时返回 `ModelError`
     pub async fn create_magic_link(mut self, db: &DatabaseConnection) -> ModelResult<Model> {
         let random_str = hash::random_string(MAGIC_LINK_LENGTH as usize);
         let expired = Local::now() + Duration::minutes(MAGIC_LINK_EXPIRATION_MIN.into());
@@ -416,13 +368,11 @@ impl ActiveModel {
         self.update(db).await.map_err(ModelError::from)
     }
 
-    /// Verifies and invalidates the magic link after successful authentication.
-    ///
-    /// Clears the magic link token and expiration time after the user has
-    /// successfully authenticated using the magic link.
+    /// 登录成功后清除魔术链接 Token 与过期时间戳
     ///
     /// # Errors
-    /// - Returns an error if database update fails
+    ///
+    /// 当数据库更新失败时返回 `ModelError`
     pub async fn clear_magic_link(mut self, db: &DatabaseConnection) -> ModelResult<Model> {
         self.magic_link_token = ActiveValue::set(None);
         self.magic_link_expiration = ActiveValue::set(None);

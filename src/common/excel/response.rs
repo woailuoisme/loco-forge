@@ -3,6 +3,7 @@ use axum::{
     http::{HeaderValue, StatusCode, header},
     response::{IntoResponse, Response},
 };
+use bytes::Bytes;
 
 /// Excel 文件下载响应（仿 Laravel `Excel::download()` 流式下载 API）
 ///
@@ -20,7 +21,7 @@ use axum::{
 ///     // 2. 映射为实现了 ExcelExport 的导出结构体
 ///     let rows: Vec<UserExport> = users.into_iter().map(UserExport::from).collect();
 ///
-///     // 3. 序列化为 xlsx 字节流
+///     // 3. 序列化为 xlsx 字节流 (返回 zero-copy Bytes)
 ///     let bytes = export_to_bytes(&rows)?;
 ///
 ///     // 4. 返回文件下载响应（Content-Disposition: attachment）
@@ -36,15 +37,8 @@ use axum::{
 /// let filename = format!("orders-{}.xlsx", Local::now().format("%Y%m%d%H%M%S"));
 /// Ok(ExcelResponse::download(bytes, filename))
 /// ```
-///
-/// ## 路由注册
-///
-/// ```ignore
-/// // src/controllers/user.rs
-/// router.get("/users/export", export_users);
-/// ```
 enum ExcelResponseBody {
-    Bytes(Vec<u8>),
+    Bytes(Bytes),
     File(std::path::PathBuf),
 }
 
@@ -54,14 +48,14 @@ pub struct ExcelResponse {
 }
 
 impl ExcelResponse {
-    /// 构造 `.xlsx` 文件内存字节流下载响应（适合小数据量导出）
+    /// 构造 `.xlsx` 文件内存字节流下载响应（适合小数据量导出，接受零拷贝 `impl Into<Bytes>`）
     ///
     /// # 参数
     /// - `bytes`: 由 [`export_to_bytes`](crate::common::excel::export::export_to_bytes) 生成的 Excel 字节流
     /// - `filename`: 浏览器收到的文件名（如 `"users-2026-08-06.xlsx"`）
-    pub fn download(bytes: Vec<u8>, filename: impl Into<String>) -> Self {
+    pub fn download(bytes: impl Into<Bytes>, filename: impl Into<String>) -> Self {
         Self {
-            body: ExcelResponseBody::Bytes(bytes),
+            body: ExcelResponseBody::Bytes(bytes.into()),
             filename: filename.into(),
         }
     }

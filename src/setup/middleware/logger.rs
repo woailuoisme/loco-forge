@@ -38,11 +38,16 @@ pub async fn log_request(req: axum::extract::Request, next: axum::middleware::Ne
     let duration = start.elapsed();
     let status = response.status().as_u16();
 
-    // 协议版本置顶最前 (如: [HTTP/1.1] GET / 200 1.105ms | 127.0.0.1)
+    // 格式化输出结构化 HTTP 请求日志
     tracing::info!(
         target: "app",
-        "[{:?}] {} {} {} {:?} | {}",
-        version, method, path, status, duration, client_ip
+        version = ?version,
+        method = %method,
+        path = %path,
+        status = status,
+        latency_ms = %duration.as_secs_f64() * 1000.0,
+        client_ip = %client_ip,
+        "HTTP request"
     );
 
     response

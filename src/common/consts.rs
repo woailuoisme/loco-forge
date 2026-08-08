@@ -18,6 +18,10 @@ pub mod app {
 pub mod storage {
     /// 默认存储根目录 (`"./storages"`)
     pub const DEFAULT_STORAGE_DIR: &str = "./storages";
+    /// 默认单文件字节限制上限 (10 MB)
+    pub const DEFAULT_MAX_FILE_SIZE: usize = 10 * 1024 * 1024;
+    /// 默认单次 Multipart 总上传字节限制上限 (50 MB)
+    pub const DEFAULT_MAX_TOTAL_UPLOAD_SIZE: usize = 50 * 1024 * 1024;
 }
 
 /// HTTP 接口通用分页限制常量

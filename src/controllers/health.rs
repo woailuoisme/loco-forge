@@ -77,7 +77,7 @@ async fn check_db(ctx: &AppContext) -> ComponentHealth {
     }
 }
 
-/// 探针: 执行缓存 (Redis/Valkey/Memory) 写入、读取与删除探针检测
+/// 探针: 执行缓存 (Redis/Valkey/Memory) 写入、读取与删除探针检测（使用 UUID 隔离 Key 防止并发碰撞）
 async fn check_cache(ctx: &AppContext) -> ComponentHealth {
     let start = Instant::now();
     let kind = if ctx.environment == Environment::Test {
@@ -85,20 +85,21 @@ async fn check_cache(ctx: &AppContext) -> ComponentHealth {
     } else {
         "redis"
     };
-    let test_key = "_health_ready_probe_key";
+    let probe_id = uuid::Uuid::new_v4().simple();
+    let test_key = format!("_health_ready_probe:{probe_id}");
     let test_val = "ping";
 
     let probe = async {
         ctx.cache
-            .insert(test_key, &test_val)
+            .insert(&test_key, &test_val)
             .await
             .map_err(|e| format!("cache write failed: {e}"))?;
         let res: Option<String> = ctx
             .cache
-            .get(test_key)
+            .get(&test_key)
             .await
             .map_err(|e| format!("cache read failed: {e}"))?;
-        let _ = ctx.cache.remove(test_key).await;
+        let _ = ctx.cache.remove(&test_key).await;
         if res.as_deref() != Some(test_val) {
             return Err("cache value mismatch".to_string());
         }
@@ -109,25 +110,25 @@ async fn check_cache(ctx: &AppContext) -> ComponentHealth {
         Ok(Ok(_)) => ComponentHealth {
             kind: kind.to_string(),
             status: "up".to_string(),
-            latency_ms: (start.elapsed().as_secs_f64() * 100_000.0).round() / 100.0,
+            latency_ms: (start.elapsed().as_secs_f64() * 1000.0 * 100.0).round() / 100.0,
             error: None,
         },
         Ok(Err(err)) => ComponentHealth {
             kind: kind.to_string(),
             status: "down".to_string(),
-            latency_ms: (start.elapsed().as_secs_f64() * 100_000.0).round() / 100.0,
+            latency_ms: (start.elapsed().as_secs_f64() * 1000.0 * 100.0).round() / 100.0,
             error: Some(err),
         },
         Err(_) => ComponentHealth {
             kind: kind.to_string(),
             status: "down".to_string(),
-            latency_ms: (start.elapsed().as_secs_f64() * 100_000.0).round() / 100.0,
+            latency_ms: (start.elapsed().as_secs_f64() * 1000.0 * 100.0).round() / 100.0,
             error: Some("cache probe timed out (3s)".to_string()),
         },
     }
 }
 
-/// 探针: 执行对象存储 (S3 Garage / Local) 上传与删除探针检测
+/// 探针: 执行对象存储 (S3 Garage / Local) 上传与删除探针检测（使用 UUID 隔离文件名防止并发碰撞）
 async fn check_storage(ctx: &AppContext) -> ComponentHealth {
     let start = Instant::now();
     let kind = if ctx.environment == Environment::Test {
@@ -135,7 +136,9 @@ async fn check_storage(ctx: &AppContext) -> ComponentHealth {
     } else {
         "s3"
     };
-    let test_path = Path::new("_health_ready_probe.txt");
+    let probe_id = uuid::Uuid::new_v4().simple();
+    let filename = format!("_health_ready_probe_{probe_id}.txt");
+    let test_path = Path::new(&filename);
     let test_bytes = Bytes::from_static(b"ping");
 
     let probe = async {
@@ -152,19 +155,19 @@ async fn check_storage(ctx: &AppContext) -> ComponentHealth {
         Ok(Ok(_)) => ComponentHealth {
             kind: kind.to_string(),
             status: "up".to_string(),
-            latency_ms: (start.elapsed().as_secs_f64() * 100_000.0).round() / 100.0,
+            latency_ms: (start.elapsed().as_secs_f64() * 1000.0 * 100.0).round() / 100.0,
             error: None,
         },
         Ok(Err(err)) => ComponentHealth {
             kind: kind.to_string(),
             status: "down".to_string(),
-            latency_ms: (start.elapsed().as_secs_f64() * 100_000.0).round() / 100.0,
+            latency_ms: (start.elapsed().as_secs_f64() * 1000.0 * 100.0).round() / 100.0,
             error: Some(err),
         },
         Err(_) => ComponentHealth {
             kind: kind.to_string(),
             status: "down".to_string(),
-            latency_ms: (start.elapsed().as_secs_f64() * 100_000.0).round() / 100.0,
+            latency_ms: (start.elapsed().as_secs_f64() * 1000.0 * 100.0).round() / 100.0,
             error: Some("storage probe timed out (3s)".to_string()),
         },
     }

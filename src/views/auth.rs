@@ -1,51 +1,6 @@
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+//! Auth 视图契约重定向
+//!
+//! 所有认证响应 DTO 已统一下沉收拢至 `crate::dtos::auth::*`。
+//! 本模块重定向保持 100% 向上兼容。
 
-use crate::models::_entities::users;
-
-/// 登录成功响应数据对象
-#[derive(Debug, Deserialize, Serialize, ToSchema)]
-pub struct LoginResource {
-    /// JWT 认证 Token
-    pub token: String,
-    /// 用户公共 PID (UUID)
-    pub pid: String,
-    /// 用户姓名
-    pub name: String,
-    /// 邮箱是否已验证
-    pub is_verified: bool,
-}
-
-impl LoginResource {
-    #[must_use]
-    pub fn new(user: &users::Model, token: &str) -> Self {
-        Self {
-            token: token.to_owned(),
-            pid: user.pid.to_string(),
-            name: user.name.clone(),
-            is_verified: user.email_verified_at.is_some(),
-        }
-    }
-}
-
-/// 当前登录用户信息响应
-#[derive(Debug, Deserialize, Serialize, ToSchema)]
-pub struct CurrentUserResource {
-    /// 用户公共 PID (UUID)
-    pub pid: String,
-    /// 用户姓名
-    pub name: String,
-    /// 用户邮箱
-    pub email: String,
-}
-
-impl CurrentUserResource {
-    #[must_use]
-    pub fn new(user: &users::Model) -> Self {
-        Self {
-            pid: user.pid.to_string(),
-            name: user.name.clone(),
-            email: user.email.clone(),
-        }
-    }
-}
+pub use crate::dtos::auth::{CurrentUserResource, LoginResource};

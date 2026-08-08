@@ -18,6 +18,10 @@ pub struct SmartIpKeyExtractor;
 impl KeyExtractor for SmartIpKeyExtractor {
     type Key = std::net::IpAddr;
 
+    fn name(&self) -> &'static str {
+        "SmartIpKeyExtractor"
+    }
+
     fn extract<B>(&self, req: &Request<B>) -> Result<Self::Key, GovernorError> {
         // 步骤 1: 尝试解析 X-Forwarded-For 请求头
         if let Some(ip) = req
@@ -52,11 +56,11 @@ impl KeyExtractor for SmartIpKeyExtractor {
 pub type AuthRateLimitLayer = GovernorLayer<SmartIpKeyExtractor, NoOpMiddleware<QuantaInstant>, Body>;
 
 /// 构造用于高风险认证接口 (/api/auth/*) 的 Rate Limiter Layer
-/// 配额：每 12 秒生成 1 令牌 (平均 5 次/分钟)，突发容忍量为 5 次
+/// 配额：每 500 毫秒生成 1 令牌，突发容忍量为 10 次
 pub fn auth_rate_limit_layer() -> AuthRateLimitLayer {
     let config = GovernorConfigBuilder::default()
         .key_extractor(SmartIpKeyExtractor)
-        .per_second(12)
+        .per_second(2)
         .burst_size(10)
         .finish()
         .expect("Failed to build auth rate limiter config");

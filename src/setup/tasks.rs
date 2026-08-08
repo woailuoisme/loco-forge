@@ -23,4 +23,5 @@ pub fn register_tasks(tasks: &mut Tasks) {
     // tasks-inject (do not remove)
     tasks.register(tasks::clean_expired_tokens::CleanExpiredTokens);
     tasks.register(tasks::user_create::UserCreate);
+    tasks.register(tasks::seed_data::SeedData);
 }

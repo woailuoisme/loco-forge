@@ -9,6 +9,8 @@ just = "latest"                     # 现代化 command runner 任务命令工�
 "cargo:cargo-audit" = "latest"      # 扫描依赖包中的 RustSec 已知安全漏洞
 "cargo:cargo-llvm-cov" = "latest"   # 代码测试覆盖率统计工具
 "cargo:sea-orm-cli" = "latest"      # Sea-ORM 数据库实体与迁移 CLI 工具
+"cargo:rust-i18n-cli" = "latest"    # 国际化 (i18n) 文案提取与词条校验 CLI 工具
+"cargo:https://github.com/cksac/fake-rs.git" = { features = ["cli"], version = "latest" } # 伪造 Mock 数据生成 CLI 工具
 
 [tasks]
 dev = { run = "cargo watch -w src -w config -s 'cargo run -- start'", description = "启动开发环境热重载服务 (自动监听 src/ 与 config/)" }
@@ -19,3 +21,5 @@ fix = { run = "cargo clippy --fix --allow-dirty --allow-staged && cargo fmt --al
 migrate = { run = "cargo loco db migrate", description = "执行数据库迁移" }
 routes = { run = "cargo loco routes", description = "查看当前所有已注册的路由表" }
 doctor = { run = "cargo loco doctor", description = "检查开发环境配置与依赖健康状态" }
+i18n = { run = "cargo i18n", description = "抽取代码中的 t! 国际化文案并更新 locales/ 字典" }
+seed = { run = "cargo loco task seed_data", description = "填充开发与演示环境种子数据 (src/fixtures)" }

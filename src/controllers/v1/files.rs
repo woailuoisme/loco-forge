@@ -4,27 +4,15 @@ use axum::{
     response::Response,
 };
 use loco_rs::prelude::*;
-use serde::Serialize;
-use std::path::Path as StdPath;
-use uuid::Uuid;
 
 use crate::{
     common::consts::openapi::TAG_FILES,
-    dtos::common::{ApiResponse, format_res},
+    dtos::{
+        common::{ApiResponse, format_res},
+        files::FileUploadResource,
+    },
+    services::FileService,
 };
-
-/// 文件上传响应 Payload
-#[derive(Debug, Serialize, utoipa::ToSchema)]
-pub struct FileUploadResource {
-    /// 存储系统中的唯一文件 Key
-    pub key: String,
-    /// 原始文件名
-    pub filename: String,
-    /// 文件字节大小
-    pub size: usize,
-    /// HTTP Content-Type 类型
-    pub content_type: Option<String>,
-}
 
 /// 单文件/多文件上传接口
 #[utoipa::path(
@@ -43,48 +31,8 @@ pub struct FileUploadResource {
     tag = TAG_FILES
 )]
 #[debug_handler]
-pub async fn upload(_auth: auth::JWT, State(ctx): State<AppContext>, mut multipart: Multipart) -> Result<Response> {
-    let mut uploaded_files = Vec::new();
-
-    while let Ok(Some(field)) = multipart.next_field().await {
-        let filename = field.file_name().unwrap_or("unnamed_file").to_string();
-
-        let content_type = field.content_type().map(|ct| ct.to_string());
-
-        let bytes = match field.bytes().await {
-            Ok(b) => b,
-            Err(err) => {
-                return format_res::bad_request(format!("Failed to read file field: {err}"));
-            }
-        };
-
-        let file_size = bytes.len();
-        if file_size == 0 {
-            continue;
-        }
-
-        // 生成存储 Key: uploads/<uuid>/<filename>
-        let file_uuid = Uuid::new_v4();
-        let key = format!("uploads/{file_uuid}/{filename}");
-        let path = StdPath::new(&key);
-
-        if let Err(err) = ctx.storage.upload(path, &bytes).await {
-            tracing::error!(key = %key, error = %err, "Failed to upload file to storage");
-            return format_res::internal_error("An unexpected internal server error occurred");
-        }
-
-        uploaded_files.push(FileUploadResource {
-            key,
-            filename,
-            size: file_size,
-            content_type,
-        });
-    }
-
-    if uploaded_files.is_empty() {
-        return format_res::bad_request("No files were uploaded");
-    }
-
+pub async fn upload(_auth: auth::JWT, State(ctx): State<AppContext>, multipart: Multipart) -> Result<Response> {
+    let uploaded_files = FileService::upload(&ctx, multipart).await?;
     format_res::ok(uploaded_files)
 }
 
@@ -99,44 +47,19 @@ pub async fn upload(_auth: auth::JWT, State(ctx): State<AppContext>, mut multipa
     ),
     responses(
         (status = 200, description = "获取成功"),
+        (status = 400, description = "非法的路径 Key"),
         (status = 404, description = "文件不存在")
     ),
     tag = TAG_FILES
 )]
 #[debug_handler]
 pub async fn get_file(State(ctx): State<AppContext>, Path(key): Path<String>) -> Result<Response> {
-    let path = StdPath::new(&key);
-    let bytes: Vec<u8> = match ctx.storage.download(path).await {
-        Ok(b) => b,
-        Err(_) => {
-            return format_res::not_found(format!("File not found: {key}"));
-        }
-    };
+    let (content_type, bytes) = FileService::download(&ctx, &key).await?;
 
     let mut headers = HeaderMap::new();
-    let content_type = guess_content_type(&key);
     headers.insert(header::CONTENT_TYPE, HeaderValue::from_static(content_type));
 
     Ok((StatusCode::OK, headers, bytes).into_response())
-}
-
-/// 简易 Content-Type 推导辅助函数
-fn guess_content_type(filename: &str) -> &'static str {
-    let ext = StdPath::new(filename)
-        .extension()
-        .and_then(|s| s.to_str())
-        .unwrap_or("");
-
-    match ext.to_lowercase().as_str() {
-        "png" => "image/png",
-        "jpg" | "jpeg" => "image/jpeg",
-        "gif" => "image/gif",
-        "svg" => "image/svg+xml",
-        "json" => "application/json",
-        "pdf" => "application/pdf",
-        "txt" => "text/plain; charset=utf-8",
-        _ => "application/octet-stream",
-    }
 }
 
 pub fn routes() -> Routes {

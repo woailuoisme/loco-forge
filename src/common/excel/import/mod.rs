@@ -70,9 +70,14 @@ impl Default for ImportOptions {
     }
 }
 
-/// 将二进制 `.xlsx` 字节流解析为强类型列表与错误集合（支持自动拆分的多 Sheet 连续解析）
-pub fn import_from_bytes<T: ExcelImport>(bytes: &[u8]) -> Result<ImportResult<T>, Error> {
-    let cursor = Cursor::new(bytes);
+/// 将二进制 `.xlsx` 字节流解析为强类型列表与错误集合（支持泛型 `impl AsRef<[u8]>` 入参，支持自动拆分的多 Sheet 连续解析）
+pub fn import_from_bytes<T: ExcelImport>(bytes: impl AsRef<[u8]>) -> Result<ImportResult<T>, Error> {
+    let slice = bytes.as_ref();
+    if slice.is_empty() {
+        return Err(Error::BadRequest("Excel 导入数据字节流为空".to_string()));
+    }
+
+    let cursor = Cursor::new(slice);
     let mut workbook: Xlsx<_> = calamine::open_workbook_from_rs(cursor).map_err(|e| {
         tracing::error!("打开 Excel 文件字节流失败: {:?}", e);
         Error::BadRequest("无法识别的 Excel 文件格式".to_string())
@@ -82,6 +87,7 @@ pub fn import_from_bytes<T: ExcelImport>(bytes: &[u8]) -> Result<ImportResult<T>
 
     let mut valid_rows = Vec::new();
     let mut errors = Vec::new();
+    let max_errors = consts::excel::MAX_IMPORT_ERRORS;
 
     for sheet_name in target_sheets {
         let range = match workbook.worksheet_range(&sheet_name) {
@@ -100,6 +106,11 @@ pub fn import_from_bytes<T: ExcelImport>(bytes: &[u8]) -> Result<ImportResult<T>
         let headers_map = reader::build_headers_map(header_row);
 
         for (row_idx, row_cells) in rows_iter.enumerate() {
+            if errors.len() >= max_errors {
+                tracing::warn!("Excel 导入错误收集达到熔断阀值 ({})，提前终止后续行解析", max_errors);
+                break;
+            }
+
             let line_number = row_idx + 2;
 
             if reader::is_empty_row(row_cells) {

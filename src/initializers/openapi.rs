@@ -38,7 +38,7 @@ use crate::{
     ),
     components(
         schemas(
-            controllers::v1::files::FileUploadResource,
+            dtos::files::FileUploadResource,
             dtos::common::ApiError,
             // 无载荷成功响应 (注册/验证/重置密码/魔术链接等)
             dtos::common::ApiResponse,
@@ -49,7 +49,7 @@ use crate::{
             dtos::common::ApiResponse<views::auth::LoginResource>,
             dtos::common::ApiResponse<views::auth::CurrentUserResource>,
             // 文件上传具化响应
-            dtos::common::ApiResponse<Vec<controllers::v1::files::FileUploadResource>>,
+            dtos::common::ApiResponse<Vec<dtos::files::FileUploadResource>>,
             // 分页与通用类型
             dtos::common::Page<dtos::posts::PostResource>,
             dtos::common::PaginationRequest,

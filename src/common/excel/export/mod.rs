@@ -6,10 +6,11 @@ pub mod engine;
 pub use chunk::export_chunked_to_file;
 pub use engine::ExportStyles;
 
-use crate::common::consts;
+use bytes::Bytes;
 use loco_rs::prelude::*;
 use rust_xlsxwriter::Workbook;
 
+use crate::common::consts;
 use crate::common::excel::cell::CellValue;
 
 /// Excel 导出接口（仿 Laravel Excel `FromCollection` / `WithHeadings` 规范）
@@ -50,8 +51,8 @@ impl Default for ExportOptions {
     }
 }
 
-/// 将实现了 `ExcelExport` 的结构体切片导出为内存中的 `.xlsx` 二进制字节数组（适合小数据量导出）
-pub fn export_to_bytes<T: ExcelExport>(items: &[T]) -> Result<Vec<u8>, Error> {
+/// 将实现了 `ExcelExport` 的结构体切片导出为内存中的 `.xlsx` 二进制字节数组（适合小数据量导出，导出为零拷贝 `bytes::Bytes`）
+pub fn export_to_bytes<T: ExcelExport>(items: &[T]) -> Result<Bytes, Error> {
     let mut workbook = Workbook::new();
     let worksheet = workbook.add_worksheet();
     let _ = worksheet.set_name(T::sheet_name());
@@ -80,9 +81,11 @@ pub fn export_to_bytes<T: ExcelExport>(items: &[T]) -> Result<Vec<u8>, Error> {
         worksheet.autofit();
     }
 
-    // 4. 保存到内存字节流并返回
-    workbook.save_to_buffer().map_err(|e| {
+    // 4. 保存到内存字节流并返回为零拷贝 `Bytes`
+    let buffer = workbook.save_to_buffer().map_err(|e| {
         tracing::error!("生成 Excel 字节流失败: {:?}", e);
         Error::InternalServerError
-    })
+    })?;
+
+    Ok(Bytes::from(buffer))
 }

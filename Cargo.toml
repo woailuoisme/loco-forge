@@ -20,68 +20,80 @@ sea-orm-migration = { version = "2.0" }
 loco-rs = { workspace = true, features = [
   "storage_aws_s3",
   "cache_redis",
-  "worker_redis"
+  "worker_redis",
 ] }
-tokio = { version = "1.53", default-features = false, features = [
-  "rt-multi-thread", # 启用 Tokio 多线程 Work-Stealing 异步运行时调度器 (Loco/Axum 必须)
-  "macros",          # 启用 Tokio 过程宏支持 (#[tokio::main], #[tokio::test], select!)
-  "time",            # 启用异步定时器与超时控制 (sleep, timeout, interval)
-  "sync",            # 启用异步同步原语与通道 (mpsc, oneshot, watch, Mutex, RwLock)
-  "signal",          # 启用操作系统信号监听 (SIGINT/SIGTERM, 优雅停机 Graceful Shutdown)
-] }
+tokio = { version = "1.53", features = ["rt-multi-thread", "macros", "time", "sync", "signal", "fs", "io-util"] } # Tokio 异步运行时 (多线程 Work-Stealing 调度器、过程宏、定时器、通道与异步文件 IO)
+axum = { version = "0.8", features = ["multipart", "macros"] } # 底层 Web 框架支持 (开启 multipart 支持表单文件上传)
 tokio-util = { version = "0.7" } # Tokio 异步工具库扩展 (包含 CancellationToken/Codec/TaskTracker)
 async-trait = { version = "0.1" } # 允许在 Trait 中定义 async 方法的属性宏 (Hooks/Initializer 必须)
-axum = { version = "0.8", features = ["multipart","macros"] } # 底层 Web 框架支持 (开启 multipart 支持表单文件上传)
-governor = "0.10" # 高性能 Token/Leaky Bucket 频控算法核心库
-tower_governor = { version = "0.8" } # 基于 Governor 算法的 Tower/Axum 速率限制中间件 (Rate Limiting)
+governor = { version = "0.10", features = ["jitter", "quanta"] } # 高性能 Token/Leaky Bucket 频控算法核心库 (开启抖动削峰与纳秒高精度时钟)
+tower_governor = { version = "0.8", features = ["tracing"] } # 基于 Governor 算法的 Tower/Axum 速率限制中间件 (开启 Tracing 限流日志输出)
 
-# 2. 网络与 HTTP 客户端 (Networking & HTTP Client)
-reqwest = { version = "0.13.4", features = ["json"] }
-meilisearch-sdk = "0.33" # Meilisearch 官方 Rust SDK (全文检索)
-
-# 3. 序列化与基础工具库 (Serialization & Core Utilities)
-serde = { version = "1", features = ["derive"] } # 通用数据序列化与反序列化框架
-serde_json = { version = "1" } # JSON 数据格式化与解析工具
-thiserror = { version = "2" } # 自定义错误类型派生宏 (std::error::Error)
-
-chrono = { version = "0.4", features = ["serde"] } # 日期与时间跨时区处理库 (Loco/SeaORM/utoipa 全栈统一标准)
-uuid = { version = "1.24", features = ["v4", "serde"] } # 通用唯一标识符 (UUID v4) 生成器
-validator = { version = "0.20" } # DTO 请求参数格式校验器 (锁定 0.20.x 需与 loco-rs 1.0 的 Validate Trait 保持一致)
-base64 = { version = "0.23" } # Base64 数据编解码工具 (用于二进制/Token/图片数据编解码)
-secrecy = { version = "0.10.3", features = ["serde"] }
-regex = { version = "1.13" } # 高性能正则表达式匹配工具
-rust-i18n = {version="4"} # 多语言国际化 (i18n) 翻译框架
-jsonwebtoken = { version = "10.4", features = ["rust_crypto"] }
-rand = { version="0.10" } # 加密安全伪随机数生成器 (OTP/Token/随机验证码生成)
-
-# 4. 数据库与数据迁移 (Database & ORM)
+# 2. 数据库与数据迁移 (Database & ORM)
 migration = { path = "migration" }
 sea-orm = { workspace = true, features = [
   "sqlx-sqlite",
   "sqlx-postgres",
   "runtime-tokio-rustls",
   "macros",
+  "with-rust_decimal",
 ] }
 
-# 5. 日志与链路追踪 (Logging & Observability)
+# 3. 网络、检索与 HTTP 客户端 (Networking, Search & HTTP Client)
+reqwest = { version = "0.13.4", features = ["json", "stream", "multipart"] } # 异步 HTTP 客户端 (支持 JSON、流式 Stream 下载与 Multipart 表单)
+meilisearch-sdk = { version = "0.33" } # Meilisearch 全文搜索引擎 SDK
+mime_guess = { version = "2" } # 根据文件后缀或路径推导 RFC 标准 MIME/Content-Type 类型
+bytes = { version = "1", features = ["serde"] } # 高性能二进制 Byte 缓冲区与零拷贝 Byte 容器 (开启 Serde 序列化支持)
+
+# 4. 序列化、校验与扩展数据类型 (Serialization, Validation & Data Types)
+serde = { version = "1", features = ["derive"] } # 通用数据序列化与反序列化框架
+serde_json = { version = "1" } # JSON 数据格式化与解析工具
+thiserror = { version = "2" } # 自定义错误类型派生宏 (std::error::Error)
+chrono = { version = "0.4", features = ["serde"] } # 日期与时间跨时区处理库 (Loco/SeaORM/utoipa 全栈统一标准)
+uuid = { version = "1.24", features = ["v4", "serde"] } # 通用唯一标识符 (UUID v4) 生成器
+validator = { version = "0.20", features = ["derive"] } # DTO 请求参数格式校验器 (锁定 0.20.x 需与 loco-rs 1.0 的 Validate Trait 保持一致)
+rust_decimal = { version = "1", features = ["macros", "maths", "serde", "serde-with-str", "serde-str"] } # 高精度定点小数库 (用于金融/货币/高级数学/字符串序列化)
+fake = { version = "5", features = ["derive", "chrono", "uuid", "rust_decimal", "serde_json", "geo", "url", "indexmap", "semver"] } # 伪造 Mock 测试数据与 Dummy 派生宏
+geo = { version = "0.33", features = ["serde"] } # GIS 2D 地理空间数据类型与空间算法库 (PostGIS/GeoJSON 兼容)
+indexmap = { version = "2", features = ["serde"] } # 保持插入顺序的高性能 Hash Map/Set 集合 (utoipa/Loco/serde 原生兼容)
+
+# 5. 安全、身份认证与加密工具 (Security, Authentication & Cryptography)
+jsonwebtoken = { version = "10.4", features = ["rust_crypto"] } # JWT Token 签发与校验
+secrecy = { version = "0.10.3", features = ["serde"] } # 敏感数据防泄漏内存包裹容器
+base64 = { version = "0.23" } # Base64 数据编解码工具
+rand = { version = "0.10", features = ["serde"] } # 加密安全伪随机数生成器 (开启 Serde 序列化)
+regex = { version = "1.13" } # 高性能正则表达式匹配工具
+rust-i18n = { version = "4" } # 多语言国际化 (i18n) 翻译框架
+sha2 = { version = "0.11" } # SHA-256 / SHA-512 高性能密码学哈希计算库 (文件去重与摘要)
+
+# 6. 命令行 CLI 与终端交互 (CLI & Terminal Interaction)
+inquire = { version = "0.9", features = ["date", "editor", "macros"] } # 终端交互式命令行提示组件库 (Confirm/Select/Text/Password/Date 交互菜单与宏)
+inquire-derive = { version = "0.9" } # Inquire 过程宏导出
+
+# 7. 日志与链路追踪 (Logging & Observability)
 tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
-# 6. Excel 与电子表格处理 (Excel & Spreadsheet Processing)
-calamine = { version = "0.36" }
-rust_xlsxwriter = { version = "0.97", features = ["constant_memory"] }
+# 8. 电子表格、图像与二维码处理 (Spreadsheet, Image & QR Processing)
+calamine = { version = "0.36", features = ["chrono"] } # Excel/Spreadsheet 读取解析工具 (开启 Chrono 原生时间支持)
+rust_xlsxwriter = { version = "0.97", features = ["constant_memory", "chrono", "serde"] } # Excel 导出与生成工具 (开启常数内存流式落盘、Chrono 时间与 Serde 序列化)
+image = { version = "0.25", features = ["serde", "color_quant"] } # 图像处理与编解码库 (包含 Rayon 多线程、Serde 序列化与 NeuQuant 调色板量化)
+qrcode = { version = "0.14" } # 二维码 (QR Code) 生成库
 
-# 7. 图像与二维码生成 (Image & QR Code Processing)
-image = { version = "0.25" }
-qrcode = { version = "0.14" }
-
-# 8. API 文档与前端契约生成 (API Docs & TypeScript Bindings)
-# ts-rs 自动为 DTO 导出 TypeScript 类型定义文件，供 SPA 前端消费
-ts-rs = { version = "12", features = ["chrono-impl", "serde-compat"] }
-include_dir = { version = "0.7" }
-utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid", "preserve_order", "openapi_extensions", "repr"] }
-utoipa-scalar = { version = "0.3", features = ["axum"] }
-utoipa-redoc = { version = "6", features = ["axum"] }
+# 9. API 文档与前端契约生成 (API Docs & TypeScript Bindings)
+utoipa = { version = "5", features = [
+  "axum_extras",
+  "chrono",
+  "uuid",
+  "preserve_order",
+  "openapi_extensions",
+  "repr",
+  "decimal",
+] } # OpenAPI Spec 自动推导生成库
+utoipa-scalar = { version = "0.3", features = ["axum"] } # Modern Scalar API UI
+utoipa-redoc = { version = "6", features = ["axum"] } # ReDoc API UI
+ts-rs = { version = "12", features = ["chrono-impl", "serde-compat"] } # TypeScript 类型绑定自动导出工具
+include_dir = { version = "0.7" } # 静态文件打入二进制嵌入工具
 
 [[bin]]
 name = "locos"
@@ -90,8 +102,8 @@ required-features = []
 
 [dev-dependencies]
 loco-rs = { workspace = true, features = ["testing"] }
-tower = { version = "0.5" }
-serial_test = { version = "4.0.1" }
+tower = { version = "0.5", features = ["util"] } # Tower HTTP 服务与测试扩展 (提供 ServiceExt::oneshot/ready 支持)
+serial_test = { version = "4.0" }
 rstest = { version = "0.26" }
 insta = { version = "1.48", features = [
   "redactions",
@@ -99,6 +111,7 @@ insta = { version = "1.48", features = [
   "json",
   "glob",
   "filters",
+  "colors",
 ] }
 
 # 优化开发构建体积 (把调试信息级别降为 1 并在 macOS 开启 unpacked 符号拆分，同时保留 panic 堆栈追踪)

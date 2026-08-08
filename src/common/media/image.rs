@@ -1,11 +1,14 @@
+use bytes::Bytes;
 use image::{DynamicImage, GenericImageView, ImageFormat, codecs::jpeg::JpegEncoder, imageops};
 use std::io::Cursor;
 
 use crate::common::consts;
 use crate::common::media::error::{MediaError, MediaResult};
 
+use serde::{Deserialize, Serialize};
+
 /// 图像缩放与裁剪模式 (Resize Mode)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ResizeMode {
     /// 保持宽高比缩放，适应目标边界框 (尺寸不会超出指定的 width/height)
     Fit,
@@ -18,7 +21,7 @@ pub enum ResizeMode {
 }
 
 /// 常见的图像变体预设 (Laravel Media Library Conversions / Presets)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ImagePreset {
     /// 用户头像：200x200 填充居中裁剪
     Avatar,
@@ -33,7 +36,7 @@ pub enum ImagePreset {
 }
 
 /// 水印九宫格位置定义 (Watermark Position)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WatermarkPosition {
     Center,
     TopLeft,
@@ -47,7 +50,7 @@ pub enum WatermarkPosition {
 }
 
 /// 导出目标图像格式定义 (Output Format)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum OutputFormat {
     #[default]
     Png,
@@ -69,12 +72,13 @@ pub struct ImageProcessor {
 }
 
 impl ImageProcessor {
-    /// 从内存二进制字节数据中加载并解析图片 (自动校正 EXIF 旋转角，包含 8000px 维度防炸安全保护)
-    pub fn from_bytes(bytes: &[u8]) -> MediaResult<Self> {
-        if bytes.is_empty() {
+    /// 从字节数据中加载并解析图片（泛型支持 `&[u8]`, `Vec<u8>`, `Bytes` 等，包含 8000px 维度防炸安全保护）
+    pub fn from_bytes(bytes: impl AsRef<[u8]>) -> MediaResult<Self> {
+        let slice = bytes.as_ref();
+        if slice.is_empty() {
             return Err(MediaError::InvalidInput("Image input byte array is empty".to_string()));
         }
-        let image = image::load_from_memory(bytes)?;
+        let image = image::load_from_memory(slice)?;
         let (w, h) = image.dimensions();
         if w > consts::media::MAX_DIMENSION || h > consts::media::MAX_DIMENSION {
             return Err(MediaError::InvalidInput(format!(
@@ -90,6 +94,7 @@ impl ImageProcessor {
     }
 
     /// 从已有的 `image::DynamicImage` 实例构造
+    #[must_use]
     pub fn from_image(image: DynamicImage) -> Self {
         Self {
             image,
@@ -98,17 +103,20 @@ impl ImageProcessor {
     }
 
     /// 获取当前图像的像素尺寸 (width, height)
+    #[must_use]
     pub fn dimensions(&self) -> (u32, u32) {
         self.image.dimensions()
     }
 
     /// 设置图像导出目标格式 (如 PNG, JPEG, WebP 含质量参数)
+    #[must_use]
     pub fn format(mut self, format: OutputFormat) -> Self {
         self.format = format;
         self
     }
 
     /// 应用 Laravel Media Library 风格的变体预设 (Presets)
+    #[must_use]
     pub fn apply_preset(self, preset: ImagePreset) -> Self {
         match preset {
             ImagePreset::Avatar => self.resize(200, 200, ResizeMode::FillCrop),
@@ -120,6 +128,7 @@ impl ImageProcessor {
     }
 
     /// 执行图像尺寸调整/裁剪操作
+    #[must_use]
     pub fn resize(mut self, target_width: u32, target_height: u32, mode: ResizeMode) -> Self {
         if target_width == 0 || target_height == 0 {
             return self;
@@ -163,54 +172,63 @@ impl ImageProcessor {
     // ==================== 链式滤镜与变换操作 (Filters & Transforms) ====================
 
     /// 灰度滤镜 (Grayscale)
+    #[must_use]
     pub fn grayscale(mut self) -> Self {
         self.image = self.image.grayscale();
         self
     }
 
     /// 高斯模糊滤镜 (Gaussian Blur)
+    #[must_use]
     pub fn blur(mut self, sigma: f32) -> Self {
         self.image = self.image.blur(sigma.max(0.0));
         self
     }
 
     /// 亮度调节 (Brighten)
+    #[must_use]
     pub fn brighten(mut self, value: i32) -> Self {
         self.image = self.image.brighten(value);
         self
     }
 
     /// 对比度调节 (Contrast)
+    #[must_use]
     pub fn contrast(mut self, value: f32) -> Self {
         self.image = self.image.adjust_contrast(value);
         self
     }
 
     /// 顺时针旋转 90 度
+    #[must_use]
     pub fn rotate90(mut self) -> Self {
         self.image = self.image.rotate90();
         self
     }
 
     /// 顺时针旋转 180 度
+    #[must_use]
     pub fn rotate180(mut self) -> Self {
         self.image = self.image.rotate180();
         self
     }
 
     /// 顺时针旋转 270 度
+    #[must_use]
     pub fn rotate270(mut self) -> Self {
         self.image = self.image.rotate270();
         self
     }
 
     /// 水平镜像翻转 (Flip Horizontal)
+    #[must_use]
     pub fn fliph(mut self) -> Self {
         self.image = self.image.fliph();
         self
     }
 
     /// 垂直镜像翻转 (Flip Vertical)
+    #[must_use]
     pub fn flipv(mut self) -> Self {
         self.image = self.image.flipv();
         self
@@ -218,13 +236,19 @@ impl ImageProcessor {
 
     // ==================== 水印与导出操作 (Watermark & Export) ====================
 
-    /// 叠加图片水印 (支持九宫格位置控制与透明度 alpha 调配)
-    pub fn watermark(mut self, watermark_bytes: &[u8], position: WatermarkPosition, opacity: f32) -> MediaResult<Self> {
-        if watermark_bytes.is_empty() {
+    /// 叠加图片水印 (支持泛型入参 `impl AsRef<[u8]>`，九宫格位置控制与透明度 alpha 调配)
+    pub fn watermark(
+        mut self,
+        watermark_bytes: impl AsRef<[u8]>,
+        position: WatermarkPosition,
+        opacity: f32,
+    ) -> MediaResult<Self> {
+        let slice = watermark_bytes.as_ref();
+        if slice.is_empty() {
             return Ok(self);
         }
 
-        let watermark_dynamic = image::load_from_memory(watermark_bytes)?;
+        let watermark_dynamic = image::load_from_memory(slice)?;
         let (base_w, base_h) = self.image.dimensions();
         let (wm_w, wm_h) = watermark_dynamic.dimensions();
 
@@ -276,13 +300,13 @@ impl ImageProcessor {
         Ok(self)
     }
 
-    /// 快捷导出为现代化 Web 推荐的高效 WebP 字节流
-    pub fn to_webp_optimal(self, quality: u8) -> MediaResult<Vec<u8>> {
+    /// 快捷导出为现代化 Web 推荐的高效 WebP 字节流 (返回 `bytes::Bytes` 实现零拷贝)
+    pub fn to_webp_optimal(self, quality: u8) -> MediaResult<Bytes> {
         self.format(OutputFormat::Webp { quality }).to_bytes()
     }
 
-    /// 转换并导出为字节 Byte 数组
-    pub fn to_bytes(&self) -> MediaResult<Vec<u8>> {
+    /// 转换并导出为 `bytes::Bytes` 容器 (零拷贝 HTTP 对接)
+    pub fn to_bytes(&self) -> MediaResult<Bytes> {
         let mut buffer = Vec::new();
         let mut cursor = Cursor::new(&mut buffer);
 
@@ -316,10 +340,11 @@ impl ImageProcessor {
             }
         }
 
-        Ok(buffer)
+        Ok(Bytes::from(buffer))
     }
 
     /// 获取底层 `DynamicImage` 内部对象
+    #[must_use]
     pub fn to_dynamic_image(self) -> DynamicImage {
         self.image
     }

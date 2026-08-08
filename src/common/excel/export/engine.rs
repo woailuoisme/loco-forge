@@ -113,15 +113,8 @@ pub fn write_cell(
         CellValue::Int(n) => worksheet.write_number_with_format(row_idx, col_idx, n as f64, &styles.data_format),
         CellValue::Float(f) => worksheet.write_number_with_format(row_idx, col_idx, f, &styles.data_format),
         CellValue::Bool(b) => worksheet.write_boolean_with_format(row_idx, col_idx, b, &styles.data_format),
-        CellValue::Date(d) => {
-            worksheet.write_string_with_format(row_idx, col_idx, d.format("%Y-%m-%d").to_string(), &styles.date_format)
-        }
-        CellValue::DateTime(dt) => worksheet.write_string_with_format(
-            row_idx,
-            col_idx,
-            dt.format("%Y-%m-%d %H:%M:%S").to_string(),
-            &styles.datetime_format,
-        ),
+        CellValue::Date(d) => worksheet.write_date_with_format(row_idx, col_idx, d, &styles.date_format),
+        CellValue::DateTime(dt) => worksheet.write_datetime_with_format(row_idx, col_idx, dt, &styles.datetime_format),
         CellValue::Empty => worksheet.write_blank(row_idx, col_idx, &styles.data_format),
     };
 

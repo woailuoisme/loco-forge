@@ -64,6 +64,14 @@ alias start-release := prod
 migrate:
     cargo loco db migrate
 
+# 填充开发/演示环境种子数据 (src/fixtures)
+seed:
+    cargo loco task seed_data
+
+# 重置冲刷数据库并重新填充种子数据
+seed-refresh:
+    cargo loco task seed_data refresh:true
+
 # 查看当前所有已注册的路由列表
 routes:
     cargo loco routes
@@ -105,6 +113,14 @@ fmt:
 fix:
     cargo clippy --fix --allow-dirty --allow-staged && cargo fmt --all
     rumdl fmt .
+
+# ==============================================================================
+# 4. 国际化与文案 (Internationalization & i18n)
+# ==============================================================================
+
+# 抽取代码中的 t! 国际化文案词条并更新 locales/ 多语言字典文件
+i18n *args="":
+    cargo i18n {{args}}
 
 # 检查依赖包的安全漏洞 (RustSec 漏洞数据库)
 audit:

@@ -1,4 +1,5 @@
 use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
+use bytes::Bytes;
 use image::{DynamicImage, GenericImageView, ImageFormat, Rgba, RgbaImage, imageops};
 use qrcode::{EcLevel, QrCode, render::svg};
 use std::io::Cursor;
@@ -14,8 +15,8 @@ fn rgba_to_hex(rgba: Rgba<u8>) -> String {
 /// 二维码 Logo 配置结构体
 #[derive(Debug, Clone)]
 pub struct QrLogoConfig {
-    /// Logo 图片内存字节数据
-    pub logo_bytes: Vec<u8>,
+    /// Logo 图片内存字节数据 (采用 `bytes::Bytes` 实现零拷贝传递)
+    pub logo_bytes: Bytes,
     /// Logo 占二维码总宽度的比例 (0.1 ~ 0.35, 默认 0.20 即 20%)
     pub scale_ratio: f32,
     /// Logo 外围白色对比遮罩边框大小 (像素)
@@ -23,7 +24,8 @@ pub struct QrLogoConfig {
 }
 
 impl QrLogoConfig {
-    pub fn new(logo_bytes: impl Into<Vec<u8>>) -> Self {
+    /// 构造新的 QrLogoConfig (零拷贝接收 `impl Into<Bytes>`)
+    pub fn new(logo_bytes: impl Into<Bytes>) -> Self {
         Self {
             logo_bytes: logo_bytes.into(),
             scale_ratio: consts::qrcode::LOGO_DEFAULT_SCALE,
@@ -31,11 +33,15 @@ impl QrLogoConfig {
         }
     }
 
+    /// 设置 Logo 缩放比例
+    #[must_use]
     pub fn with_scale_ratio(mut self, ratio: f32) -> Self {
         self.scale_ratio = ratio.clamp(consts::qrcode::LOGO_MIN_SCALE, consts::qrcode::LOGO_MAX_SCALE);
         self
     }
 
+    /// 设置 Logo 对比边框大小
+    #[must_use]
     pub fn with_border_padding(mut self, padding: u32) -> Self {
         self.border_padding = padding;
         self
@@ -69,36 +75,42 @@ impl QrCodeBuilder {
     }
 
     /// 设置图像导出像素目标尺寸 (默认 256px)
+    #[must_use]
     pub fn size(mut self, size: u32) -> Self {
         self.size = size.max(consts::qrcode::MIN_SIZE);
         self
     }
 
     /// 设置二维码白边/留白边距格数 (默认 4)
+    #[must_use]
     pub fn margin(mut self, margin: u32) -> Self {
         self.margin = margin;
         self
     }
 
     /// 设置纠错等级 (EcLevel::L, M, Q, H)
+    #[must_use]
     pub fn ec_level(mut self, level: EcLevel) -> Self {
         self.ec_level = level;
         self
     }
 
     /// 设置前景色 (RGBA)
+    #[must_use]
     pub fn fg_color(mut self, color: [u8; 4]) -> Self {
         self.fg_color = Rgba(color);
         self
     }
 
     /// 设置背景色 (RGBA)
+    #[must_use]
     pub fn bg_color(mut self, color: [u8; 4]) -> Self {
         self.bg_color = Rgba(color);
         self
     }
 
     /// 嵌入中心 Logo (自动提升纠错等级至 H - 30% 容错，并叠加背景防护衬垫)
+    #[must_use]
     pub fn with_logo(mut self, logo: QrLogoConfig) -> Self {
         self.logo = Some(logo);
         // 有 Logo 覆盖时自动提升容错率到最高级别 (EcLevel::H)，确保二维码可被顺畅扫描
@@ -178,20 +190,20 @@ impl QrCodeBuilder {
         Ok(dynamic_img)
     }
 
-    /// 导出为 PNG 格式二进制 Byte 数组
-    pub fn to_png_bytes(&self) -> MediaResult<Vec<u8>> {
+    /// 导出为 PNG 格式二进制 Byte 数组 (返回 `bytes::Bytes` 实现零拷贝)
+    pub fn to_png_bytes(&self) -> MediaResult<Bytes> {
         let img = self.to_dynamic_image()?;
         let mut buffer = Vec::new();
         let mut cursor = Cursor::new(&mut buffer);
         img.write_to(&mut cursor, ImageFormat::Png)?;
-        Ok(buffer)
+        Ok(Bytes::from(buffer))
     }
 
     /// 导出为 Base64 Data URL 字符串 (用于前端 `<img src="...">` 直接展示)
     pub fn to_data_url(&self) -> MediaResult<String> {
         let bytes = self.to_png_bytes()?;
         let b64 = BASE64.encode(&bytes);
-        Ok(format!("data:image/png;base64,{}", b64))
+        Ok(format!("data:image/png;base64,{b64}"))
     }
 
     /// 导出为 SVG 矢量文本字符串

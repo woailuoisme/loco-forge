@@ -23,11 +23,19 @@ fn get_env(primary: &str, fallback: &str) -> Option<String> {
     std::env::var(primary).or_else(|_| std::env::var(fallback)).ok()
 }
 
+/// 从环境变量列表按顺序读取首个有效的配置值
+fn get_env_first(keys: &[&str]) -> Option<String> {
+    keys.iter().find_map(|key| std::env::var(key).ok())
+}
+
 /// 初始化全局对象存储驱动并更新 AppContext
 pub async fn init(mut ctx: AppContext) -> Result<AppContext> {
     let storage = match ctx.environment {
         // 1. 测试环境：使用 In-Memory 内存驱动，零磁盘与网络依赖
-        Environment::Test => Storage::single(mem::new()),
+        Environment::Test => {
+            tracing::info!(driver = "memory", "初始化测试环境内存对象存储驱动");
+            Storage::single(mem::new())
+        }
         // 2. 开发与生产环境：从环境变量动态读取 S3 凭据与 Endpoint
         _ => {
             let bucket = get_env("STORAGE_S3_BUCKET", "AWS_S3_BUCKET").unwrap_or_else(|| "default".to_string());
@@ -35,7 +43,7 @@ pub async fn init(mut ctx: AppContext) -> Result<AppContext> {
 
             let key_id = get_env("STORAGE_S3_ACCESS_KEY", "AWS_ACCESS_KEY_ID");
             let secret_key = get_env("STORAGE_S3_SECRET_KEY", "AWS_SECRET_ACCESS_KEY");
-            let endpoint = std::env::var("STORAGE_S3_ENDPOINT").ok();
+            let endpoint = get_env_first(&["STORAGE_S3_ENDPOINT", "AWS_ENDPOINT_URL_S3", "AWS_ENDPOINT"]);
 
             let cred = key_id.zip(secret_key).map(|(key_id, secret_key)| Credential {
                 key_id,
@@ -58,6 +66,12 @@ pub async fn init(mut ctx: AppContext) -> Result<AppContext> {
                 },
             };
 
+            tracing::info!(
+                driver = "s3",
+                bucket = %bucket,
+                region = %region,
+                "初始化 S3 对象存储驱动"
+            );
             Storage::single(store)
         }
     };

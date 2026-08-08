@@ -22,19 +22,48 @@ impl Task for RouteList {
     /// 执行路由收集与日志打印
     async fn run(&self, app_context: &AppContext, _vars: &task::Vars) -> Result<()> {
         // 步骤 1: 调用 App::routes 收集全局组装好的路由集合
-        let routes = App::routes(app_context);
+        let routes = App::routes(app_context).collect();
 
-        // 步骤 2: 格式化路由表格 Header 头
-        let mut output = String::from("\n+------------+---------------------------------------------------------+\n");
-        output.push_str(&format!("| {:<10} | {:<55} |\n", "Method", "URI"));
-        output.push_str("+------------+---------------------------------------------------------+\n");
+        // 步骤 2: 动态计算 Method 与 URI 的最大长度（以 10 和 55 为基准下限）
+        let mut max_method_len = 10;
+        let mut max_uri_len = 55;
 
-        // 步骤 3: 遍历路由项并按 HTTP 方法与 URI 格式化输出
-        for route in routes.collect() {
+        let mut route_entries = Vec::with_capacity(routes.len());
+        for route in routes {
             let methods = route.actions.iter().map(|a| a.as_str()).collect::<Vec<_>>().join("|");
-            output.push_str(&format!("| {:<10} | {:<55} |\n", methods, route.uri));
+            max_method_len = max_method_len.max(methods.len());
+            max_uri_len = max_uri_len.max(route.uri.len());
+            route_entries.push((methods, route.uri));
         }
-        output.push_str("+------------+---------------------------------------------------------+");
+
+        // 步骤 3: 绘制自适应表格 Header 与分隔线
+        let border = format!("+-{}-+-{}-+", "-".repeat(max_method_len), "-".repeat(max_uri_len));
+
+        let mut output = String::new();
+        output.push('\n');
+        output.push_str(&border);
+        output.push('\n');
+        output.push_str(&format!(
+            "| {:<width_m$} | {:<width_u$} |\n",
+            "Method",
+            "URI",
+            width_m = max_method_len,
+            width_u = max_uri_len
+        ));
+        output.push_str(&border);
+        output.push('\n');
+
+        // 步骤 4: 填充每条路由记录
+        for (methods, uri) in route_entries {
+            output.push_str(&format!(
+                "| {:<width_m$} | {:<width_u$} |\n",
+                methods,
+                uri,
+                width_m = max_method_len,
+                width_u = max_uri_len
+            ));
+        }
+        output.push_str(&border);
 
         tracing::info!(target: "app", "{}", output);
         Ok(())

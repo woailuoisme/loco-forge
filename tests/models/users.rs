@@ -278,3 +278,36 @@ async fn magic_link() {
         "Magic link expiration exceeds expected maximum expiration time"
     );
 }
+
+#[tokio::test]
+#[serial]
+async fn test_clean_expired_tokens_batch() {
+    let boot = boot_test::<App>().await.expect("Failed to boot test application");
+    seed::<App>(&boot.app_context).await.expect("Failed to seed database");
+
+    // 设置过期 reset_token
+    let user = Model::find_by_pid(&boot.app_context.db, "11111111-1111-1111-1111-111111111111")
+        .await
+        .expect("Failed to find user");
+
+    let mut active: users::ActiveModel = user.into();
+    let old_time = Local::now() - Duration::hours(2);
+    active.reset_token = ActiveValue::Set(Some("expired_token".to_string()));
+    active.reset_sent_at = ActiveValue::Set(Some(old_time.into()));
+    active
+        .update(&boot.app_context.db)
+        .await
+        .expect("Failed to update user token");
+
+    let cleaned = Model::clean_expired_tokens(&boot.app_context.db)
+        .await
+        .expect("clean_expired_tokens should succeed");
+
+    assert!(cleaned >= 1, "Should clean at least 1 expired token");
+
+    let refetched = Model::find_by_pid(&boot.app_context.db, "11111111-1111-1111-1111-111111111111")
+        .await
+        .expect("Failed to refetch user");
+
+    assert!(refetched.reset_token.is_none(), "Expired reset token should be cleared");
+}

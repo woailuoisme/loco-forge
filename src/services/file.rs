@@ -1,0 +1,137 @@
+use axum::extract::Multipart;
+use loco_rs::prelude::*;
+use std::path::Path as StdPath;
+
+use crate::{
+    common::utils::upload::{UploadConfig, UploadUtil},
+    dtos::files::FileUploadResource,
+};
+
+/// 文件存储与管理服务
+pub struct FileService;
+
+impl FileService {
+    /// 校验 key 的规范性，防御路径穿越攻击（零堆分配）
+    #[must_use]
+    pub fn sanitize_key(key: &str) -> Option<&str> {
+        if key.contains('\\') {
+            return None;
+        }
+        let path = StdPath::new(key);
+        if path.is_absolute()
+            || path
+                .components()
+                .any(|c| matches!(c, std::path::Component::ParentDir | std::path::Component::RootDir))
+        {
+            return None;
+        }
+        Some(key)
+    }
+
+    /// 使用默认配置执行文件上传
+    pub async fn upload(ctx: &AppContext, multipart: Multipart) -> Result<Vec<FileUploadResource>> {
+        Self::upload_with_config(ctx, multipart, &UploadConfig::default()).await
+    }
+
+    /// 使用自定义配置（包含文件限制、命名策略、白名单校验、防 OOM 流式读取）执行上传
+    pub async fn upload_with_config(
+        ctx: &AppContext,
+        mut multipart: Multipart,
+        config: &UploadConfig,
+    ) -> Result<Vec<FileUploadResource>> {
+        let mut uploaded_files = Vec::new();
+        let mut total_uploaded_bytes: usize = 0;
+
+        while let Ok(Some(mut field)) = multipart.next_field().await {
+            let raw_name_buf = field.file_name().map(|s| s.to_string());
+            let filename_cow = UploadUtil::sanitize_filename(raw_name_buf.as_deref());
+            let content_type = field.content_type().map(|ct| ct.to_string());
+
+            // 1. 后缀与 MIME 白名单预检
+            if let Err(err) = UploadUtil::validate_file(&filename_cow, content_type.as_deref(), config) {
+                tracing::warn!(filename = %filename_cow, error = %err, "Upload file validation failed");
+                return Err(err);
+            }
+
+            // 2. 防 OOM 分块流式读取（受限于 config.max_file_size）
+            let bytes = UploadUtil::read_field_bounded(&mut field, config.max_file_size).await?;
+            let file_size = bytes.len();
+            if file_size == 0 {
+                tracing::debug!(filename = %filename_cow, "Skipping zero-byte file upload");
+                continue;
+            }
+
+            // 3. 单次 Multipart 总大小拦截
+            total_uploaded_bytes += file_size;
+            if total_uploaded_bytes > config.max_total_size {
+                tracing::warn!(
+                    total_uploaded_bytes = total_uploaded_bytes,
+                    max_total_size = config.max_total_size,
+                    "Total multipart upload size exceeded"
+                );
+                return Err(Error::BadRequest(format!(
+                    "Total upload size exceeds limit of {} bytes",
+                    config.max_total_size
+                )));
+            }
+
+            // 4. 根据策略生成 Storage Key
+            let key = UploadUtil::generate_storage_key(&filename_cow, &bytes, config);
+            let path = StdPath::new(&key);
+
+            // 5. 写入存储层
+            let content_bytes = bytes::Bytes::from(bytes);
+            if let Err(err) = ctx.storage.upload(path, &content_bytes).await {
+                tracing::error!(key = %key, error = %err, "Failed to write file to storage provider");
+                return Err(Error::InternalServerError);
+            }
+
+            tracing::info!(key = %key, size = file_size, "File uploaded successfully");
+
+            uploaded_files.push(FileUploadResource {
+                key,
+                filename: filename_cow.into_owned(),
+                size: file_size,
+                content_type,
+            });
+        }
+
+        if uploaded_files.is_empty() {
+            return Err(Error::BadRequest("No valid files were uploaded".into()));
+        }
+
+        Ok(uploaded_files)
+    }
+
+    /// 获取文件二进制数据及由 mime_guess 自动推导的 RFC Content-Type
+    pub async fn download(ctx: &AppContext, raw_key: &str) -> Result<(&'static str, Vec<u8>)> {
+        let key = Self::sanitize_key(raw_key).ok_or_else(|| {
+            tracing::warn!(key = %raw_key, "Detected potential path traversal attempt in file download");
+            Error::BadRequest("Invalid file path key".into())
+        })?;
+
+        let path = StdPath::new(key);
+        let bytes = ctx.storage.download(path).await.map_err(|err| {
+            tracing::warn!(key = %key, error = %err, "File not found or unreadable from storage provider");
+            Error::NotFound
+        })?;
+
+        let content_type = mime_guess::from_path(key)
+            .first_raw()
+            .unwrap_or("application/octet-stream");
+
+        Ok((content_type, bytes))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sanitize_key() {
+        assert!(FileService::sanitize_key("uploads/123/file.png").is_some());
+        assert!(FileService::sanitize_key("/etc/passwd").is_none());
+        assert!(FileService::sanitize_key("uploads/../etc/passwd").is_none());
+    }
+}

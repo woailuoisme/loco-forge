@@ -24,17 +24,48 @@ impl Task for UserCreate {
 
     /// 执行用户创建流程
     async fn run(&self, app_context: &AppContext, vars: &task::Vars) -> Result<()> {
-        // 步骤 1: 解析必填的命令行参数 (email, name, password)
-        let email = vars.cli_arg("email").map_err(|_| Error::string("email 参数为必填项"))?;
-        let name = vars.cli_arg("name").map_err(|_| Error::string("name 参数为必填项"))?;
-        let password = vars
-            .cli_arg("password")
-            .map_err(|_| Error::string("password 参数为必填项"))?;
+        // 步骤 1: 解析命令行参数；若未在 CLI 传入，则自动通过 inquire 弹出交互提示
+        let email = match vars.cli_arg("email") {
+            Ok(val) => {
+                if !val.contains('@') || !val.contains('.') {
+                    return Err(Error::string("电子邮箱格式不正确"));
+                }
+                val.to_string()
+            }
+            Err(_) => inquire::Text::new("请输入新用户的电子邮箱 (Email):")
+                .with_validator(inquire::required!("电子邮箱不能为空"))
+                .with_validator(|input: &str| {
+                    if input.contains('@') && input.contains('.') {
+                        Ok(inquire::validator::Validation::Valid)
+                    } else {
+                        Ok(inquire::validator::Validation::Invalid("电子邮箱格式不正确".into()))
+                    }
+                })
+                .prompt()
+                .map_err(|e| Error::string(&format!("取消或输入失败: {e}")))?,
+        };
+
+        let name = match vars.cli_arg("name") {
+            Ok(val) => val.to_string(),
+            Err(_) => inquire::Text::new("请输入新用户的真实姓名/昵称 (Name):")
+                .with_validator(inquire::required!("姓名不能为空"))
+                .prompt()
+                .map_err(|e| Error::string(&format!("取消或输入失败: {e}")))?,
+        };
+
+        let password = match vars.cli_arg("password") {
+            Ok(val) => val.to_string(),
+            Err(_) => inquire::Password::new("请输入新用户的初始密码 (Password):")
+                .with_display_mode(inquire::PasswordDisplayMode::Masked)
+                .with_validator(inquire::required!("密码不能为空"))
+                .prompt()
+                .map_err(|e| Error::string(&format!("取消或输入失败: {e}")))?,
+        };
 
         let register_params = RegisterRequest {
-            email: email.to_owned(),
-            password: secrecy::SecretString::from(password.to_owned()),
-            name: name.to_owned(),
+            email,
+            password: secrecy::SecretString::from(password),
+            name,
         };
 
         // 步骤 2: 调用 User Model 的 create_with_password 进行密码哈希与记录插入

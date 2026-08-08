@@ -41,7 +41,7 @@ impl TargetFilter {
             for item in cleaned.split(',') {
                 match item.trim().to_lowercase().as_str() {
                     "db" | "database" => filter.db = true,
-                    "cache" | "redis" => filter.cache = true,
+                    "cache" | "redis" | "valkey" => filter.cache = true,
                     "storage" | "s3" => filter.storage = true,
                     "all" => return Self::all(),
                     _ => {}
@@ -72,18 +72,19 @@ async fn check_db(ctx: &AppContext) -> std::result::Result<Duration, String> {
     Ok(start.elapsed())
 }
 
-/// 缓存 (Redis/Valkey/Memory) 读写与删除探针
+/// 缓存 (Redis/Valkey/Memory) 读写与删除探针（动态生成唯一 Key 避免并发竞态）
 async fn check_cache(ctx: &AppContext) -> std::result::Result<Duration, String> {
     let start = Instant::now();
-    let key = "_health_check_probe";
+    let probe_id = uuid::Uuid::new_v4().simple();
+    let key = format!("_health_check_probe:{probe_id}");
     let val = "ping";
 
     ctx.cache
-        .insert(key, &val)
+        .insert(&key, &val)
         .await
         .map_err(|e| format!("写入失败: {e}"))?;
-    let res: Option<String> = ctx.cache.get(key).await.map_err(|e| format!("读取失败: {e}"))?;
-    let _ = ctx.cache.remove(key).await;
+    let res: Option<String> = ctx.cache.get(&key).await.map_err(|e| format!("读取失败: {e}"))?;
+    let _ = ctx.cache.remove(&key).await;
 
     if res.as_deref() != Some(val) {
         return Err("缓存读取值不匹配".to_string());
@@ -92,10 +93,12 @@ async fn check_cache(ctx: &AppContext) -> std::result::Result<Duration, String> 
     Ok(start.elapsed())
 }
 
-/// 对象存储 (S3 Garage/Local) 上传与删除探针
+/// 对象存储 (S3 Garage/Local) 上传与删除探针（动态生成唯一文件名避免并发竞态）
 async fn check_storage(ctx: &AppContext) -> std::result::Result<Duration, String> {
     let start = Instant::now();
-    let path = Path::new("_health_check_probe.txt");
+    let probe_id = uuid::Uuid::new_v4().simple();
+    let filename = format!("_health_check_probe_{probe_id}.txt");
+    let path = Path::new(&filename);
     let bytes = Bytes::from_static(b"ping");
 
     ctx.storage
