@@ -25,9 +25,7 @@ impl Task for RouteList {
         let routes = App::routes(app_context);
 
         // 步骤 2: 格式化路由表格 Header 头
-        let mut output = String::from(
-            "\n+------------+---------------------------------------------------------+\n",
-        );
+        let mut output = String::from("\n+------------+---------------------------------------------------------+\n");
         output.push_str(&format!("| {:<10} | {:<55} |\n", "Method", "URI"));
         output.push_str("+------------+---------------------------------------------------------+\n");
 

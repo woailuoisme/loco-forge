@@ -47,6 +47,11 @@ impl Hooks for App {
         create_app::<Self, Migrator>(mode, environment, config).await
     }
 
+    /// 在 AppContext 构建完成后，装配全局对象存储驱动 (委托给 `setup::storage::init`)
+    async fn after_context(ctx: AppContext) -> Result<AppContext> {
+        setup::storage::init(ctx).await
+    }
+
     /// 绑定全局 HTTP 中间件与请求日志钩子 (委托给 `setup::middleware::register`)
     async fn after_routes(router: axum::Router, ctx: &AppContext) -> Result<axum::Router> {
         setup::middleware::register(router, ctx).await

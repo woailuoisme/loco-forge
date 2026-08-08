@@ -28,7 +28,6 @@ use axum::{
 use serde::Serialize;
 use ts_rs::TS;
 
-use super::error_code::{ErrorCode, status_from_code};
 use super::response::ApiResponse;
 
 /// 内部通用辅助：快速构建 HTTP 响应
@@ -67,24 +66,47 @@ pub fn ok_msg<T: Serialize>(data: T, message: impl Into<String>) -> loco_rs::pre
     respond(StatusCode::OK, ApiResponse::ok_with_message(data, message))
 }
 
-/// 格式化 201 资源创建成功响应 (默认提示消息 "创建成功")
+/// 格式化 201 资源创建成功响应 (默认提示消息 "创建成功"，JSON code 为 201)
 pub fn created<T: Serialize>(data: T) -> loco_rs::prelude::Result<Response> {
-    respond(StatusCode::CREATED, ApiResponse::ok_with_message(data, "创建成功"))
+    respond(StatusCode::CREATED, ApiResponse::created(data))
 }
 
-/// 格式化带自定义消息的 201 资源创建成功响应
+/// 格式化带自定义消息的 201 资源创建成功响应 (JSON code 为 201)
 pub fn created_msg<T: Serialize>(data: T, message: impl Into<String>) -> loco_rs::prelude::Result<Response> {
-    respond(StatusCode::CREATED, ApiResponse::ok_with_message(data, message))
+    respond(StatusCode::CREATED, ApiResponse::created_with_message(data, message))
 }
 
-/// 格式化 202 已接受（异步处理中）响应
+/// 格式化 202 已接受（异步处理中）响应 (JSON code 为 202)
 pub fn accepted_msg(message: impl Into<String>) -> loco_rs::prelude::Result<Response> {
-    respond(StatusCode::ACCEPTED, ApiResponse::success_empty(message))
+    respond(
+        StatusCode::ACCEPTED,
+        ApiResponse::success_empty_with_code(StatusCode::ACCEPTED.as_u16() as u32, message),
+    )
 }
 
 /// 格式化无载荷成功响应 (如注册成功、密码重置受理、删除成功等)
 pub fn empty_msg(message: impl Into<String>) -> loco_rs::prelude::Result<Response> {
     respond(StatusCode::OK, ApiResponse::success_empty(message))
+}
+
+/// 格式化 CRUD 查询成功响应 (默认提示消息 "数据获取成功")
+pub fn retrieved<T: Serialize>(data: T) -> loco_rs::prelude::Result<Response> {
+    ok_msg(data, "数据获取成功")
+}
+
+/// 格式化 CRUD 更新成功响应 (默认提示消息 "数据更新成功")
+pub fn updated<T: Serialize>(data: T) -> loco_rs::prelude::Result<Response> {
+    ok_msg(data, "数据更新成功")
+}
+
+/// 格式化 CRUD 删除成功响应 (默认提示消息 "数据删除成功"，无载荷)
+pub fn deleted() -> loco_rs::prelude::Result<Response> {
+    empty_msg("数据删除成功")
+}
+
+/// 格式化 CRUD 删除成功响应 (默认提示消息 "数据删除成功"，带载荷)
+pub fn deleted_with_data<T: Serialize>(data: T) -> loco_rs::prelude::Result<Response> {
+    ok_msg(data, "数据删除成功")
 }
 
 /// 格式化分页列表响应
@@ -100,6 +122,20 @@ pub fn page<T: Serialize + TS>(
     )
 }
 
+/// 格式化带扩展数据的分页列表响应
+pub fn page_with_extras<T: Serialize + TS, E: Serialize>(
+    items: Vec<T>,
+    current_page: u64,
+    per_page: u64,
+    total: u64,
+    extras: E,
+) -> loco_rs::prelude::Result<Response> {
+    respond(
+        StatusCode::OK,
+        ApiResponse::page_with_extras_response(items, current_page, per_page, total, extras),
+    )
+}
+
 // =========================================================================
 // 4xx 客户端错误响应
 // =========================================================================
@@ -107,6 +143,11 @@ pub fn page<T: Serialize + TS>(
 /// 格式化 400 Bad Request 客户端无效请求响应
 pub fn bad_request(message: impl Into<String>) -> loco_rs::prelude::Result<Response> {
     error_response(StatusCode::BAD_REQUEST, message)
+}
+
+/// 格式化默认 400 Bad Request 客户端无效请求响应 (默认提示消息 "请求参数无效")
+pub fn bad_request_default() -> loco_rs::prelude::Result<Response> {
+    bad_request("请求参数无效")
 }
 
 /// 格式化带结构化细节的 400 Bad Request 响应
@@ -132,9 +173,9 @@ pub fn not_found(message: impl Into<String>) -> loco_rs::prelude::Result<Respons
     error_response(StatusCode::NOT_FOUND, message)
 }
 
-/// 格式化 404 Not Found 路由/接口路径不存在响应 (使用 ErrorCode::ROUTE_NOT_FOUND 错误码 404003)
+/// 格式化 404 Not Found 路由/接口路径不存在响应
 pub fn route_not_found() -> loco_rs::prelude::Result<Response> {
-    biz(ErrorCode::ROUTE_NOT_FOUND)
+    not_found("请求的接口路径不存在")
 }
 
 /// 格式化 405 Method Not Allowed 请求方法不允许响应
@@ -174,22 +215,17 @@ pub fn internal_error(message: impl Into<String>) -> loco_rs::prelude::Result<Re
     error_response(StatusCode::INTERNAL_SERVER_ERROR, message)
 }
 
-/// 格式化带完整调试诊断信息的 500 响应 (仅在 Debug/Test 模式保留 exception 与 trace)
+/// 格式化带完整调试诊断信息的 500 响应 (仅在 Debug/Test 模式保留 trace 堆栈跟踪)
 pub fn internal_error_with_debug(
     message: impl Into<String>,
-    exception: impl Into<String>,
+    _exception: impl Into<String>,
     trace: Vec<String>,
 ) -> loco_rs::prelude::Result<Response> {
-    let (opt_exception, opt_trace) = if cfg!(debug_assertions) {
-        (Some(exception.into()), Some(trace))
-    } else {
-        (None, None)
-    };
-    let res = ApiResponse::<serde_json::Value>::error(
+    let opt_trace = if cfg!(debug_assertions) { Some(trace) } else { None };
+    let res = ApiResponse::<serde_json::Value>::error_with_trace(
         StatusCode::INTERNAL_SERVER_ERROR.as_u16() as u32,
         message,
         None,
-        opt_exception,
         opt_trace,
     );
     respond(StatusCode::INTERNAL_SERVER_ERROR, res)
@@ -200,40 +236,81 @@ pub fn service_unavailable(message: impl Into<String>) -> loco_rs::prelude::Resu
     error_response(StatusCode::SERVICE_UNAVAILABLE, message)
 }
 
+/// 格式化带数据载荷的 503 Service Unavailable 响应
+pub fn service_unavailable_data<T: Serialize>(
+    data: T,
+    message: impl Into<String>,
+) -> loco_rs::prelude::Result<Response> {
+    let res = ApiResponse {
+        success: false,
+        code: 503,
+        message: message.into(),
+        data: Some(data),
+        errors: None,
+        trace: None,
+    };
+    respond(StatusCode::SERVICE_UNAVAILABLE, res)
+}
+
 // =========================================================================
-// 自定义业务错误码响应 (如 400001 用户冻结, 404001 用户不存在)
+// 600 ~ 999 业务逻辑错误码响应
 // =========================================================================
 
-/// 格式化带自定义业务错误码 (如 400001) 的错误响应
+/// 格式化带自定义业务错误码 (如 601) 的错误响应 (默认 HTTP 400 Bad Request)
 pub fn custom_error(code: u32, message: impl Into<String>) -> loco_rs::prelude::Result<Response> {
-    let status = status_from_code(code);
+    custom_error_with_status(StatusCode::BAD_REQUEST, code, message)
+}
+
+/// 格式化带指定 HTTP 状态码与自定义业务错误码的错误响应
+pub fn custom_error_with_status(
+    status: StatusCode,
+    code: u32,
+    message: impl Into<String>,
+) -> loco_rs::prelude::Result<Response> {
     let res = ApiResponse::<serde_json::Value>::error_simple(code, message);
     respond(status, res)
 }
 
-/// 格式化带自定义业务错误码与结构化细节的错误响应
+/// 格式化带自定义业务错误码与结构化细节的错误响应 (默认 HTTP 400 Bad Request)
 pub fn custom_error_with_details<D: Serialize>(
     code: u32,
     message: impl Into<String>,
     details: D,
 ) -> loco_rs::prelude::Result<Response> {
-    let status = status_from_code(code);
+    custom_error_with_status_and_details(StatusCode::BAD_REQUEST, code, message, details)
+}
+
+/// 格式化带指定 HTTP 状态码、自定义业务错误码与结构化细节的错误响应
+pub fn custom_error_with_status_and_details<D: Serialize>(
+    status: StatusCode,
+    code: u32,
+    message: impl Into<String>,
+    details: D,
+) -> loco_rs::prelude::Result<Response> {
     let mut res = ApiResponse::<serde_json::Value>::error_simple(code, message);
     res.errors = serde_json::to_value(details).ok();
     respond(status, res)
 }
 
-/// 使用预定义 ErrorCode 快速格式化业务错误响应
-pub fn biz(err_code: ErrorCode) -> loco_rs::prelude::Result<Response> {
-    custom_error(err_code.code, err_code.message)
+/// 格式化 600~999 业务逻辑错误响应 (默认 HTTP 400 Bad Request)
+pub fn biz(code: u32, message: impl Into<String>) -> loco_rs::prelude::Result<Response> {
+    custom_error(code, message)
 }
 
-/// 使用预定义 ErrorCode 与自定义描述消息格式化业务错误响应
-pub fn biz_msg(err_code: ErrorCode, message: impl Into<String>) -> loco_rs::prelude::Result<Response> {
-    custom_error(err_code.code, message)
+/// 格式化 600~999 业务逻辑错误响应 (带结构化 details，默认 HTTP 400 Bad Request)
+pub fn biz_with_details<D: Serialize>(
+    code: u32,
+    message: impl Into<String>,
+    details: D,
+) -> loco_rs::prelude::Result<Response> {
+    custom_error_with_details(code, message, details)
 }
 
-/// 使用预定义 ErrorCode 及结构化 details 格式化业务错误响应
-pub fn biz_with_details<D: Serialize>(err_code: ErrorCode, details: D) -> loco_rs::prelude::Result<Response> {
-    custom_error_with_details(err_code.code, err_code.message, details)
+/// 格式化 600~999 业务逻辑错误响应 (带指定 HTTP Wire 状态码)
+pub fn biz_with_status(
+    status: StatusCode,
+    code: u32,
+    message: impl Into<String>,
+) -> loco_rs::prelude::Result<Response> {
+    custom_error_with_status(status, code, message)
 }

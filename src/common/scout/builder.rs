@@ -158,10 +158,7 @@ impl<'a> ScoutBuilder<'a> {
             })
             .collect();
 
-        let ordered_models = ids
-            .into_iter()
-            .filter_map(|id| model_map.remove(&id))
-            .collect();
+        let ordered_models = ids.into_iter().filter_map(|id| model_map.remove(&id)).collect();
 
         Ok(ordered_models)
     }

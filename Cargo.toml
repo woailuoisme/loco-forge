@@ -79,8 +79,9 @@ qrcode = { version = "0.14" }
 # ts-rs 自动为 DTO 导出 TypeScript 类型定义文件，供 SPA 前端消费
 ts-rs = { version = "12", features = ["chrono-impl", "serde-compat"] }
 include_dir = { version = "0.7" }
-utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
+utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid", "preserve_order", "openapi_extensions", "repr"] }
 utoipa-scalar = { version = "0.3", features = ["axum"] }
+utoipa-redoc = { version = "6", features = ["axum"] }
 
 [[bin]]
 name = "locos"

@@ -1,6 +1,6 @@
 use axum::http::{HeaderName, HeaderValue};
 use loco_rs::{TestServer, app::AppContext};
-use locos::{models::users, views::auth::LoginResponse};
+use locos::{models::users, views::auth::LoginResource};
 
 const USER_EMAIL: &str = "test@loco.com";
 const USER_PASSWORD: &str = "1234";
@@ -37,7 +37,7 @@ pub async fn init_user_login_with_email(request: &TestServer, ctx: &AppContext, 
         }))
         .await;
 
-    let api_res: locos::dtos::common::ApiResponse<LoginResponse> = serde_json::from_str(&response.text()).unwrap();
+    let api_res: locos::dtos::common::ApiResponse<LoginResource> = serde_json::from_str(&response.text()).unwrap();
     let login_response = api_res.data.expect("Login response data expected");
 
     LoggedInUser {

@@ -15,7 +15,7 @@ use crate::{
 
 /// 文件上传响应 Payload
 #[derive(Debug, Serialize, utoipa::ToSchema)]
-pub struct FileUploadResponse {
+pub struct FileUploadResource {
     /// 存储系统中的唯一文件 Key
     pub key: String,
     /// 原始文件名
@@ -33,7 +33,7 @@ pub struct FileUploadResponse {
     summary = "上传文件",
     description = "通过 multipart/form-data 格式上传单文件或多文件到存储服务",
     responses(
-        (status = 200, description = "上传成功", body = ApiResponse<Vec<FileUploadResponse>>),
+        (status = 200, description = "上传成功", body = ApiResponse<Vec<FileUploadResource>>),
         (status = 400, description = "请求参数或文件格式错误"),
         (status = 401, description = "未授权")
     ),
@@ -73,7 +73,7 @@ pub async fn upload(_auth: auth::JWT, State(ctx): State<AppContext>, mut multipa
             return format_res::internal_error("An unexpected internal server error occurred");
         }
 
-        uploaded_files.push(FileUploadResponse {
+        uploaded_files.push(FileUploadResource {
             key,
             filename,
             size: file_size,

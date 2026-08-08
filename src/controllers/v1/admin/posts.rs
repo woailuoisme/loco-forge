@@ -3,8 +3,8 @@ use loco_rs::prelude::*;
 use crate::{
     common::consts::{message::POST_NOT_FOUND, openapi::TAG_POSTS},
     dtos::{
-        common::{AdminUser, ApiError, ApiResponse, PaginatedData, PaginationQuery, ValidJson, format_res},
-        posts::{CreatePost, PostDto, UpdatePost},
+        common::{AdminUser, ApiError, ApiResponse, PaginatedResource, PaginationRequest, ValidJson, format_res},
+        posts::{CreatePostRequest, PostResource, UpdatePostRequest},
     },
     services::admin::PostService,
 };
@@ -15,9 +15,9 @@ use crate::{
     path = "/api/v1/admin/posts",
     summary = "获取文章列表",
     description = "分页查询文章列表",
-    params(PaginationQuery),
+    params(PaginationRequest),
     responses(
-        (status = 200, description = "获取成功", body = ApiResponse<PaginatedData<PostDto>>),
+        (status = 200, description = "获取成功", body = ApiResponse<PaginatedResource<PostResource>>),
     ),
     security(
         ("bearer_auth" = [])
@@ -28,7 +28,7 @@ use crate::{
 pub async fn list(
     _auth: auth::JWT,
     State(ctx): State<AppContext>,
-    Query(params): Query<PaginationQuery>,
+    Query(params): Query<PaginationRequest>,
 ) -> Result<Response> {
     let (dtos, page, per_page, total) = PostService::list(&ctx, &params).await?;
     format_res::page(dtos, page, per_page, total)
@@ -44,7 +44,7 @@ pub async fn list(
         ("id" = i64, Path, description = "文章 ID")
     ),
     responses(
-        (status = 200, description = "获取成功", body = ApiResponse<PostDto>),
+        (status = 200, description = "获取成功", body = ApiResponse<PostResource>),
         (status = 404, description = "文章不存在", body = ApiError)
     ),
     security(
@@ -57,7 +57,7 @@ pub async fn get_one(_auth: auth::JWT, State(ctx): State<AppContext>, Path(id): 
     let Some(dto) = PostService::get_one(&ctx, id).await? else {
         return format_res::not_found(POST_NOT_FOUND);
     };
-    format_res::ok(dto)
+    format_res::retrieved(dto)
 }
 
 /// 创建新文章
@@ -66,9 +66,9 @@ pub async fn get_one(_auth: auth::JWT, State(ctx): State<AppContext>, Path(id): 
     path = "/api/v1/admin/posts",
     summary = "创建新文章",
     description = "提交标题与内容创建新文章",
-    request_body = CreatePost,
+    request_body = CreatePostRequest,
     responses(
-        (status = 201, description = "创建成功", body = ApiResponse<PostDto>)
+        (status = 201, description = "创建成功", body = ApiResponse<PostResource>)
     ),
     security(
         ("bearer_auth" = [])
@@ -79,7 +79,7 @@ pub async fn get_one(_auth: auth::JWT, State(ctx): State<AppContext>, Path(id): 
 pub async fn create(
     _auth: auth::JWT,
     State(ctx): State<AppContext>,
-    ValidJson(params): ValidJson<CreatePost>,
+    ValidJson(params): ValidJson<CreatePostRequest>,
 ) -> Result<Response> {
     let dto = PostService::create(&ctx, params).await?;
     format_res::created(dto)
@@ -94,9 +94,9 @@ pub async fn create(
     params(
         ("id" = i64, Path, description = "文章 ID")
     ),
-    request_body = UpdatePost,
+    request_body = UpdatePostRequest,
     responses(
-        (status = 200, description = "更新成功", body = ApiResponse<PostDto>),
+        (status = 200, description = "更新成功", body = ApiResponse<PostResource>),
         (status = 404, description = "文章不存在", body = ApiError)
     ),
     security(
@@ -109,13 +109,13 @@ pub async fn update(
     _auth: auth::JWT,
     State(ctx): State<AppContext>,
     Path(id): Path<i64>,
-    ValidJson(params): ValidJson<UpdatePost>,
+    ValidJson(params): ValidJson<UpdatePostRequest>,
 ) -> Result<Response> {
     let Some(dto) = PostService::update(&ctx, id, params).await? else {
         return format_res::not_found(POST_NOT_FOUND);
     };
 
-    format_res::ok(dto)
+    format_res::updated(dto)
 }
 
 /// 删除文章
@@ -142,7 +142,7 @@ pub async fn remove(_admin: AdminUser, State(ctx): State<AppContext>, Path(id): 
         return format_res::not_found(POST_NOT_FOUND);
     }
 
-    format_res::empty_msg("删除成功")
+    format_res::deleted()
 }
 
 pub fn routes() -> Routes {

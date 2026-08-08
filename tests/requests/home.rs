@@ -31,7 +31,7 @@ async fn cannot_get_non_existent_route_returns_json_404() {
 
         let body: Value = serde_json::from_str(&res.text()).expect("Failed to parse JSON");
         assert_eq!(body["success"], false);
-        assert_eq!(body["code"], 404003);
+        assert_eq!(body["code"], 404);
 
         // 验证访问 API 未定义路径 (如 /api/non_existent) 同样返回标准 Route 404 JSON
         let api_res = request.get("/api/non_existent").await;
@@ -39,7 +39,7 @@ async fn cannot_get_non_existent_route_returns_json_404() {
 
         let api_body: Value = serde_json::from_str(&api_res.text()).expect("Failed to parse JSON");
         assert_eq!(api_body["success"], false);
-        assert_eq!(api_body["code"], 404003);
+        assert_eq!(api_body["code"], 404);
     })
     .await;
 }

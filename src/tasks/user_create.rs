@@ -6,7 +6,7 @@ use loco_rs::prelude::*;
 
 use crate::{
     mailers::auth::AuthMailer,
-    models::{_entities::users, users::RegisterParams},
+    models::{_entities::users, users::RegisterRequest},
 };
 
 /// 用户创建管理员任务
@@ -31,7 +31,7 @@ impl Task for UserCreate {
             .cli_arg("password")
             .map_err(|_| Error::string("password 参数为必填项"))?;
 
-        let register_params = RegisterParams {
+        let register_params = RegisterRequest {
             email: email.to_owned(),
             password: secrecy::SecretString::from(password.to_owned()),
             name: name.to_owned(),

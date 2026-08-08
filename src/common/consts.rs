@@ -103,3 +103,24 @@ pub mod qrcode {
     /// Logo 外围白色对比遮罩默认边距（像素）
     pub const DEFAULT_BORDER_PADDING: u32 = 4;
 }
+
+/// 标准业务逻辑错误码常量 (范围 600 ~ 999)
+pub mod biz_code {
+    /// 最小业务错误码下限 (600)
+    pub const MIN_BIZ_CODE: u32 = 600;
+    /// 最大业务错误码上限 (999)
+    pub const MAX_BIZ_CODE: u32 = 999;
+
+    /// 通用参数非法 / 校验失败 (600)
+    pub const PARAM_INVALID: u32 = 600;
+    /// 账号已被冻结 (601)
+    pub const USER_FROZEN: u32 = 601;
+    /// 余额不足 (602)
+    pub const INSUFFICIENT_BALANCE: u32 = 602;
+    /// 验证码校验失败 (603)
+    pub const CAPTCHA_INVALID: u32 = 603;
+    /// 业务状态不允许操作 (604)
+    pub const INVALID_STATE: u32 = 604;
+    /// 频次超限 / 操作受限 (605)
+    pub const OPERATION_RESTRICTED: u32 = 605;
+}

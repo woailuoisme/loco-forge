@@ -1,6 +1,6 @@
 //! 分页相关数据结构 (Pagination Types)
 //!
-//! 提供标准分页元数据 [`PageMeta`]、分页响应容器 [`PaginatedData`] 与标准分页查询提取器 [`PaginationQuery`]。
+//! 提供标准分页元数据 [`PageMeta`]、分页响应容器 [`PaginatedResource`] 与标准分页查询提取器 [`PaginationRequest`]。
 
 use crate::common::consts::pagination::{DEFAULT_PAGE, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE};
 use serde::{Deserialize, Serialize};
@@ -9,14 +9,14 @@ use utoipa::ToSchema;
 
 /// 通用分页查询提取参数 (Pagination Query Params)
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, utoipa::IntoParams, utoipa::ToSchema)]
-pub struct PaginationQuery {
+pub struct PaginationRequest {
     /// 页码 (从 1 开始，默认 1)
     pub page: Option<u64>,
     /// 每页数量 (默认 20，最大 100)
     pub per_page: Option<u64>,
 }
 
-impl PaginationQuery {
+impl PaginationRequest {
     /// 构造新的分页查询参数
     pub fn new(page: Option<u64>, per_page: Option<u64>) -> Self {
         Self { page, per_page }
@@ -38,7 +38,7 @@ impl PaginationQuery {
     }
 }
 
-impl Default for PaginationQuery {
+impl Default for PaginationRequest {
     fn default() -> Self {
         Self {
             page: Some(DEFAULT_PAGE),
@@ -80,15 +80,22 @@ impl PageMeta {
 
 /// 通用分页数据响应结构
 #[derive(Debug, Clone, Serialize, Deserialize, TS, ToSchema)]
-pub struct PaginatedData<T: TS> {
+pub struct PaginatedResource<T: TS> {
     /// 列表数据项
     pub items: Vec<T>,
     /// 分页元数据信息
     pub meta: PageMeta,
+    /// 额外扩展数据 (仅当不为 None 时在 JSON 中序列化出现，可选)
+    #[schema(ignore)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(type = "any")]
+    pub extras: Option<serde_json::Value>,
 }
 
 /// 兼容别名 `Page<T>`
-pub type Page<T> = PaginatedData<T>;
+pub type Page<T> = PaginatedResource<T>;
+/// 兼容别名 `PaginatedData<T>`
+pub type PaginatedData<T> = PaginatedResource<T>;
 
 #[cfg(test)]
 mod tests {
@@ -96,16 +103,16 @@ mod tests {
 
     #[test]
     fn test_pagination_query_defaults_and_bounds() {
-        let q = PaginationQuery::new(None, None);
+        let q = PaginationRequest::new(None, None);
         assert_eq!(q.page(), 1);
         assert_eq!(q.per_page(), 20);
         assert_eq!(q.offset(), 0);
 
-        let q = PaginationQuery::new(Some(0), Some(500));
+        let q = PaginationRequest::new(Some(0), Some(500));
         assert_eq!(q.page(), 1);
         assert_eq!(q.per_page(), 100); // capped at MAX_PAGE_SIZE
 
-        let q = PaginationQuery::new(Some(3), Some(15));
+        let q = PaginationRequest::new(Some(3), Some(15));
         assert_eq!(q.page(), 3);
         assert_eq!(q.per_page(), 15);
         assert_eq!(q.offset(), 30);

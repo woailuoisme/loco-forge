@@ -7,6 +7,8 @@
 pub mod middleware;
 /// Controller 控制器路由组装
 pub mod routes;
+/// 对象存储 (Storage) 基础设施装配
+pub mod storage;
 /// 命令行 / 管理员 Task 注册
 pub mod tasks;
 /// 后台异步 Worker 队列注册

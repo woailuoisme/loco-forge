@@ -3,7 +3,7 @@ use insta::assert_debug_snapshot;
 use loco_rs::testing::prelude::*;
 use locos::{
     app::App,
-    models::users::{self, Model, RegisterParams},
+    models::users::{self, Model, RegisterRequest},
 };
 use sea_orm::{ActiveModelTrait, ActiveValue, IntoActiveModel};
 use serial_test::serial;
@@ -35,7 +35,7 @@ async fn can_create_with_password() {
 
     let boot = boot_test::<App>().await.expect("Failed to boot test application");
 
-    let params = RegisterParams {
+    let params = RegisterRequest {
         email: "test@framework.com".to_string(),
         password: secrecy::SecretString::from("1234"),
         name: "framework".to_string(),
@@ -59,7 +59,7 @@ async fn handle_create_with_password_with_duplicate() {
 
     let new_user = Model::create_with_password(
         &boot.app_context.db,
-        &RegisterParams {
+        &RegisterRequest {
             email: "user1@example.com".to_string(),
             password: secrecy::SecretString::from("1234"),
             name: "framework".to_string(),

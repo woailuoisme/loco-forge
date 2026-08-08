@@ -5,7 +5,7 @@ use crate::models::_entities::users;
 
 /// 登录成功响应数据对象
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
-pub struct LoginResponse {
+pub struct LoginResource {
     /// JWT 认证 Token
     pub token: String,
     /// 用户公共 PID (UUID)
@@ -16,7 +16,7 @@ pub struct LoginResponse {
     pub is_verified: bool,
 }
 
-impl LoginResponse {
+impl LoginResource {
     #[must_use]
     pub fn new(user: &users::Model, token: &str) -> Self {
         Self {
@@ -30,7 +30,7 @@ impl LoginResponse {
 
 /// 当前登录用户信息响应
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
-pub struct CurrentResponse {
+pub struct CurrentUserResource {
     /// 用户公共 PID (UUID)
     pub pid: String,
     /// 用户姓名
@@ -39,7 +39,7 @@ pub struct CurrentResponse {
     pub email: String,
 }
 
-impl CurrentResponse {
+impl CurrentUserResource {
     #[must_use]
     pub fn new(user: &users::Model) -> Self {
         Self {

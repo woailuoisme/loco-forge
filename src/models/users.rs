@@ -38,7 +38,7 @@ impl std::fmt::Display for UserRole {
 
 /// 登录请求参数
 #[derive(Debug, Deserialize, Serialize, utoipa::ToSchema)]
-pub struct LoginParams {
+pub struct LoginRequest {
     /// 注册邮箱
     pub email: String,
     /// 密码
@@ -49,7 +49,7 @@ pub struct LoginParams {
 
 /// 注册请求参数
 #[derive(Debug, Deserialize, Serialize, utoipa::ToSchema)]
-pub struct RegisterParams {
+pub struct RegisterRequest {
     /// 注册邮箱
     pub email: String,
     /// 密码
@@ -247,7 +247,7 @@ impl Model {
     /// # Errors
     ///
     /// When could not save the user into the DB
-    pub async fn create_with_password(db: &DatabaseConnection, params: &RegisterParams) -> ModelResult<Self> {
+    pub async fn create_with_password(db: &DatabaseConnection, params: &RegisterRequest) -> ModelResult<Self> {
         let txn = db.begin().await?;
 
         if users::Entity::find()

@@ -1,8 +1,8 @@
 //! # 文章模块 DTO 定义
 //!
 //! 本文件包含文章模块的数据传输对象 (DTO)，实现请求解析与响应解耦：
-//! - **Response DTO**：用于将数据库 Model 转换为前端展示对象。
-//! - **Request DTO**：用于解析客户端提交的 Payload。
+//! - **Response DTO**：用于将数据库 Model 转换为前端展示对象 [`PostResource`]。
+//! - **Request DTO**：用于解析客户端提交的 Payload [`CreatePostRequest`], [`UpdatePostRequest`]。
 
 use sea_orm::prelude::DateTimeWithTimeZone;
 use ts_rs::TS;
@@ -17,7 +17,7 @@ use validator::Validate;
 ///
 /// 用于将数据库 SeaORM 实体模型解耦并格式化为标准 JSON 响应。
 #[derive(serde::Serialize, serde::Deserialize, TS, ToSchema)]
-pub struct PostDto {
+pub struct PostResource {
     /// 文章 ID
     #[ts(type = "number")]
     pub id: i64,
@@ -35,7 +35,7 @@ pub struct PostDto {
     pub updated_at: DateTimeWithTimeZone,
 }
 
-impl From<crate::models::_entities::posts::Model> for PostDto {
+impl From<crate::models::_entities::posts::Model> for PostResource {
     fn from(m: crate::models::_entities::posts::Model) -> Self {
         Self {
             id: m.id,
@@ -55,7 +55,7 @@ impl From<crate::models::_entities::posts::Model> for PostDto {
 ///
 /// 用于接收和反序列化客户端创建文章时提交的 JSON Payload。
 #[derive(serde::Serialize, serde::Deserialize, Validate, TS, ToSchema)]
-pub struct CreatePost {
+pub struct CreatePostRequest {
     /// 文章标题
     #[validate(length(min = 1, message = "文章标题不能为空"))]
     pub title: Option<String>,
@@ -67,7 +67,7 @@ pub struct CreatePost {
 ///
 /// 用于接收和反序列化客户端更新文章时提交的 JSON Payload。
 #[derive(serde::Serialize, serde::Deserialize, Validate, TS, ToSchema)]
-pub struct UpdatePost {
+pub struct UpdatePostRequest {
     /// 文章标题
     #[validate(length(min = 1, message = "文章标题不能为空"))]
     pub title: Option<String>,

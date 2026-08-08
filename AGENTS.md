@@ -55,6 +55,11 @@ AI Agent 在此项目中编写、重构代码或排查问题时，必须严格�
    - 各种通用功能服务（如身份认证/JWT 校验、文件存储 `ctx.storage`、缓存 `ctx.cache`、邮件发送 `ctx.mailer`、后台任务队列 `ctx.queue` / `Worker`、数据库与事务 `ctx.db`、环境配置 `ctx.config`、日志 `tracing` 等）**必须优先使用 Loco 框架原生内置的服务与能力**。
    - **严禁**在 Loco 已提供内置支持的情况下重复造轮子或盲目引入冗余的第三方替代依赖。
 
+8. **DTO 命名与后缀规范 (DTO Naming Conventions)**
+   - **请求 DTO (Request DTO)**：所有客户端提交的 Payload / Query / Path 参数结构体，统一以 **`Request`** 为后缀（例如 `CreatePostRequest`, `UpdatePostRequest`, `LoginRequest`, `PaginationRequest`）。
+   - **响应 DTO (Response DTO)**：所有返回给前端或客户端展示的 Resource / Data 结构体，统一以 **`Resource`** 为后缀（例如 `PostResource`, `LoginResource`, `CurrentUserResource`, `PaginatedResource`）。
+   - **严禁**使用 `Params`, `Dto`, `Response` 等非标或杂乱后缀作为 DTO 结构体名称。
+
 ---
 
 ## 分层架构与组件职责 (Layered Architecture & Responsibilities)
@@ -64,7 +69,7 @@ AI Agent 在此项目中编写、重构代码或排查问题时，必须严格�
 | **Controller 层** | `src/controllers/` | 校验入参 DTO、提取 `State(ctx)`、路由映射、调用 Service 并返回 `Response` | ❌ **禁止**直接写 SQL / Sea-ORM 复杂事务查询；❌ **禁止**直接处理邮件/队列 |
 | **Service 层** | `src/services/` | 编排业务流程、跨 Model 事务处理、业务规则校验、触发 Worker/Mailer | ❌ **禁止**直接依赖 HTTP Request/Header 对象；❌ **禁止**手动返回 HTTP StatusCode |
 | **Model 层** | `src/models/` | 数据库表操作、模型字段 Validation、单个实体的拓展 CRUD 方法 | ❌ **禁止**手动修改 `src/models/_entities/` 自动生成文件 |
-| **DTO 层** | `src/dtos/` | 定义 Request/Response 契约结构体、实现 `utoipa::ToSchema` 与 `From` 转换 | ❌ **禁止**放置复杂业务处理逻辑 |
+| **DTO 层** | `src/dtos/` | 定义 Request (`XxxRequest`) / Response Resource (`XxxResource`) 契约结构体、实现 `utoipa::ToSchema` 与 `From` 转换 | ❌ **禁止**放置复杂业务处理逻辑；❌ **禁止**使用 `Params`, `Dto`, `Response` 等非标后缀 |
 | **Common 层** | `src/common/` | 全局常量 (`consts.rs`)、工具函数 (`utils/`) | ❌ **禁止**依赖上层 Controller 或 Service 模块 |
 | **Setup 层** | `src/setup/` | HTTP 中间件注册 (i18n, rate_limit, logger)、路由总装 | ❌ **禁止**将具体业务 Endpoint 逻辑写入中间件 |
 

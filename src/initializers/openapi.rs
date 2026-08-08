@@ -9,9 +9,10 @@ use utoipa::{
     openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme},
 };
 use utoipa_scalar::{Scalar, Servable as ScalarServable};
+use utoipa_redoc::{Redoc, Servable as RedocServable};
 
 use crate::{
-    common::consts::openapi::{TAG_AUTH, TAG_FILES, TAG_HEALTH, TAG_HOME, TAG_POSTS},
+    common::consts::openapi::{TAG_AUTH, TAG_FILES, TAG_POSTS},
     controllers, dtos, models, views,
 };
 
@@ -37,21 +38,32 @@ use crate::{
     ),
     components(
         schemas(
-            controllers::v1::files::FileUploadResponse,
+            controllers::v1::files::FileUploadResource,
             dtos::common::ApiError,
-            dtos::common::Page<dtos::posts::PostDto>,
-            dtos::common::PaginationQuery,
-            dtos::posts::PostDto,
-            dtos::posts::CreatePost,
-            dtos::posts::UpdatePost,
-            dtos::auth::ForgotParams,
-            dtos::auth::ResetParams,
-            dtos::auth::MagicLinkParams,
-            dtos::auth::ResendVerificationParams,
-            models::users::LoginParams,
-            models::users::RegisterParams,
-            views::auth::LoginResponse,
-            views::auth::CurrentResponse,
+            // 无载荷成功响应 (注册/验证/重置密码/魔术链接等)
+            dtos::common::ApiResponse,
+            // 文章接口具化响应
+            dtos::common::ApiResponse<dtos::posts::PostResource>,
+            dtos::common::ApiResponse<dtos::common::PaginatedResource<dtos::posts::PostResource>>,
+            // 认证接口具化响应
+            dtos::common::ApiResponse<views::auth::LoginResource>,
+            dtos::common::ApiResponse<views::auth::CurrentUserResource>,
+            // 文件上传具化响应
+            dtos::common::ApiResponse<Vec<controllers::v1::files::FileUploadResource>>,
+            // 分页与通用类型
+            dtos::common::Page<dtos::posts::PostResource>,
+            dtos::common::PaginationRequest,
+            dtos::posts::PostResource,
+            dtos::posts::CreatePostRequest,
+            dtos::posts::UpdatePostRequest,
+            dtos::auth::ForgotPasswordRequest,
+            dtos::auth::ResetPasswordRequest,
+            dtos::auth::MagicLinkRequest,
+            dtos::auth::ResendVerificationRequest,
+            models::users::LoginRequest,
+            models::users::RegisterRequest,
+            views::auth::LoginResource,
+            views::auth::CurrentUserResource,
         )
     ),
     modifiers(&SecurityAddon),
@@ -59,8 +71,6 @@ use crate::{
         (name = TAG_AUTH, description = "用户认证与账号管理接口"),
         (name = TAG_POSTS, description = "文章管理与增删改查接口"),
         (name = TAG_FILES, description = "文件上传与静态资源下载服务接口"),
-        (name = TAG_HEALTH, description = "健康检查与存活探针接口"),
-        (name = TAG_HOME, description = "根路由信息与 API 导航接口"),
     ),
     info(
         title = "Loco RESTful API 文档",
@@ -107,7 +117,7 @@ impl Initializer for OpenApiInitializer {
                     move || async move { Json(openapi_json) }
                 }),
             )
-            .merge(Scalar::with_url("/docs", openapi).custom_html(
+            .merge(Scalar::with_url("/docs", openapi.clone()).custom_html(
                 r#"<!doctype html>
 <html>
 <head>
@@ -126,7 +136,8 @@ impl Initializer for OpenApiInitializer {
 <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
 </body>
 </html>"#,
-            ));
+            ))
+            .merge(Redoc::with_url("/redoc", openapi));
 
         Ok(router)
     }

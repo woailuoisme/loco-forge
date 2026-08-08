@@ -4,138 +4,115 @@
 
 use axum::body::Bytes;
 use loco_rs::prelude::*;
-use std::path::Path;
-use std::time::{Duration, Instant};
+use std::{
+    path::Path,
+    time::{Duration, Instant},
+};
 
 /// 基础设施健康检查任务
 pub struct HealthCheck;
 
 /// 健康检查目标过滤器
-#[derive(Debug, Default)]
+#[derive(Debug, PartialEq, Eq)]
 struct TargetFilter {
     db: bool,
     cache: bool,
     storage: bool,
 }
 
-/// 解析命令行参数中的目标服务筛选条件
-fn parse_targets(vars: &task::Vars) -> TargetFilter {
-    let raw = vars
-        .cli_arg("target")
-        .or_else(|_| vars.cli_arg("--target"))
-        .or_else(|_| vars.cli_arg("only"))
-        .or_else(|_| vars.cli_arg("--only"))
-        .ok();
+impl TargetFilter {
+    /// 从命令行参数中解析检测目标筛选条件
+    fn from_vars(vars: &task::Vars) -> Self {
+        let raw = vars
+            .cli_arg("target")
+            .or_else(|_| vars.cli_arg("--target"))
+            .or_else(|_| vars.cli_arg("only"))
+            .or_else(|_| vars.cli_arg("--only"))
+            .ok();
 
-    let mut filter = TargetFilter::default();
+        let mut filter = Self {
+            db: false,
+            cache: false,
+            storage: false,
+        };
 
-    if let Some(target_str) = raw {
-        let cleaned = target_str.trim_start_matches("--target=").trim_start_matches("--only=");
-
-        for item in cleaned.split(',') {
-            match item.trim().to_lowercase().as_str() {
-                "db" | "database" => filter.db = true,
-                "cache" | "redis" => filter.cache = true,
-                "storage" | "s3" => filter.storage = true,
-                "all" => {
-                    filter.db = true;
-                    filter.cache = true;
-                    filter.storage = true;
+        if let Some(target_str) = raw {
+            let cleaned = target_str.trim_start_matches("--target=").trim_start_matches("--only=");
+            for item in cleaned.split(',') {
+                match item.trim().to_lowercase().as_str() {
+                    "db" | "database" => filter.db = true,
+                    "cache" | "redis" => filter.cache = true,
+                    "storage" | "s3" => filter.storage = true,
+                    "all" => return Self::all(),
+                    _ => {}
                 }
-                _ => {}
             }
+        }
+
+        if !filter.db && !filter.cache && !filter.storage {
+            Self::all()
+        } else {
+            filter
         }
     }
 
-    if !filter.db && !filter.cache && !filter.storage {
-        filter.db = true;
-        filter.cache = true;
-        filter.storage = true;
+    fn all() -> Self {
+        Self {
+            db: true,
+            cache: true,
+            storage: true,
+        }
     }
-
-    filter
 }
 
-/// 步骤子函数: 执行数据库 (PostgreSQL) 连接探针检测
+/// 数据库 (PostgreSQL) ping 探针
 async fn check_db(ctx: &AppContext) -> std::result::Result<Duration, String> {
     let start = Instant::now();
     ctx.db.ping().await.map_err(|e| e.to_string())?;
     Ok(start.elapsed())
 }
 
-/// 步骤子函数: 执行缓存 (Redis/Valkey) 写入、读取与清理探针检测
+/// 缓存 (Redis/Valkey/Memory) 读写与删除探针
 async fn check_cache(ctx: &AppContext) -> std::result::Result<Duration, String> {
     let start = Instant::now();
-    let test_key = "health_check_test_key";
-    let test_val = "ping";
+    let key = "_health_check_probe";
+    let val = "ping";
 
-    // 1. 测试缓存写入
     ctx.cache
-        .insert(test_key, &test_val)
+        .insert(key, &val)
         .await
-        .map_err(|e| format!("写入失败: {}", e))?;
+        .map_err(|e| format!("写入失败: {e}"))?;
+    let res: Option<String> = ctx.cache.get(key).await.map_err(|e| format!("读取失败: {e}"))?;
+    let _ = ctx.cache.remove(key).await;
 
-    // 2. 测试缓存读取与值匹配
-    let res: Option<String> = ctx.cache.get(test_key).await.map_err(|e| format!("读取失败: {}", e))?;
-
-    if res.as_deref() != Some(test_val) {
-        return Err(format!("缓存值校验不匹配: 期望 '{}', 实际得到 {:?}", test_val, res));
+    if res.as_deref() != Some(val) {
+        return Err("缓存读取值不匹配".to_string());
     }
 
-    // 3. 测试后清理探针键
-    let _ = ctx.cache.remove(test_key).await;
     Ok(start.elapsed())
 }
 
-/// 步骤子函数: 执行对象存储 (S3 Garage) 上传与删除探针检测
+/// 对象存储 (S3 Garage/Local) 上传与删除探针
 async fn check_storage(ctx: &AppContext) -> std::result::Result<Duration, String> {
     let start = Instant::now();
-    let test_path = Path::new("health_check_test.txt");
-    let test_bytes = Bytes::from_static(b"health_check_content");
+    let path = Path::new("_health_check_probe.txt");
+    let bytes = Bytes::from_static(b"ping");
 
-    // 1. 优先使用 AppContext 默认对象存储驱动测试
-    if ctx.storage.upload(test_path, &test_bytes).await.is_ok() {
-        let _ = ctx.storage.delete(test_path).await;
-        return Ok(start.elapsed());
-    }
-
-    // 2. 降级备用: 从环境变量构建 S3 Storage 驱动进行二次探针检测
-    let bucket = std::env::var("STORAGE_S3_BUCKET").unwrap_or_else(|_| "default".to_string());
-    let region = std::env::var("STORAGE_S3_REGION").unwrap_or_else(|_| "garage".to_string());
-    let endpoint = std::env::var("STORAGE_S3_ENDPOINT").unwrap_or_else(|_| "http://127.0.0.1:3900".to_string());
-    let key_id = std::env::var("STORAGE_S3_ACCESS_KEY")
-        .map_err(|_| "S3 存储密钥未配置 (需设置 STORAGE_S3_ACCESS_KEY 环境变量)".to_string())?;
-    let secret_key = std::env::var("STORAGE_S3_SECRET_KEY")
-        .map_err(|_| "S3 存储密钥未配置 (需设置 STORAGE_S3_SECRET_KEY 环境变量)".to_string())?;
-
-    let credential = loco_rs::storage::drivers::aws::Credential {
-        key_id,
-        secret_key,
-        token: None,
-    };
-
-    let driver = loco_rs::storage::drivers::aws::with_credentials_and_endpoint(&bucket, &region, &endpoint, credential)
-        .map_err(|e| format!("S3 驱动创建失败: {}", e))?;
-
-    let storage = loco_rs::storage::Storage::single(driver);
-
-    storage
-        .upload(test_path, &test_bytes)
+    ctx.storage
+        .upload(path, &bytes)
         .await
-        .map_err(|e| format!("上传文件失败: {}", e))?;
-
-    storage
-        .delete(test_path)
-        .await
-        .map_err(|e| format!("删除测试文件失败: {}", e))?;
+        .map_err(|e| format!("上传失败: {e}"))?;
+    let _ = ctx.storage.delete(path).await;
 
     Ok(start.elapsed())
 }
 
-/// 格式化输出健康检查结果状态
+/// 格式化输出健康检查探针结果
 fn report_status(label: &str, res: std::result::Result<Duration, String>, has_failures: &mut bool) {
     match res {
-        Ok(duration) => tracing::info!(service = label, duration = ?duration, "[OK] 探针正常"),
+        Ok(duration) => {
+            tracing::info!(service = label, latency_ms = %duration.as_millis(), "[OK] 探针正常");
+        }
         Err(err) => {
             *has_failures = true;
             tracing::error!(service = label, error = %err, "[FAIL] 探针异常");
@@ -145,7 +122,7 @@ fn report_status(label: &str, res: std::result::Result<Duration, String>, has_fa
 
 #[async_trait]
 impl Task for HealthCheck {
-    /// 定义 Task 的 CLI 名称与帮助说明
+    /// 定义 Task 的 CLI 名称与描述信息
     fn task(&self) -> TaskInfo {
         TaskInfo {
             name: "health:check".to_string(),
@@ -155,28 +132,38 @@ impl Task for HealthCheck {
 
     /// 执行健康检查流程
     async fn run(&self, ctx: &AppContext, vars: &task::Vars) -> Result<()> {
-        // 步骤 1: 解析命令行参数中的检测目标服务
-        let targets = parse_targets(vars);
+        let targets = TargetFilter::from_vars(vars);
+        tracing::info!("开始并发执行基础设施健康检查探针...");
 
-        tracing::info!("开始执行基础设施健康检查探针...");
+        let (db_res, cache_res, storage_res) = tokio::join!(
+            async { if targets.db { Some(check_db(ctx).await) } else { None } },
+            async {
+                if targets.cache {
+                    Some(check_cache(ctx).await)
+                } else {
+                    None
+                }
+            },
+            async {
+                if targets.storage {
+                    Some(check_storage(ctx).await)
+                } else {
+                    None
+                }
+            }
+        );
+
         let mut has_failures = false;
-
-        // 步骤 2: 检测数据库状态
-        if targets.db {
-            report_status("Database", check_db(ctx).await, &mut has_failures);
+        if let Some(res) = db_res {
+            report_status("Database", res, &mut has_failures);
+        }
+        if let Some(res) = cache_res {
+            report_status("Cache", res, &mut has_failures);
+        }
+        if let Some(res) = storage_res {
+            report_status("Storage", res, &mut has_failures);
         }
 
-        // 步骤 3: 检测缓存状态
-        if targets.cache {
-            report_status("Cache", check_cache(ctx).await, &mut has_failures);
-        }
-
-        // 步骤 4: 检测对象存储状态
-        if targets.storage {
-            report_status("Storage", check_storage(ctx).await, &mut has_failures);
-        }
-
-        // 步骤 5: 根据是否存在失败项返回执行结果
         if has_failures {
             tracing::error!("部分基础设施健康检查未通过！");
             Err(Error::string("部分基础设施健康检查未通过！"))
@@ -184,5 +171,35 @@ impl Task for HealthCheck {
             tracing::info!("[SUCCESS] 所选基础设施探针检测全数通过！");
             Ok(())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_target_filter_parse() {
+        let mut vars = task::Vars::default();
+        assert_eq!(TargetFilter::from_vars(&vars), TargetFilter::all());
+
+        vars.cli.insert("target".to_string(), "db,cache".to_string());
+        assert_eq!(
+            TargetFilter::from_vars(&vars),
+            TargetFilter {
+                db: true,
+                cache: true,
+                storage: false,
+            }
+        );
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_health_check_task_run() {
+        let boot = boot_test::<crate::app::App>().await.unwrap();
+        let vars = task::Vars::default();
+        let res = HealthCheck.run(&boot.app_context, &vars).await;
+        assert!(res.is_ok(), "health_check task failed: {:?}", res);
     }
 }

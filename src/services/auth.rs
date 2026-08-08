@@ -3,9 +3,9 @@ use crate::{
     mailers::auth::AuthMailer,
     models::{
         _entities::users,
-        users::{LoginParams, RegisterParams},
+        users::{LoginRequest, RegisterRequest},
     },
-    views::auth::{CurrentResponse, LoginResponse},
+    views::auth::{CurrentUserResource, LoginResource},
 };
 use loco_rs::prelude::*;
 use regex::Regex;
@@ -21,7 +21,7 @@ pub struct AuthService;
 
 impl AuthService {
     /// 用户注册业务逻辑
-    pub async fn register(ctx: &AppContext, params: &RegisterParams) -> Result<()> {
+    pub async fn register(ctx: &AppContext, params: &RegisterRequest) -> Result<()> {
         let res = users::Model::create_with_password(&ctx.db, params).await;
 
         let user = match res {
@@ -81,7 +81,7 @@ impl AuthService {
     }
 
     /// 用户登录业务逻辑
-    pub async fn login(ctx: &AppContext, params: &LoginParams) -> Result<Result<LoginResponse, &'static str>> {
+    pub async fn login(ctx: &AppContext, params: &LoginRequest) -> Result<Result<LoginResource, &'static str>> {
         use secrecy::ExposeSecret;
 
         let Ok(user) = users::Model::find_by_email(&ctx.db, &params.email).await else {
@@ -99,13 +99,13 @@ impl AuthService {
             Err(_) => return Ok(Err("Unauthorized")),
         };
 
-        Ok(Ok(LoginResponse::new(&user, &token)))
+        Ok(Ok(LoginResource::new(&user, &token)))
     }
 
     /// 获取当前登录用户信息
-    pub async fn current(ctx: &AppContext, pid: &str) -> Result<CurrentResponse> {
+    pub async fn current(ctx: &AppContext, pid: &str) -> Result<CurrentUserResource> {
         let user = users::Model::find_by_pid(&ctx.db, pid).await?;
-        Ok(CurrentResponse::new(&user))
+        Ok(CurrentUserResource::new(&user))
     }
 
     /// 请求魔术链接登录业务逻辑
@@ -130,7 +130,7 @@ impl AuthService {
     }
 
     /// 验证魔术链接登录业务逻辑
-    pub async fn magic_link_verify(ctx: &AppContext, token: &str) -> Result<Option<LoginResponse>> {
+    pub async fn magic_link_verify(ctx: &AppContext, token: &str) -> Result<Option<LoginResource>> {
         let Ok(user) = users::Model::find_by_magic_token(&ctx.db, token).await else {
             return Ok(None);
         };
@@ -142,7 +142,7 @@ impl AuthService {
             Err(_) => return Ok(None),
         };
 
-        Ok(Some(LoginResponse::new(&user, &token)))
+        Ok(Some(LoginResource::new(&user, &token)))
     }
 
     /// 重发邮箱验证邮件业务逻辑

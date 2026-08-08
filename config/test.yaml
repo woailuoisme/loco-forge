@@ -101,4 +101,9 @@ auth:
 cache:
   kind: InMem
 
+# Storage Configuration (Local for Tests)
+storage:
+  kind: Local
+
+
 

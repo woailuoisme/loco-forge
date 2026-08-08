@@ -29,7 +29,11 @@ async fn can_get_health_readiness() {
         let body: Value = serde_json::from_str(&text).expect("Failed to parse JSON");
         assert_eq!(body["success"], true);
         assert_eq!(body["code"], 200);
-        assert_eq!(body["data"]["db"], "ok");
+        assert_eq!(body["data"]["status"], "up");
+        let db_kind = body["data"]["checks"]["db"]["kind"].as_str().unwrap();
+        assert!(db_kind == "pg" || db_kind == "sqlite");
+        assert_eq!(body["data"]["checks"]["cache"]["kind"], "memory");
+        assert_eq!(body["data"]["checks"]["storage"]["kind"], "memory");
     })
     .await;
 }
