@@ -1,7 +1,7 @@
 use crate::{
     common::consts::openapi::TAG_AUTH,
     dtos::{
-        auth::{ForgotParams, MagicLinkParams, ResetParams, ResendVerificationParams},
+        auth::{ForgotParams, MagicLinkParams, ResendVerificationParams, ResetParams},
         common::{ApiError, ApiResponse, format_res},
     },
     models::users::{LoginParams, RegisterParams},

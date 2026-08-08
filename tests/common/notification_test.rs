@@ -115,11 +115,7 @@ async fn test_notification_manager_send() {
             .expect("NotificationManager::send failed");
 
         // 回归断言: EmailChannel::send 应真实投递邮件到 Stub 发送器 (mailer.stub: true, ForegroundBlocking 同步执行)
-        let deliveries = ctx
-            .mailer
-            .as_ref()
-            .expect("测试环境应配置 mailer")
-            .deliveries();
+        let deliveries = ctx.mailer.as_ref().expect("测试环境应配置 mailer").deliveries();
         assert_eq!(deliveries.count, 1, "邮件通知应通过 Stub 恰好投递 1 封");
     })
     .await;

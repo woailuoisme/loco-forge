@@ -54,8 +54,7 @@ pub struct Scout;
 impl Scout {
     /// 从 AppContext 解析 Meilisearch 配置并创建引擎（配置缺失时返回统一错误）
     fn engine_from_ctx(ctx: &AppContext) -> Result<MeilisearchEngine> {
-        let config = MeilisearchConfig::from_ctx(ctx)
-            .ok_or_else(|| Error::string("Meilisearch config is not set"))?;
+        let config = MeilisearchConfig::from_ctx(ctx).ok_or_else(|| Error::string("Meilisearch config is not set"))?;
         MeilisearchEngine::new(config)
     }
 

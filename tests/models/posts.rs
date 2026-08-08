@@ -31,8 +31,5 @@ async fn test_model() {
         .expect("Inserted post should exist");
 
     assert_eq!(fetched.title.as_deref(), Some("Loco 最佳实践"));
-    assert_eq!(
-        fetched.content.as_deref(),
-        Some("通过生成器生成的测试文章")
-    );
+    assert_eq!(fetched.content.as_deref(), Some("通过生成器生成的测试文章"));
 }

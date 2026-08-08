@@ -79,7 +79,8 @@ impl ImageProcessor {
         if w > consts::media::MAX_DIMENSION || h > consts::media::MAX_DIMENSION {
             return Err(MediaError::InvalidInput(format!(
                 "Image dimensions ({w}x{h}) exceed maximum allowed safety limit of {}x{}px",
-                consts::media::MAX_DIMENSION, consts::media::MAX_DIMENSION
+                consts::media::MAX_DIMENSION,
+                consts::media::MAX_DIMENSION
             )));
         }
         Ok(Self {

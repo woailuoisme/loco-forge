@@ -89,9 +89,7 @@ pub fn resolve_target_sheets(
         Some(target) => {
             let matched: Vec<String> = all_sheet_names
                 .iter()
-                .filter(|&name| {
-                    name == target || name.strip_prefix(target).is_some_and(|rest| rest.starts_with('_'))
-                })
+                .filter(|&name| name == target || name.strip_prefix(target).is_some_and(|rest| rest.starts_with('_')))
                 .cloned()
                 .collect();
             if matched.is_empty() {

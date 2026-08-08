@@ -77,9 +77,7 @@ impl NotificationManager {
                 let message = notification.to_telegram()?;
                 Some(ChannelDispatch::Telegram {
                     message,
-                    recipient: notifiable
-                        .route_notification_for_telegram()
-                        .unwrap_or_default(),
+                    recipient: notifiable.route_notification_for_telegram().unwrap_or_default(),
                 })
             }
             Channel::Custom(_) => None,
@@ -104,8 +102,7 @@ impl NotificationManager {
                 tracing::info!("自定义通知渠道暂无扩展处理器: {}", name);
                 continue;
             }
-            let Some(dispatch) = Self::resolve_dispatch(notifiable, notification, &channel, true)
-            else {
+            let Some(dispatch) = Self::resolve_dispatch(notifiable, notification, &channel, true) else {
                 continue;
             };
             match dispatch {
@@ -137,27 +134,22 @@ impl NotificationManager {
                 tracing::info!("自定义通知渠道暂无队列分发: {}", name);
                 continue;
             }
-            let Some(dispatch) = Self::resolve_dispatch(notifiable, notification, &channel, false)
-            else {
+            let Some(dispatch) = Self::resolve_dispatch(notifiable, notification, &channel, false) else {
                 continue;
             };
             let job_args = match dispatch {
-                ChannelDispatch::Email { message, recipient } => {
-                    crate::workers::notification::NotificationJobArgs {
-                        channel: Channel::Email,
-                        recipient,
-                        mail_message: Some(message),
-                        telegram_message: None,
-                    }
-                }
-                ChannelDispatch::Telegram { message, recipient } => {
-                    crate::workers::notification::NotificationJobArgs {
-                        channel: Channel::Telegram,
-                        recipient,
-                        mail_message: None,
-                        telegram_message: Some(message),
-                    }
-                }
+                ChannelDispatch::Email { message, recipient } => crate::workers::notification::NotificationJobArgs {
+                    channel: Channel::Email,
+                    recipient,
+                    mail_message: Some(message),
+                    telegram_message: None,
+                },
+                ChannelDispatch::Telegram { message, recipient } => crate::workers::notification::NotificationJobArgs {
+                    channel: Channel::Telegram,
+                    recipient,
+                    mail_message: None,
+                    telegram_message: Some(message),
+                },
             };
             crate::workers::notification::NotificationWorker::perform_later(ctx, job_args).await?;
         }
