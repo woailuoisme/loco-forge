@@ -39,11 +39,27 @@ AI Agent 在此项目中编写、重构代码或排查问题时，必须严格�
      （例如 `ctx.db`, `ctx.config`, `ctx.mailer`, `ctx.cache`, `ctx.storage`）。
    - 禁止在业务代码中自行创建独立的数据库连接池或服务实例。
 
-5. **Sea-ORM 实体约束**
+5. **Sea-ORM 实体约束与 Data Repository 规范**
    - `src/models/_entities/` 目录下的文件为 Sea-ORM
      **自动生成的代码**，**绝对禁止手动修改**。
    - 自定义业务逻辑、关联查询和模型验证必须编写在 `src/models/*.rs` 中。
    - 主键与外键类型统一使用 `i64`（Loco 0.17+ 规范）。
+   - **Data Repository 三段式结构**：每个 `src/models/<name>.rs` 必须按以下三个 `impl` 块组织，明确职责边界：
+     - `impl Model { … }`：单实例读写方法（`find_by_id`, `create`, `update_xxx`, `delete`）
+     - `impl ActiveModel { … }`：字段级钩子与 `ActiveModelBehavior`（如 `before_save`）
+     - `impl Entity { … }`：集合级查询（分页、搜索、批量删除、聚合统计）
+   - **SeaORM 原生 filter 写法**：统一使用 `Column::Field.eq(value)` / `.is_in(...)` / `.contains(...)` 等原生表达式，
+     **禁止**使用已废弃的 `model::query::condition().eq(...).build()` 旧式写法。
+   - **批量操作规范**：
+     - 批量删除：`Entity::delete_many().filter(Column::Id.is_in(ids)).exec(db)` — 单条 SQL，零 N+1
+     - 批量更新：`Entity::update_many().col_expr(Column::Field, Expr::value(val)).filter(...).exec(db)` — 禁止循环逐行 update
+     - 空切片保护：批量操作入口处须 `if ids.is_empty() { return Ok(0); }` 提前返回
+   - **分页查询规范**：统一使用 SeaORM `Paginator`（`.paginate(db, page_size)`），
+     页码从 1 开始入参，内部转换 `page.saturating_sub(1)` 传给 `.fetch_page()`，
+     同时返回 `(Vec<Model>, total_pages: u64)` 元组。
+   - **`#[must_use]` 使用规则**：
+     - 纯查询、纯计算的无副作用方法（如 `is_admin`, `verify_password`, `has_role`）**须**标注 `#[must_use]`
+     - 返回类型已是 `#[must_use]`（如 `Result<T>`, `Option<T>`）的方法**禁止**再叠加 `#[must_use]`（避免 `clippy::double_must_use`）
 
 6. **错误处理、日志规范与代码风格**
    - 控制器、模型、Service 与 Task 返回类型统一为 `loco_rs::Result<T>`，
@@ -66,10 +82,10 @@ AI Agent 在此项目中编写、重构代码或排查问题时，必须严格�
 
 | 架构层级 | 所在目录 | 职责范围 (Responsibilities) | 禁止事项 (Anti-Patterns) |
 |---|---|---|---|
-| **Controller 层** | `src/controllers/` | 校验入参 DTO、提取 `State(ctx)`、路由映射、调用 Service 并返回 `Response` | ❌ **禁止**直接写 SQL / Sea-ORM 复杂事务查询；❌ **禁止**直接处理邮件/队列 |
-| **Service 层** | `src/services/` | 编排业务流程、跨 Model 事务处理、业务规则校验、触发 Worker/Mailer | ❌ **禁止**直接依赖 HTTP Request/Header 对象；❌ **禁止**手动返回 HTTP StatusCode |
-| **Model 层** | `src/models/` | 数据库表操作、模型字段 Validation、单个实体的拓展 CRUD 方法 | ❌ **禁止**手动修改 `src/models/_entities/` 自动生成文件 |
-| **DTO 层** | `src/dtos/` | 定义 Request (`XxxRequest`) / Response Resource (`XxxResource`) 契约结构体、实现 `utoipa::ToSchema` 与 `From` 转换 | ❌ **禁止**放置复杂业务处理逻辑；❌ **禁止**使用 `Params`, `Dto`, `Response` 等非标后缀 |
+| **Controller 层** | `src/controllers/` | `#[debug_handler]` + `#[utoipa::path(...)]` 标注；`State(ctx)` 提取上下文；`Json(params)` / `Path(id)` 提取入参；调用 Service 方法；用 `format_res::ok/empty_msg/unauthorized` 统一格式化响应；`routes()` 函数内注册路由并按需挂载中间件层 | ❌ **禁止**直接写 SQL / Sea-ORM 查询；❌ **禁止**直接触发邮件/队列；❌ **禁止**在 Handler 函数内包含业务逻辑 |
+| **Service 层** | `src/services/` | `pub struct XxxService;` 关联函数模式；接收 `&AppContext` + DTO 参数；编排 Model 查询、Mailer 调用、Worker 投递；静默处理用户不存在（返回 `Ok(())` 避免信息泄露）；用 `OnceLock<Regex>` 缓存复用正则编译结果 | ❌ **禁止**直接依赖 `axum::http::Request` / Header 对象；❌ **禁止**手动构造 HTTP 状态码或 Response；❌ **禁止**在 Service 层直接访问数据库（须通过 Model 方法） |
+| **Model 层** | `src/models/` | Data Repository 三段式结构（`impl Model` 单实例读写 / `impl ActiveModel` 钩子行为 / `impl Entity` 集合查询）；SeaORM 原生 filter；批量操作用 `delete_many`/`update_many` 消除 N+1；分页返回 `(Vec<Model>, total_pages)`；纯方法标注 `#[must_use]` | ❌ **禁止**手动修改 `src/models/_entities/` 自动生成文件；❌ **禁止**在 `impl Entity` 或 `impl Model` 中放置跨模型事务（归 Service 层）；❌ **禁止**使用旧式 `query::condition().build()` 写法；❌ **禁止**在批量方法中逐行循环 update/delete |
+| **DTO 层** | `src/dtos/` | Request (`XxxRequest`) 标注 `#[derive(Deserialize, Validate, ToSchema)]`；Response Resource (`XxxResource`) 标注 `#[derive(Serialize, ToSchema)]` 并实现 `From<Model>`；分页统一用 `PaginatedResource<T>` + `PageMeta` + `PaginationRequest` | ❌ **禁止**放置业务逻辑；❌ **禁止**使用 `Params`, `Dto`, `Response` 等非标后缀；❌ **禁止** Resource 直接暴露密码/Token 等敏感字段 |
 | **Common 层** | `src/common/` | 全局常量 (`consts.rs`)、工具函数 (`utils/`) | ❌ **禁止**依赖上层 Controller 或 Service 模块 |
 | **Setup 层** | `src/setup/` | HTTP 中间件注册 (i18n, rate_limit, logger)、路由总装 | ❌ **禁止**将具体业务 Endpoint 逻辑写入中间件 |
 
@@ -144,6 +160,245 @@ mise run down     # 停止并销毁 Docker Compose 容器
   在 `tests/` 中编写或更新测试。
 - HTTP 集成测试模式：
   `request::<App, _, _>(|request, ctx| async move { ... }).await;`
+
+---
+
+## Controller 层最佳实践 (Controller Best Practices)
+
+### Handler 标准结构
+
+每个 Handler 函数保持**薄层**：提取入参 → 调用 Service → 格式化响应，禁止在函数体内编写业务逻辑。
+
+```rust
+/// 用户登录
+#[utoipa::path(
+    post, path = "/api/v1/auth/login",
+    request_body = LoginRequest,
+    responses(
+        (status = 200, body = ApiResponse<LoginResource>),
+        (status = 401, body = ApiError)
+    ),
+    tag = TAG_AUTH
+)]
+#[debug_handler]
+pub async fn login(
+    State(ctx): State<AppContext>,
+    Json(params): Json<LoginRequest>,
+) -> Result<Response> {
+    match AuthService::login(&ctx, &params).await? {
+        Ok(res) => format_res::ok(res),
+        Err(msg) => format_res::unauthorized(msg),
+    }
+}
+```
+
+### 统一响应格式化 (`format_res`)
+
+| 场景 | 调用方式 |
+|---|---|
+| 成功返回数据 | `format_res::ok(resource)` |
+| 成功但无数据 | `format_res::empty_msg("操作成功")` |
+| 401 未授权 | `format_res::unauthorized("msg")` |
+| 400 参数错误 | `format_res::bad_request("msg")` |
+
+### 路由注册规范
+
+路由统一在 `routes()` 关联函数中注册，中间件按需挂载到 Routes 层：
+
+```rust
+pub fn routes() -> Routes {
+    Routes::new()
+        .prefix("/api/v1/auth")
+        .add("/login", post(login))
+        .add("/current", get(current))
+        .layer(auth_rate_limit_layer())   // 按需挂载限流层
+}
+```
+
+---
+
+## Service 层最佳实践 (Service Best Practices)
+
+### 关联函数模式
+
+Service 结构体无字段，所有方法为关联函数，接收 `&AppContext` 作为第一参数：
+
+```rust
+pub struct AuthService;
+
+impl AuthService {
+    pub async fn register(ctx: &AppContext, params: &RegisterRequest) -> Result<()> {
+        // 调用 Model 层 → 触发 Mailer → 返回 Result
+    }
+}
+```
+
+### 静默处理用户不存在
+
+认证类接口**不暴露用户是否存在**，统一静默返回 `Ok(())` 防止信息泄露：
+
+```rust
+// ✅ 推荐
+let Ok(user) = users::Model::find_by_email(&ctx.db, email).await else {
+    return Ok(());  // 静默返回，不透露用户是否存在
+};
+
+// ❌ 禁止
+if !user_exists { return Err(Error::Unauthorized()); }
+```
+
+### 正则编译缓存
+
+使用 `OnceLock<Regex>` 全局懒加载，避免每次请求重复编译正则：
+
+```rust
+pub static EMAIL_DOMAIN_RE: OnceLock<Regex> = OnceLock::new();
+
+fn get_allow_email_domain_re() -> &'static Regex {
+    EMAIL_DOMAIN_RE.get_or_init(|| {
+        Regex::new(ALLOW_EMAIL_DOMAIN_PATTERN).expect("Invalid regex")
+    })
+}
+```
+
+### admin 子模块
+
+管理后台专属 Service 放置于 `src/services/admin/`，避免与用户端逻辑混用。
+
+---
+
+## DTO 层最佳实践 (DTO Best Practices)
+
+### Request DTO 规范
+
+```rust
+/// 创建文章请求参数 [Request DTO]
+#[derive(Deserialize, Validate, TS, ToSchema)]
+pub struct CreatePostRequest {
+    /// 文章标题
+    #[validate(length(min = 1, message = "文章标题不能为空"))]
+    pub title: Option<String>,
+    pub content: Option<String>,
+}
+```
+
+- 统一 `#[derive(Deserialize, Validate, ToSchema)]`
+- 使用 `validator::Validate` 做字段级校验（`#[validate(...)]`）
+- 敏感字段（密码）使用 `SecretString` + `#[serde(skip_serializing)]`
+
+### Response Resource 规范
+
+```rust
+/// 文章响应数据对象 [Response DTO]
+#[derive(Serialize, TS, ToSchema)]
+pub struct PostResource {
+    pub id: i64,
+    pub title: Option<String>,
+    pub content: Option<String>,
+    pub created_at: DateTimeWithTimeZone,
+}
+
+impl From<posts::Model> for PostResource {
+    fn from(m: posts::Model) -> Self {
+        Self { id: m.id, title: m.title, content: m.content, created_at: m.created_at }
+    }
+}
+```
+
+- 统一实现 `From<Model>` 解耦 Model 与响应格式
+- 纯工厂方法（`::new()`）标注 `#[must_use]`
+- **禁止**在 Resource 中暴露密码、内部 Token 等敏感字段
+
+### 分页 DTO 三件套
+
+| 类型 | 用途 |
+|---|---|
+| `PaginationRequest` | Query 参数提取（`page`, `per_page`，含上下界合法化） |
+| `PaginatedResource<T>` | 统一分页响应容器（`items` + `meta`） |
+| `PageMeta` | 分页元数据（`current_page`, `per_page`, `last_page`, `total`） |
+
+```rust
+// Controller 端
+async fn list(Query(pq): Query<PaginationRequest>, ...) -> Result<Response> {
+    let (posts, total_pages) = posts::Entity::find_all_paginated(
+        &ctx.db, pq.page(), pq.per_page()
+    ).await?;
+    let resources: Vec<PostResource> = posts.into_iter().map(Into::into).collect();
+    format_res::ok(PaginatedResource {
+        items: resources,
+        meta: PageMeta::new(pq.page(), pq.per_page(), total_pages),
+        extras: None,
+    })
+}
+```
+
+---
+
+## Model Data Repository 最佳实践 (Model Best Practices)
+
+### 三段式 `impl` 结构
+
+每个 `src/models/<name>.rs` 文件按如下三个块组织，**不得跨块混写**：
+
+```rust
+// ① 单实例读写 — find_by_id / create / update_xxx / delete
+impl Model { … }
+
+// ② ActiveModel 钩子 — before_save / before_delete 等生命周期
+impl ActiveModel { … }
+
+// ③ 集合查询 — 分页、搜索、批量删除、聚合统计
+impl Entity { … }
+```
+
+### SeaORM 原生 Filter 写法
+
+```rust
+// ✅ 推荐 — 原生列表达式
+Entity::find().filter(Column::Email.eq(email))
+Entity::find().filter(Column::Id.is_in(ids.to_vec()))
+Entity::find().filter(Column::Title.contains(&pattern))
+
+// ❌ 禁止 — 已废弃旧式写法
+model::query::condition().email().eq(email).build()
+```
+
+### 批量删除（单条 SQL，零 N+1）
+
+```rust
+pub async fn delete_by_ids(db: &DatabaseConnection, ids: &[i64]) -> ModelResult<u64> {
+    if ids.is_empty() { return Ok(0); }          // 空切片保护
+    let res = Entity::delete_many()
+        .filter(Column::Id.is_in(ids.to_vec()))
+        .exec(db)
+        .await?;
+    Ok(res.rows_affected)
+}
+```
+
+### 批量字段更新（单条 SQL，替代 N+1 循环）
+
+```rust
+Entity::update_many()
+    .col_expr(Column::Field, Expr::value(Option::<Type>::None))
+    .filter(Column::ExpiredAt.lt(now))
+    .exec(db)
+    .await?;
+```
+
+### 分页查询约定
+
+- 入参 `page: u64` 从 **1 开始**，内部转 `page.saturating_sub(1)` 传给 `.fetch_page()`
+- 返回值统一为 `ModelResult<(Vec<Model>, u64)>` — `(数据列表, 总页数)`
+- 排序默认 `order_by_desc(Column::CreatedAt)` 保持新旧一致性
+
+### `#[must_use]` 使用规则
+
+| 情形 | 处理方式 |
+|---|---|
+| 纯查询 / 纯计算方法（`is_admin`, `verify_password`, `has_role`） | **加** `#[must_use]` |
+| 返回 `Result<T>` / `Option<T>` 的方法 | **不加**（类型本身已是 `#[must_use]`，重复会触发 `clippy::double_must_use`） |
+| 有副作用的写入方法（`create`, `update`, `delete`） | **不加** |
 
 ---
 
