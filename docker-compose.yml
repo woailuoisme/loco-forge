@@ -21,7 +21,24 @@ services:
       - backend
     restart: unless-stopped
 
+  app-alpine:
+    build:
+      context: .
+      dockerfile: Dockerfile.alpine
+    container_name: loco_app_alpine
+    ports:
+      - "5151:5150"
+    environment:
+      - LOCO_ENV=development
+      - LOCO_BINDING=0.0.0.0
+      - DATABASE_URL=${DATABASE_URL:-sqlite://loco-starter_development.sqlite?mode=rwc}
+      - JWT_SECRET=${JWT_SECRET:-mHuQ6y9WZiykqoDgaAEm}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - backend
+    restart: unless-stopped
+
 networks:
   backend:
-    external: true
-
+    driver: bridge

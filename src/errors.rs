@@ -82,6 +82,17 @@ impl From<sea_orm::DbErr> for AppError {
     }
 }
 
+impl From<crate::common::media::error::MediaError> for AppError {
+    fn from(err: crate::common::media::error::MediaError) -> Self {
+        match err {
+            crate::common::media::error::MediaError::InvalidInput(msg) => {
+                Self::Custom(StatusCode::BAD_REQUEST, msg)
+            }
+            _ => Self::Internal(err.to_string()),
+        }
+    }
+}
+
 /// 实现 Axum `IntoResponse` Trait，将 AppError 统一渲染为标准 JSON [`ApiError`]
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {

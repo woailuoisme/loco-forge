@@ -30,9 +30,9 @@ FROM chef AS builder
 # 根据 TARGETPLATFORM 自动选择 musl 目标三元组
 ARG TARGETPLATFORM
 RUN case "$TARGETPLATFORM" in \
-      "linux/amd64")  echo "x86_64-unknown-linux-musl"   > /target.txt ;; \
-      "linux/arm64")  echo "aarch64-unknown-linux-musl"  > /target.txt ;; \
-      *)              echo "Unsupported platform: $TARGETPLATFORM" && exit 1 ;; \
+    "linux/amd64")  echo "x86_64-unknown-linux-musl"   > /target.txt ;; \
+    "linux/arm64")  echo "aarch64-unknown-linux-musl"  > /target.txt ;; \
+    *)              echo "Unsupported platform: $TARGETPLATFORM" && exit 1 ;; \
     esac
 
 COPY --from=planner /app/recipe.json recipe.json
@@ -47,7 +47,7 @@ RUN TARGET=$(cat /target.txt) && \
     cp target/"$TARGET"/release/locos /locos
 
 # ── 阶段 4：最小化 Alpine runtime 镜像 ───────────────────────────────────────
-FROM alpine:3.21 AS runtime
+FROM alpine:3.24 AS runtime
 
 # 静态链接二进制无需 libc，仅添加 ca-certificates 用于 HTTPS
 RUN apk add --no-cache ca-certificates tzdata && \
