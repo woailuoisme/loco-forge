@@ -1,3 +1,23 @@
+app:
+  name: "Loco"
+
+auth:
+  welcome_title: "Welcome to %{app_name}!"
+  welcome_user: "Welcome to %{app_name}, %{name}!"
+  verify_email_subject: "[%{app_name}] Please verify your email address"
+  reset_password_subject: "[%{app_name}] Reset your account password"
+  magic_link_subject: "[%{app_name}] Your passwordless magic login link"
+  link_expire_notice: "This link will expire in %{minutes} minutes."
+  invalid_magic_link_token: "The magic link token is invalid or expired."
+  user_not_found: "User with email '%{email}' was not found."
+  email_already_exists: "An account with email '%{email}' already exists."
+  password_reset_sent: "If an account with email '%{email}' exists in our system, a password reset link has been sent."
+
+errors:
+  unauthorized: "Authentication required to access this resource."
+  bad_request: "Invalid request parameters."
+  internal_error: "An internal server error occurred. Please try again later."
+
 validation:
   # General & Presence
   required: "This field is required."

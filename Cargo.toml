@@ -10,6 +10,19 @@ loco-rs = { version = "1.0" }
 sea-orm = { version = "2.0" }
 sea-orm-migration = { version = "2.0" }
 
+[workspace.lints.rust]
+unsafe_code = "warn"                          # 警惕 unsafe 代码，保持纯安全 Rust
+
+[workspace.lints.clippy]
+# --- Rust 2024 现代编码范式 ---
+manual_let_else = "warn"                      # 强制使用 let-else 减少嵌套解包
+implicit_clone = "warn"                       # 避免隐式 Clone（如对 String 引用调 to_string）
+redundant_closure_for_method_calls = "warn"   # 优先使用函数指针（如 ToString::to_string）
+needless_lifetimes = "deny"                   # 消除冗余生命周期标注（Rust 2024 Elision）
+double_must_use = "deny"                      # 禁止重复标注 #[must_use]
+# --- 框架与第三方宏兼容放行 ---
+option_if_let_else = "allow"                  # 允许（防止 utoipa::ToSchema 泛型宏展开误报）
+
 [package]
 name = "locos"
 version = "0.1.0"
@@ -17,6 +30,9 @@ edition = "2024"
 publish = false
 rust-version = "1.97.1"
 default-run = "locos"
+
+[lints]
+workspace = true
 
 [dependencies]
 # 1. 核心框架与异步运行时 (Core Framework & Async Runtime)

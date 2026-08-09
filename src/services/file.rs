@@ -43,9 +43,9 @@ impl FileService {
         let mut total_uploaded_bytes: usize = 0;
 
         while let Ok(Some(mut field)) = multipart.next_field().await {
-            let raw_name_buf = field.file_name().map(|s| s.to_string());
+            let raw_name_buf = field.file_name().map(ToString::to_string);
             let filename_cow = UploadUtil::sanitize_filename(raw_name_buf.as_deref());
-            let content_type = field.content_type().map(|ct| ct.to_string());
+            let content_type = field.content_type().map(ToString::to_string);
 
             // 1. 后缀与 MIME 白名单预检
             if let Err(err) = UploadUtil::validate_file(&filename_cow, content_type.as_deref(), config) {

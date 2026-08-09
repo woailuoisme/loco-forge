@@ -44,11 +44,10 @@ impl KeyExtractor for SmartIpKeyExtractor {
             return Ok(ip);
         }
 
-        // 步骤 3: 降级尝试解析物理连接 Peer IP（在测试框架或内存 Mock 请求下如无法提取，降级保底为 127.0.0.1）
-        match tower_governor::key_extractor::PeerIpKeyExtractor.extract(req) {
-            Ok(ip) => Ok(ip),
-            Err(_) => Ok(std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST)),
-        }
+        let ip = tower_governor::key_extractor::PeerIpKeyExtractor
+            .extract(req)
+            .unwrap_or(std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST));
+        Ok(ip)
     }
 }
 

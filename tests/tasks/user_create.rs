@@ -17,7 +17,7 @@ async fn test_can_run_user_create() {
     assert!(user.is_err());
 
     let vars = task::Vars::from_cli_args(vec![
-        ("email".to_string(), email.to_string()),
+        ("email".to_string(), email.clone()),
         ("name".to_string(), "Test User".to_string()),
         ("password".to_string(), "securepassword".to_string()),
     ]);

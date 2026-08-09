@@ -95,7 +95,7 @@ impl OrderUtil {
         let sequence_digits = opts.sequence_digits.unwrap_or(4);
         let max_capacity = 10u32.pow(sequence_digits as u32);
 
-        let mut lock = GENERATOR_STATE.lock().unwrap_or_else(|e| e.into_inner());
+        let mut lock = GENERATOR_STATE.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
 
         let mut now_dt = Local::now();
         let mut now_ms = now_dt.timestamp_millis();

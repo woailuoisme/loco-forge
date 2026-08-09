@@ -1,4 +1,0 @@
-errors:
-  unauthorized: "需要身份验证方可访问该资源。"
-  bad_request: "请求参数格式无效。"
-  internal_error: "服务器内部发生异常，请稍后重试。"

@@ -18,19 +18,6 @@ dev = ["watch", "-w", "src", "-w", "config", "-s", "cargo run -- start"]
 linker = "rust-lld"
 rustflags = ["-C", "link-arg=-w"]
 
-# macOS (Intel)
-[target.x86_64-apple-darwin]
-linker = "rust-lld"
-rustflags = ["-C", "link-arg=-w"]
-
-# Linux (x86_64)
-[target.x86_64-unknown-linux-gnu]
-rustflags = ["-C", "link-arg=-fuse-ld=lld"]
-
-# Linux (aarch64)
-[target.aarch64-unknown-linux-gnu]
-rustflags = ["-C", "link-arg=-fuse-ld=lld"]
-
 # Windows (MSVC)
 [target.x86_64-pc-windows-msvc]
 linker = "rust-lld"

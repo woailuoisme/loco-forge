@@ -93,7 +93,7 @@ impl UploadConfig {
     /// 设置 MIME 前缀白名单 (例如 `&["image/", "application/pdf"]`)
     #[must_use]
     pub fn allowed_mime_prefixes(mut self, mimes: &[&str]) -> Self {
-        self.allowed_mime_prefixes = Some(mimes.iter().map(|s| s.to_string()).collect());
+        self.allowed_mime_prefixes = Some(mimes.iter().map(ToString::to_string).collect());
         self
     }
 

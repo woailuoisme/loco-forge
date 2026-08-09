@@ -121,7 +121,7 @@ impl Engine for MeilisearchEngine {
         let prefixed_index = self.config.prefixed_index(index_name);
         let index = self.client.index(&prefixed_index);
 
-        let sort_refs: Vec<&str> = query.sort.iter().map(|s| s.as_str()).collect();
+        let sort_refs: Vec<&str> = query.sort.iter().map(String::as_str).collect();
 
         let mut search_builder = index.search();
         search_builder.with_query(&query.q);

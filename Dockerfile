@@ -1,14 +1,28 @@
-# ── 阶段 1：编译二进制 ────────────────────────────────────────────────────────
-FROM --platform=$BUILDPLATFORM rust:1.97.1-slim AS builder
-ENV CARGO_INCREMENTAL=0
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends lld \
-    && rm -rf /var/lib/apt/lists/*
+ARG CARGO_CHEF_VERSION=v0.1.77
+
+# ── 阶段 1：Chef 基础阶段（安装 cargo-chef 预编译二进制）──────────────────────
+FROM rust:1.97.1-slim AS chef
+ARG CARGO_CHEF_VERSION
 WORKDIR /src
+RUN apt-get update && apt-get install -y --no-install-recommends curl xz-utils \
+    && curl --proto '=https' --tlsv1.2 -LsSf https://github.com/LukeMathWalker/cargo-chef/releases/download/${CARGO_CHEF_VERSION}/cargo-chef-installer.sh | sh \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── 阶段 2：Planner 依赖分析阶段（生成 recipe.json）───────────────────────────
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+# ── 阶段 3：Builder 预编译与源码构建阶段 ────────────────────────────────────────
+FROM chef AS builder
+COPY --from=planner /src/recipe.json recipe.json
+# 缓存第三方依赖编译产物，只有 Cargo.toml / Cargo.lock 变动时才会重新编译
+RUN cargo chef cook --release --recipe-path recipe.json
+# 复制源码并编译最终二进制
 COPY . .
 RUN cargo build --release --bin locos
 
-# ── 阶段 2：最小化 runtime 镜像 ───────────────────────────────────────────────
+# ── 阶段 4：最小化 runtime 镜像 ───────────────────────────────────────────────
 FROM debian:trixie-slim AS runtime
 
 ENV LOCO_ENV=production \
@@ -40,5 +54,3 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 ENTRYPOINT ["./locos"]
 CMD ["start"]
-
-

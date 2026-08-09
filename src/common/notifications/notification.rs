@@ -62,14 +62,11 @@ impl NotificationManager {
         match channel {
             Channel::Email => {
                 let message = notification.to_mail()?;
-                let recipient = match notifiable.route_notification_for_mail() {
-                    Some(recipient) => recipient,
-                    None => {
-                        if warn_on_missing_email_route {
-                            tracing::warn!("跳过 Email 通知发送: Notifiable 目标未路由邮箱地址");
-                        }
-                        return None;
+                let Some(recipient) = notifiable.route_notification_for_mail() else {
+                    if warn_on_missing_email_route {
+                        tracing::warn!("跳过 Email 通知发送: Notifiable 目标未路由邮箱地址");
                     }
+                    return None;
                 };
                 Some(ChannelDispatch::Email { message, recipient })
             }

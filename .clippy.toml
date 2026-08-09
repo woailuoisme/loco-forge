@@ -1,0 +1,16 @@
+# ==============================================================================
+# Clippy 认知复杂度与代码质量阀值配置 (.clippy.toml)
+# Note: MSRV (最低支持 Rust 版本) 会自动继承 Cargo.toml 中的 rust-version，无需在此重复申明
+# ==============================================================================
+
+# 单个函数认知复杂度上限 (Cognitive Complexity Threshold)
+# 超过 25 会触发 clippy::cognitive_complexity 警告，提示拆分复杂逻辑
+cognitive-complexity-threshold = 25
+
+# 单个函数入参个数上限 (Too Many Arguments Threshold)
+# 超过 8 个参数会触发 clippy::too_many_arguments 警告 (适配 Axum/Loco 组合 Extractor)
+too-many-arguments-threshold = 8
+
+# 文档注释中允许包含的专有名词/大写缩写列表 (Doc Markdown Exemption)
+# 防止 clippy::doc_markdown 将技术名词识别为缺少反引号包裹的语法错误
+doc-valid-idents = ["Loco", "SeaORM", "Axum", "Tokio", "Redis", "Meilisearch", "DTO", "JWT"]

@@ -94,9 +94,8 @@ impl AuthService {
         }
 
         let jwt_secret = ctx.config.get_jwt_config()?;
-        let token = match user.generate_jwt(&jwt_secret.secret, jwt_secret.expiration) {
-            Ok(t) => t,
-            Err(_) => return Ok(Err("Unauthorized")),
+        let Ok(token) = user.generate_jwt(&jwt_secret.secret, jwt_secret.expiration) else {
+            return Ok(Err("Unauthorized"));
         };
 
         Ok(Ok(LoginResource::new(&user, &token)))
@@ -137,9 +136,8 @@ impl AuthService {
 
         let user = user.into_active_model().clear_magic_link(&ctx.db).await?;
         let jwt_secret = ctx.config.get_jwt_config()?;
-        let token = match user.generate_jwt(&jwt_secret.secret, jwt_secret.expiration) {
-            Ok(t) => t,
-            Err(_) => return Ok(None),
+        let Ok(token) = user.generate_jwt(&jwt_secret.secret, jwt_secret.expiration) else {
+            return Ok(None);
         };
 
         Ok(Some(LoginResource::new(&user, &token)))

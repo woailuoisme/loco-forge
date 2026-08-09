@@ -84,7 +84,7 @@ impl<'a> ScoutBuilder<'a> {
 
     /// 设置排序数组 (Sort)
     pub fn sort(mut self, sort: &[&str]) -> Self {
-        self.query.sort = sort.iter().map(|s| s.to_string()).collect();
+        self.query.sort = sort.iter().map(ToString::to_string).collect();
         self
     }
 

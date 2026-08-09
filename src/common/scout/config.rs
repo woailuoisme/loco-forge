@@ -54,9 +54,8 @@ impl MeilisearchConfig {
 
     /// 获取附带前缀后的最终 Meilisearch 索引名
     pub fn prefixed_index(&self, index_name: &str) -> String {
-        match &self.index_prefix {
-            Some(prefix) => format!("{prefix}{index_name}"),
-            None => index_name.to_string(),
-        }
+        self.index_prefix
+            .as_deref()
+            .map_or_else(|| index_name.to_string(), |prefix| format!("{prefix}{index_name}"))
     }
 }

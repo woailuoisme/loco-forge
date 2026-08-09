@@ -1,13 +1,25 @@
-# ── 阶段 1：编译二进制（静态 musl）────────────────────────────────────────────
-FROM clux/muslrust:stable AS builder
-ENV CARGO_INCREMENTAL=0
+ARG CARGO_CHEF_VERSION=v0.1.77
 
+# ── 阶段 1：Chef 基础阶段（Musl 环境安装 cargo-chef 预编译二进制）────────────
+FROM clux/muslrust:stable AS chef
+ARG CARGO_CHEF_VERSION
 WORKDIR /app
+RUN curl --proto '=https' --tlsv1.2 -LsSf https://github.com/LukeMathWalker/cargo-chef/releases/download/${CARGO_CHEF_VERSION}/cargo-chef-installer.sh | sh
+
+# ── 阶段 2：Planner 依赖分析阶段 ───────────────────────────────────────────────
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+# ── 阶段 3：Builder 预编译 Musl 依赖与源码构建阶段 ────────────────────────────
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
 RUN cargo build --release --bin locos \
     && cp target/*/release/locos /locos
 
-# ── 阶段 2：最小化 Alpine runtime 镜像 ───────────────────────────────────────
+# ── 阶段 4：最小化 Alpine runtime 镜像 ───────────────────────────────────────
 FROM alpine:3.24 AS runtime
 
 ENV LOCO_ENV=production \
@@ -36,5 +48,3 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 ENTRYPOINT ["./locos"]
 CMD ["start"]
-
-

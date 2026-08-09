@@ -35,10 +35,7 @@ impl<'a> ExcelRow<'a> {
 
     /// 读取单元格纯文本字符串（自动格式化数字/日期）
     pub fn get_string(&self, column_name: &str) -> String {
-        match self.get_cell(column_name) {
-            Some(cell) => format_cell_value(cell),
-            None => String::new(),
-        }
+        self.get_cell(column_name).map_or_else(String::new, format_cell_value)
     }
 
     /// 读取 64 位整数

@@ -1,4 +1,0 @@
-errors:
-  unauthorized: "Authentication required to access this resource."
-  bad_request: "Invalid request parameters."
-  internal_error: "An internal server error occurred. Please try again later."

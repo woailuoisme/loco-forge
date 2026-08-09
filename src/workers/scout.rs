@@ -44,12 +44,9 @@ impl BackgroundWorker<ScoutJobArgs> for ScoutWorker {
     }
 
     async fn perform(&self, args: ScoutJobArgs) -> Result<()> {
-        let config = match MeilisearchConfig::from_ctx(&self.ctx) {
-            Some(cfg) => cfg,
-            None => {
-                tracing::warn!("Scout Worker 跳过: 未配置 Meilisearch (缺少 MEILISEARCH_HOST 或 YAML 配置)");
-                return Ok(());
-            }
+        let Some(config) = MeilisearchConfig::from_ctx(&self.ctx) else {
+            tracing::warn!("Scout Worker 跳过: 未配置 Meilisearch (缺少 MEILISEARCH_HOST 或 YAML 配置)");
+            return Ok(());
         };
 
         let engine = MeilisearchEngine::new(config)?;
