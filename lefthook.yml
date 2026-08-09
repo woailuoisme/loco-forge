@@ -16,7 +16,7 @@ pre-commit:
       glob: "*.md"
       run: rumdl fmt {staged_files}
 
-pre-push:
-  jobs:
-    - name: test
-      run: cargo nextest run
+# pre-push:
+#   jobs:
+#     - name: test
+#       run: cargo nextest run

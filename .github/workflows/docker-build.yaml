@@ -9,21 +9,21 @@ on:
   #     - 'v*'
   workflow_dispatch:
     inputs:
-      variants:
-        description: "选择要构建的镜像变体"
-        required: true
-        type: choice
-        default: trixie
-        options:
-          - trixie
-          - alpine
+      build_trixie:
+        description: "构建 Debian Slim (trixie) 镜像"
+        type: boolean
+        default: true
+      build_alpine:
+        description: "构建 Alpine Musl (alpine) 镜像"
+        type: boolean
+        default: true
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # ── 根据手动输入计算要构建的矩阵 ──────────────────────────────────────────
+  # ── 根据多选项计算要构建的矩阵 ──────────────────────────────────────────
   prepare:
     runs-on: ubuntu-latest
     outputs:
@@ -32,12 +32,24 @@ jobs:
       - name: Set build matrix
         id: set-matrix
         run: |
-          INPUT="${{ github.event.inputs.variants }}"
-          if [ "$INPUT" = "alpine" ]; then
-            echo 'matrix={"include":[{"variant":"alpine","dockerfile":"Dockerfile.alpine","platforms":"linux/amd64"}]}' >> "$GITHUB_OUTPUT"
-          else
-            echo 'matrix={"include":[{"variant":"trixie","dockerfile":"Dockerfile","platforms":"linux/amd64"}]}' >> "$GITHUB_OUTPUT"
+          BUILD_TRIXIE="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_trixie || 'true' }}"
+          BUILD_ALPINE="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_alpine || 'true' }}"
+
+          ITEMS=()
+          if [ "$BUILD_TRIXIE" = "true" ]; then
+            ITEMS+=('{"variant":"trixie","dockerfile":"Dockerfile","platforms":"linux/amd64"}')
           fi
+          if [ "$BUILD_ALPINE" = "true" ]; then
+            ITEMS+=('{"variant":"alpine","dockerfile":"Dockerfile.alpine","platforms":"linux/amd64"}')
+          fi
+
+          if [ ${#ITEMS[@]} -eq 0 ]; then
+            echo "错误: 未勾选任何要构建的镜像变体"
+            exit 1
+          fi
+
+          JSON=$(IFS=,; echo "[${ITEMS[*]}]")
+          echo "matrix={\"include\":$JSON}" >> "$GITHUB_OUTPUT"
 
   # ── 矩阵并行构建 ───────────────────────────────────────────────────────────
   build-and-push:
