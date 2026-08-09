@@ -1,7 +1,10 @@
 use crate::{
     common::consts::openapi::TAG_AUTH,
     dtos::{
-        auth::{ForgotPasswordRequest, MagicLinkRequest, ResendVerificationRequest, ResetPasswordRequest},
+        auth::{
+            ForgotPasswordRequest, MagicLinkRequest, ResendVerificationRequest,
+            ResetPasswordRequest,
+        },
         common::{ApiError, ApiResponse, format_res},
     },
     models::users::{LoginRequest, RegisterRequest},
@@ -23,7 +26,10 @@ use loco_rs::prelude::*;
     tag = TAG_AUTH
 )]
 #[debug_handler]
-pub async fn register(State(ctx): State<AppContext>, Json(params): Json<RegisterRequest>) -> Result<Response> {
+pub async fn register(
+    State(ctx): State<AppContext>,
+    Json(params): Json<RegisterRequest>,
+) -> Result<Response> {
     AuthService::register(&ctx, &params).await?;
     format_res::empty_msg("注册请求已受理")
 }
@@ -64,7 +70,10 @@ pub async fn verify(State(ctx): State<AppContext>, Path(token): Path<String>) ->
     tag = TAG_AUTH
 )]
 #[debug_handler]
-pub async fn forgot(State(ctx): State<AppContext>, Json(params): Json<ForgotPasswordRequest>) -> Result<Response> {
+pub async fn forgot(
+    State(ctx): State<AppContext>,
+    Json(params): Json<ForgotPasswordRequest>,
+) -> Result<Response> {
     AuthService::forgot(&ctx, &params.email).await?;
     format_res::empty_msg("重置密码邮件已发送")
 }
@@ -82,7 +91,10 @@ pub async fn forgot(State(ctx): State<AppContext>, Json(params): Json<ForgotPass
     tag = TAG_AUTH
 )]
 #[debug_handler]
-pub async fn reset(State(ctx): State<AppContext>, Json(params): Json<ResetPasswordRequest>) -> Result<Response> {
+pub async fn reset(
+    State(ctx): State<AppContext>,
+    Json(params): Json<ResetPasswordRequest>,
+) -> Result<Response> {
     AuthService::reset(&ctx, &params.token, &params.password).await?;
     format_res::empty_msg("密码重置成功")
 }
@@ -101,7 +113,10 @@ pub async fn reset(State(ctx): State<AppContext>, Json(params): Json<ResetPasswo
     tag = TAG_AUTH
 )]
 #[debug_handler]
-pub async fn login(State(ctx): State<AppContext>, Json(params): Json<LoginRequest>) -> Result<Response> {
+pub async fn login(
+    State(ctx): State<AppContext>,
+    Json(params): Json<LoginRequest>,
+) -> Result<Response> {
     match AuthService::login(&ctx, &params).await? {
         Ok(res) => format_res::ok(res),
         Err(msg) => format_res::unauthorized(msg),
@@ -142,7 +157,10 @@ pub async fn current(auth: auth::JWT, State(ctx): State<AppContext>) -> Result<R
     tag = TAG_AUTH
 )]
 #[debug_handler]
-pub async fn magic_link(State(ctx): State<AppContext>, Json(params): Json<MagicLinkRequest>) -> Result<Response> {
+pub async fn magic_link(
+    State(ctx): State<AppContext>,
+    Json(params): Json<MagicLinkRequest>,
+) -> Result<Response> {
     if !AuthService::magic_link(&ctx, &params.email).await? {
         return format_res::bad_request("Invalid request");
     }
@@ -165,7 +183,10 @@ pub async fn magic_link(State(ctx): State<AppContext>, Json(params): Json<MagicL
     tag = TAG_AUTH
 )]
 #[debug_handler]
-pub async fn magic_link_verify(Path(token): Path<String>, State(ctx): State<AppContext>) -> Result<Response> {
+pub async fn magic_link_verify(
+    Path(token): Path<String>,
+    State(ctx): State<AppContext>,
+) -> Result<Response> {
     let Some(res) = AuthService::magic_link_verify(&ctx, &token).await? else {
         return format_res::unauthorized("Unauthorized");
     };

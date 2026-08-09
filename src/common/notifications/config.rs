@@ -35,7 +35,7 @@ impl TelegramConfig {
             .settings
             .as_ref()
             .and_then(|s| s.get("telegram"))
-            .and_then(|val| serde_json::from_value::<TelegramConfig>(val.clone()).ok())
+            .and_then(|val| serde_json::from_value::<Self>(val.clone()).ok())
         {
             if let Ok(token) = std::env::var("TELEGRAM_BOT_TOKEN") {
                 cfg.bot_token = token;
@@ -51,7 +51,8 @@ impl TelegramConfig {
         // 回退读取环境变量
         if let Ok(bot_token) = std::env::var("TELEGRAM_BOT_TOKEN") {
             let chat_id = std::env::var("TELEGRAM_CHAT_ID").ok();
-            let api_url = std::env::var("TELEGRAM_API_URL").unwrap_or_else(|_| "https://api.telegram.org".to_string());
+            let api_url = std::env::var("TELEGRAM_API_URL")
+                .unwrap_or_else(|_| "https://api.telegram.org".to_string());
 
             return Some(Self {
                 bot_token,

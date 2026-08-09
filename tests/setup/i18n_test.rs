@@ -20,7 +20,10 @@ async fn test_i18n_middleware_with_header() {
     request::<App, _, _>(|request, _ctx| async move {
         let res = request
             .get("/_health")
-            .add_header(axum::http::header::ACCEPT_LANGUAGE, "zh-CN,zh;q=0.9,en;q=0.8")
+            .add_header(
+                axum::http::header::ACCEPT_LANGUAGE,
+                "zh-CN,zh;q=0.9,en;q=0.8",
+            )
             .await;
         assert_eq!(res.status_code(), StatusCode::OK);
     })

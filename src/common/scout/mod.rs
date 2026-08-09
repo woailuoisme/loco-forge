@@ -54,7 +54,8 @@ pub struct Scout;
 impl Scout {
     /// 从 AppContext 解析 Meilisearch 配置并创建引擎（配置缺失时返回统一错误）
     fn engine_from_ctx(ctx: &AppContext) -> Result<MeilisearchEngine> {
-        let config = MeilisearchConfig::from_ctx(ctx).ok_or_else(|| Error::string("Meilisearch config is not set"))?;
+        let config = MeilisearchConfig::from_ctx(ctx)
+            .ok_or_else(|| Error::string("Meilisearch config is not set"))?;
         MeilisearchEngine::new(config)
     }
 
@@ -92,7 +93,10 @@ impl Scout {
     }
 
     /// 将索引更新入列推送至 Loco Background Worker 进行后台延迟分发
-    pub async fn searchable_queued<T: Searchable + ?Sized>(ctx: &AppContext, model: &T) -> Result<()> {
+    pub async fn searchable_queued<T: Searchable + ?Sized>(
+        ctx: &AppContext,
+        model: &T,
+    ) -> Result<()> {
         let job_args = crate::workers::scout::ScoutJobArgs {
             action: crate::workers::scout::ScoutAction::Update,
             index_name: model.searchable_as().to_string(),
@@ -104,7 +108,10 @@ impl Scout {
     }
 
     /// 将索引删除入列推送至 Loco Background Worker
-    pub async fn unsearchable_queued<T: Searchable + ?Sized>(ctx: &AppContext, model: &T) -> Result<()> {
+    pub async fn unsearchable_queued<T: Searchable + ?Sized>(
+        ctx: &AppContext,
+        model: &T,
+    ) -> Result<()> {
         let job_args = crate::workers::scout::ScoutJobArgs {
             action: crate::workers::scout::ScoutAction::Delete,
             index_name: model.searchable_as().to_string(),

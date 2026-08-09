@@ -31,14 +31,16 @@ impl Task for UserCreate {
                     return Err(Error::string("电子邮箱格式不正确"));
                 }
                 val.to_string()
-            }
+            },
             Err(_) => inquire::Text::new("请输入新用户的电子邮箱 (Email):")
                 .with_validator(inquire::required!("电子邮箱不能为空"))
                 .with_validator(|input: &str| {
                     if input.contains('@') && input.contains('.') {
                         Ok(inquire::validator::Validation::Valid)
                     } else {
-                        Ok(inquire::validator::Validation::Invalid("电子邮箱格式不正确".into()))
+                        Ok(inquire::validator::Validation::Invalid(
+                            "电子邮箱格式不正确".into(),
+                        ))
                     }
                 })
                 .prompt()
@@ -80,7 +82,7 @@ impl Task for UserCreate {
                     "通过 Task 成功创建用户"
                 );
                 user
-            }
+            },
             Err(err) => {
                 tracing::error!(
                     message = err.to_string(),
@@ -88,7 +90,7 @@ impl Task for UserCreate {
                     "通过 Task 创建用户失败"
                 );
                 return Err(Error::string(&format!("创建用户失败: {err}")));
-            }
+            },
         };
 
         // 步骤 3: 生成邮箱验证 Token 并标记验证邮件发送状态
@@ -106,14 +108,16 @@ impl Task for UserCreate {
             })?;
 
         // 步骤 4: 发送注册欢迎与验证邮件
-        AuthMailer::send_welcome(app_context, &user).await.map_err(|err| {
-            tracing::error!(
-                message = err.to_string(),
-                user_email = &register_params.email,
-                "发送欢迎邮件失败"
-            );
-            Error::string("发送欢迎邮件失败")
-        })?;
+        AuthMailer::send_welcome(app_context, &user)
+            .await
+            .map_err(|err| {
+                tracing::error!(
+                    message = err.to_string(),
+                    user_email = &register_params.email,
+                    "发送欢迎邮件失败"
+                );
+                Error::string("发送欢迎邮件失败")
+            })?;
 
         tracing::info!(
             message = "User creation task completed successfully",

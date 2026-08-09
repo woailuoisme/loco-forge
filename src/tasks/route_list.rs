@@ -15,7 +15,8 @@ impl Task for RouteList {
     fn task(&self) -> TaskInfo {
         TaskInfo {
             name: "route:list".to_string(),
-            detail: "以 Laravel route:list 格式化表格样式打印所有已注册的 HTTP API 路由".to_string(),
+            detail: "以 Laravel route:list 格式化表格样式打印所有已注册的 HTTP API 路由"
+                .to_string(),
         }
     }
 
@@ -42,7 +43,11 @@ impl Task for RouteList {
         }
 
         // 步骤 3: 绘制自适应表格 Header 与分隔线
-        let border = format!("+-{}-+-{}-+", "-".repeat(max_method_len), "-".repeat(max_uri_len));
+        let border = format!(
+            "+-{}-+-{}-+",
+            "-".repeat(max_method_len),
+            "-".repeat(max_uri_len)
+        );
 
         let mut output = String::new();
         output.push('\n');
@@ -61,11 +66,7 @@ impl Task for RouteList {
         // 步骤 4: 填充每条路由记录
         for (methods, uri) in route_entries {
             output.push_str(&format!(
-                "| {:<width_m$} | {:<width_u$} |\n",
-                methods,
-                uri,
-                width_m = max_method_len,
-                width_u = max_uri_len
+                "| {methods:<max_method_len$} | {uri:<max_uri_len$} |\n"
             ));
         }
         output.push_str(&border);

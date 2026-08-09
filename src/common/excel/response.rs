@@ -84,11 +84,11 @@ impl IntoResponse for ExcelResponse {
                     let tokio_file = tokio::fs::File::from_std(file);
                     let stream = tokio_util::io::ReaderStream::new(tokio_file);
                     Body::from_stream(stream)
-                }
+                },
                 Err(e) => {
                     tracing::error!("打开 Excel 下载文件失败 [{:?}]: {:?}", path, e);
                     return (StatusCode::INTERNAL_SERVER_ERROR, "无法读取文件").into_response();
-                }
+                },
             },
         };
 
@@ -98,11 +98,14 @@ impl IntoResponse for ExcelResponse {
         let headers = response.headers_mut();
         headers.insert(
             header::CONTENT_TYPE,
-            HeaderValue::from_static("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+            HeaderValue::from_static(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ),
         );
         headers.insert(
             header::CONTENT_DISPOSITION,
-            HeaderValue::from_str(&disposition_value).unwrap_or_else(|_| HeaderValue::from_static("attachment")),
+            HeaderValue::from_str(&disposition_value)
+                .unwrap_or_else(|_| HeaderValue::from_static("attachment")),
         );
         headers.insert(
             header::CACHE_CONTROL,

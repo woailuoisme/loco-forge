@@ -3,7 +3,9 @@
 //! 该 Worker 负责从后台队列中异步接收全文检索索引更新任务，
 //! 支持增量更新文档、删除文档和刷新索引，将数据同步到 Meilisearch 等搜索引擎中。
 
-use crate::common::scout::{config::MeilisearchConfig, engines::meilisearch::MeilisearchEngine, traits::Engine};
+use crate::common::scout::{
+    config::MeilisearchConfig, engines::meilisearch::MeilisearchEngine, traits::Engine,
+};
 use loco_rs::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -45,7 +47,9 @@ impl BackgroundWorker<ScoutJobArgs> for ScoutWorker {
 
     async fn perform(&self, args: ScoutJobArgs) -> Result<()> {
         let Some(config) = MeilisearchConfig::from_ctx(&self.ctx) else {
-            tracing::warn!("Scout Worker 跳过: 未配置 Meilisearch (缺少 MEILISEARCH_HOST 或 YAML 配置)");
+            tracing::warn!(
+                "Scout Worker 跳过: 未配置 Meilisearch (缺少 MEILISEARCH_HOST 或 YAML 配置)"
+            );
             return Ok(());
         };
 
@@ -56,15 +60,15 @@ impl BackgroundWorker<ScoutJobArgs> for ScoutWorker {
                 if let Some(doc) = args.document {
                     engine.update(&args.index_name, &[doc]).await?;
                 }
-            }
+            },
             ScoutAction::Delete => {
                 if !args.key.is_empty() {
                     engine.delete(&args.index_name, &[&args.key]).await?;
                 }
-            }
+            },
             ScoutAction::Flush => {
                 engine.flush(&args.index_name).await?;
-            }
+            },
         }
 
         Ok(())

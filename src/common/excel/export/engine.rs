@@ -109,17 +109,34 @@ pub fn write_cell(
     styles: &ExportStyles,
 ) -> Result<(), Error> {
     let res = match cell_value {
-        CellValue::String(s) => worksheet.write_string_with_format(row_idx, col_idx, &s, &styles.data_format),
-        CellValue::Int(n) => worksheet.write_number_with_format(row_idx, col_idx, n as f64, &styles.data_format),
-        CellValue::Float(f) => worksheet.write_number_with_format(row_idx, col_idx, f, &styles.data_format),
-        CellValue::Bool(b) => worksheet.write_boolean_with_format(row_idx, col_idx, b, &styles.data_format),
-        CellValue::Date(d) => worksheet.write_date_with_format(row_idx, col_idx, d, &styles.date_format),
-        CellValue::DateTime(dt) => worksheet.write_datetime_with_format(row_idx, col_idx, dt, &styles.datetime_format),
+        CellValue::String(s) => {
+            worksheet.write_string_with_format(row_idx, col_idx, &s, &styles.data_format)
+        },
+        CellValue::Int(n) => {
+            worksheet.write_number_with_format(row_idx, col_idx, n as f64, &styles.data_format)
+        },
+        CellValue::Float(f) => {
+            worksheet.write_number_with_format(row_idx, col_idx, f, &styles.data_format)
+        },
+        CellValue::Bool(b) => {
+            worksheet.write_boolean_with_format(row_idx, col_idx, b, &styles.data_format)
+        },
+        CellValue::Date(d) => {
+            worksheet.write_date_with_format(row_idx, col_idx, d, &styles.date_format)
+        },
+        CellValue::DateTime(dt) => {
+            worksheet.write_datetime_with_format(row_idx, col_idx, dt, &styles.datetime_format)
+        },
         CellValue::Empty => worksheet.write_blank(row_idx, col_idx, &styles.data_format),
     };
 
     res.map(|_| ()).map_err(|e| {
-        tracing::error!("写入 Excel 数据失败 [行 {}, 列 {}]: {:?}", row_idx, col_idx, e);
+        tracing::error!(
+            "写入 Excel 数据失败 [行 {}, 列 {}]: {:?}",
+            row_idx,
+            col_idx,
+            e
+        );
         Error::InternalServerError
     })
 }

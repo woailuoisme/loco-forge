@@ -21,7 +21,11 @@ impl Task for JwtSecret {
     /// 执行生成逻辑与文件更新
     async fn run(&self, _app_context: &AppContext, _vars: &task::Vars) -> Result<()> {
         // 步骤 1: 使用双 UUID v4 拼接生成 64 字符密码学高强度密钥
-        let new_secret = format!("{}{}", uuid::Uuid::new_v4().simple(), uuid::Uuid::new_v4().simple());
+        let new_secret = format!(
+            "{}{}",
+            uuid::Uuid::new_v4().simple(),
+            uuid::Uuid::new_v4().simple()
+        );
 
         tracing::info!(secret = %new_secret, "已生成随机 JWT_SECRET 密钥");
 

@@ -37,14 +37,16 @@ impl TargetFilter {
         };
 
         if let Some(target_str) = raw {
-            let cleaned = target_str.trim_start_matches("--target=").trim_start_matches("--only=");
+            let cleaned = target_str
+                .trim_start_matches("--target=")
+                .trim_start_matches("--only=");
             for item in cleaned.split(',') {
                 match item.trim().to_lowercase().as_str() {
                     "db" | "database" => filter.db = true,
                     "cache" | "redis" | "valkey" => filter.cache = true,
                     "storage" | "s3" => filter.storage = true,
                     "all" => return Self::all(),
-                    _ => {}
+                    _ => {},
                 }
             }
         }
@@ -83,7 +85,11 @@ async fn check_cache(ctx: &AppContext) -> std::result::Result<Duration, String> 
         .insert(&key, &val)
         .await
         .map_err(|e| format!("写入失败: {e}"))?;
-    let res: Option<String> = ctx.cache.get(&key).await.map_err(|e| format!("读取失败: {e}"))?;
+    let res: Option<String> = ctx
+        .cache
+        .get(&key)
+        .await
+        .map_err(|e| format!("读取失败: {e}"))?;
     let _ = ctx.cache.remove(&key).await;
 
     if res.as_deref() != Some(val) {
@@ -115,11 +121,11 @@ fn report_status(label: &str, res: std::result::Result<Duration, String>, has_fa
     match res {
         Ok(duration) => {
             tracing::info!(service = label, latency_ms = %duration.as_millis(), "[OK] 探针正常");
-        }
+        },
         Err(err) => {
             *has_failures = true;
             tracing::error!(service = label, error = %err, "[FAIL] 探针异常");
-        }
+        },
     }
 }
 
@@ -139,7 +145,13 @@ impl Task for HealthCheck {
         tracing::info!("开始并发执行基础设施健康检查探针...");
 
         let (db_res, cache_res, storage_res) = tokio::join!(
-            async { if targets.db { Some(check_db(ctx).await) } else { None } },
+            async {
+                if targets.db {
+                    Some(check_db(ctx).await)
+                } else {
+                    None
+                }
+            },
             async {
                 if targets.cache {
                     Some(check_cache(ctx).await)
@@ -186,7 +198,8 @@ mod tests {
         let mut vars = task::Vars::default();
         assert_eq!(TargetFilter::from_vars(&vars), TargetFilter::all());
 
-        vars.cli.insert("target".to_string(), "db,cache".to_string());
+        vars.cli
+            .insert("target".to_string(), "db,cache".to_string());
         assert_eq!(
             TargetFilter::from_vars(&vars),
             TargetFilter {
@@ -203,6 +216,6 @@ mod tests {
         let boot = boot_test::<crate::app::App>().await.unwrap();
         let vars = task::Vars::default();
         let res = HealthCheck.run(&boot.app_context, &vars).await;
-        assert!(res.is_ok(), "health_check task failed: {:?}", res);
+        assert!(res.is_ok(), "health_check task failed: {res:?}");
     }
 }

@@ -31,12 +31,18 @@ use ts_rs::TS;
 use super::response::ApiResponse;
 
 /// 内部通用辅助：快速构建 HTTP 响应
-fn respond<T: Serialize>(status: StatusCode, res: ApiResponse<T>) -> loco_rs::prelude::Result<Response> {
+fn respond<T: Serialize>(
+    status: StatusCode,
+    res: ApiResponse<T>,
+) -> loco_rs::prelude::Result<Response> {
     Ok((status, Json(res)).into_response())
 }
 
 /// 内部通用辅助：快速构建标准 HTTP 错误响应
-fn error_response(status: StatusCode, message: impl Into<String>) -> loco_rs::prelude::Result<Response> {
+fn error_response(
+    status: StatusCode,
+    message: impl Into<String>,
+) -> loco_rs::prelude::Result<Response> {
     let res = ApiResponse::<serde_json::Value>::error_simple(status.as_u16() as u32, message);
     respond(status, res)
 }
@@ -62,7 +68,10 @@ pub fn ok<T: Serialize>(data: T) -> loco_rs::prelude::Result<Response> {
 }
 
 /// 格式化带自定义消息的 200 成功响应
-pub fn ok_msg<T: Serialize>(data: T, message: impl Into<String>) -> loco_rs::prelude::Result<Response> {
+pub fn ok_msg<T: Serialize>(
+    data: T,
+    message: impl Into<String>,
+) -> loco_rs::prelude::Result<Response> {
     respond(StatusCode::OK, ApiResponse::ok_with_message(data, message))
 }
 
@@ -72,8 +81,14 @@ pub fn created<T: Serialize>(data: T) -> loco_rs::prelude::Result<Response> {
 }
 
 /// 格式化带自定义消息的 201 资源创建成功响应 (JSON code 为 201)
-pub fn created_msg<T: Serialize>(data: T, message: impl Into<String>) -> loco_rs::prelude::Result<Response> {
-    respond(StatusCode::CREATED, ApiResponse::created_with_message(data, message))
+pub fn created_msg<T: Serialize>(
+    data: T,
+    message: impl Into<String>,
+) -> loco_rs::prelude::Result<Response> {
+    respond(
+        StatusCode::CREATED,
+        ApiResponse::created_with_message(data, message),
+    )
 }
 
 /// 格式化 202 已接受（异步处理中）响应 (JSON code 为 202)
@@ -221,7 +236,11 @@ pub fn internal_error_with_debug(
     _exception: impl Into<String>,
     trace: Vec<String>,
 ) -> loco_rs::prelude::Result<Response> {
-    let opt_trace = if cfg!(debug_assertions) { Some(trace) } else { None };
+    let opt_trace = if cfg!(debug_assertions) {
+        Some(trace)
+    } else {
+        None
+    };
     let res = ApiResponse::<serde_json::Value>::error_with_trace(
         StatusCode::INTERNAL_SERVER_ERROR.as_u16() as u32,
         message,

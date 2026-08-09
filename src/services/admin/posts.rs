@@ -13,7 +13,10 @@ pub struct PostService;
 
 impl PostService {
     /// 分页查询文章列表
-    pub async fn list(ctx: &AppContext, params: &PaginationRequest) -> Result<(Vec<PostResource>, u64, u64, u64)> {
+    pub async fn list(
+        ctx: &AppContext,
+        params: &PaginationRequest,
+    ) -> Result<(Vec<PostResource>, u64, u64, u64)> {
         let page = params.page();
         let per_page = params.per_page();
 
@@ -44,7 +47,11 @@ impl PostService {
     }
 
     /// 更新文章
-    pub async fn update(ctx: &AppContext, id: i64, params: UpdatePostRequest) -> Result<Option<PostResource>> {
+    pub async fn update(
+        ctx: &AppContext,
+        id: i64,
+        params: UpdatePostRequest,
+    ) -> Result<Option<PostResource>> {
         let Some(model) = Entity::find_by_id(id).one(&ctx.db).await? else {
             return Ok(None);
         };

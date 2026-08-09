@@ -73,6 +73,8 @@ impl Notifiable for AnonymousNotifiable {
     }
 
     fn route_notification_for_custom(&self, channel: &str) -> Option<String> {
-        self.routes.get(&Channel::Custom(channel.to_string())).cloned()
+        self.routes
+            .get(&Channel::Custom(channel.to_string()))
+            .cloned()
     }
 }

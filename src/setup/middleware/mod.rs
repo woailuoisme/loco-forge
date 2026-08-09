@@ -19,7 +19,13 @@ use loco_rs::{Result, app::AppContext};
 /// 2. 挂载全局多语言解析中间件 (`i18n::i18n_middleware`)
 /// 3. 根据配置开关选择性挂载全局请求日志中间件 (`logger::log_request`)
 pub async fn register(router: axum::Router, ctx: &AppContext) -> Result<axum::Router> {
-    let enabled = ctx.config.server.middlewares.logger.as_ref().is_none_or(|m| m.enable);
+    let enabled = ctx
+        .config
+        .server
+        .middlewares
+        .logger
+        .as_ref()
+        .is_none_or(|m| m.enable);
 
     let router = router
         .fallback(logger::not_found_fallback)

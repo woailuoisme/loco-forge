@@ -85,7 +85,9 @@ impl From<sea_orm::DbErr> for AppError {
 impl From<crate::common::media::error::MediaError> for AppError {
     fn from(err: crate::common::media::error::MediaError) -> Self {
         match err {
-            crate::common::media::error::MediaError::InvalidInput(msg) => Self::Custom(StatusCode::BAD_REQUEST, msg),
+            crate::common::media::error::MediaError::InvalidInput(msg) => {
+                Self::Custom(StatusCode::BAD_REQUEST, msg)
+            },
             _ => Self::Internal(err.to_string()),
         }
     }

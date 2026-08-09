@@ -27,12 +27,18 @@ async fn test_notification_worker_email_delivers() {
     };
 
     let res = worker.perform(args).await;
-    assert!(res.is_ok(), "NotificationWorker email perform should succeed");
+    assert!(
+        res.is_ok(),
+        "NotificationWorker email perform should succeed"
+    );
 
     let deliveries = boot.app_context.mailer.unwrap().deliveries();
     assert_eq!(deliveries.count, 1, "应投递一封邮件");
     assert!(
-        deliveries.messages.iter().any(|m| m.contains("alice@example.com")),
+        deliveries
+            .messages
+            .iter()
+            .any(|m| m.contains("alice@example.com")),
         "投递内容应包含收件人地址"
     );
 }

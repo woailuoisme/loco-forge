@@ -149,7 +149,11 @@ impl UploadUtil {
     }
 
     /// 校验文件扩展名与 MIME 类型
-    pub fn validate_file(filename: &str, content_type: Option<&str>, config: &UploadConfig) -> Result<()> {
+    pub fn validate_file(
+        filename: &str,
+        content_type: Option<&str>,
+        config: &UploadConfig,
+    ) -> Result<()> {
         let ext = Self::get_extension(filename);
         let ext_lowercase = ext.to_lowercase();
 
@@ -158,7 +162,9 @@ impl UploadUtil {
             && !allowed_exts.contains(&ext_lowercase)
         {
             tracing::warn!(filename = %filename, ext = %ext, "File extension not allowed");
-            return Err(Error::BadRequest(format!("File extension '.{ext}' is not allowed")));
+            return Err(Error::BadRequest(format!(
+                "File extension '.{ext}' is not allowed"
+            )));
         }
 
         // 校验 MIME 类型白名单
@@ -167,7 +173,9 @@ impl UploadUtil {
             let matched = allowed_mimes.iter().any(|prefix| ct.starts_with(prefix));
             if !matched {
                 tracing::warn!(filename = %filename, content_type = ?content_type, "MIME type not allowed");
-                return Err(Error::BadRequest(format!("Content-Type '{ct}' is not allowed")));
+                return Err(Error::BadRequest(format!(
+                    "Content-Type '{ct}' is not allowed"
+                )));
             }
         }
 
@@ -219,25 +227,28 @@ impl UploadUtil {
             NamingStrategy::Uuid => {
                 let uuid = Uuid::new_v4();
                 format!("{prefix}/{yyyy}/{mm}/{dd}/{uuid}{ext_suffix}")
-            }
+            },
             NamingStrategy::DateUuid => {
                 let date_str = now.format("%Y%m%d_%H%M%S").to_string();
                 let uuid = Uuid::new_v4();
                 format!("{prefix}/{date_str}_{uuid}/{filename}")
-            }
+            },
             NamingStrategy::Hash => {
                 let hash_bytes = Sha256::digest(bytes);
-                let hash_result = hash_bytes.iter().fold(String::with_capacity(64), |mut acc, byte| {
-                    use std::fmt::Write;
-                    let _ = write!(acc, "{byte:02x}");
-                    acc
-                });
+                let hash_result =
+                    hash_bytes
+                        .iter()
+                        .fold(String::with_capacity(64), |mut acc, byte| {
+                            use std::fmt::Write;
+                            let _ = write!(acc, "{byte:02x}");
+                            acc
+                        });
                 let hash_sub = &hash_result[..2];
                 format!("{prefix}/{hash_sub}/{hash_result}{ext_suffix}")
-            }
+            },
             NamingStrategy::Original => {
                 format!("{prefix}/{yyyy}/{mm}/{dd}/{filename}")
-            }
+            },
         }
     }
 }
@@ -248,7 +259,10 @@ mod tests {
 
     #[test]
     fn test_sanitize_filename() {
-        assert_eq!(UploadUtil::sanitize_filename(Some("../../etc/passwd")), "passwd");
+        assert_eq!(
+            UploadUtil::sanitize_filename(Some("../../etc/passwd")),
+            "passwd"
+        );
         assert_eq!(
             UploadUtil::sanitize_filename(Some("C:\\Windows\\system32\\cmd.exe")),
             "cmd.exe"

@@ -36,7 +36,7 @@ impl MeilisearchConfig {
             .as_ref()
             .and_then(|s| s.get("scout"))
             .and_then(|s| s.get("meilisearch"))
-            .and_then(|v| serde_json::from_value::<MeilisearchConfig>(v.clone()).ok())
+            .and_then(|v| serde_json::from_value::<Self>(v.clone()).ok())
             .unwrap_or_default();
 
         if let Ok(host) = std::env::var("MEILISEARCH_HOST") {
@@ -49,13 +49,18 @@ impl MeilisearchConfig {
             cfg.index_prefix = Some(prefix);
         }
 
-        if !cfg.host.is_empty() { Some(cfg) } else { None }
+        if !cfg.host.is_empty() {
+            Some(cfg)
+        } else {
+            None
+        }
     }
 
     /// 获取附带前缀后的最终 Meilisearch 索引名
     pub fn prefixed_index(&self, index_name: &str) -> String {
-        self.index_prefix
-            .as_deref()
-            .map_or_else(|| index_name.to_string(), |prefix| format!("{prefix}{index_name}"))
+        self.index_prefix.as_deref().map_or_else(
+            || index_name.to_string(),
+            |prefix| format!("{prefix}{index_name}"),
+        )
     }
 }

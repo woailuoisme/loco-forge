@@ -15,7 +15,10 @@ pub async fn not_found_fallback() -> axum::response::Response {
 /// 全局 HTTP 请求日志处理中间件
 ///
 /// 记录每一个经过 Axum Router 的请求，输出请求方法、请求路径、状态码与执行耗时。
-pub async fn log_request(req: axum::extract::Request, next: axum::middleware::Next) -> axum::response::Response {
+pub async fn log_request(
+    req: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
     let method = req.method().clone();
     let path = req
         .uri()

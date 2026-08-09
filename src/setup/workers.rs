@@ -2,7 +2,9 @@
 //!
 //! 负责注册后台处理队列表 (Redis / Apalis 异步 Job)。
 
-use crate::workers::{downloader::DownloadWorker, notification::NotificationWorker, scout::ScoutWorker};
+use crate::workers::{
+    downloader::DownloadWorker, notification::NotificationWorker, scout::ScoutWorker,
+};
 use loco_rs::{
     Result,
     app::AppContext,

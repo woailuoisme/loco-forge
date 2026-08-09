@@ -78,7 +78,7 @@ impl From<chrono::NaiveDateTime> for CellValue {
     }
 }
 
-impl<T: Into<CellValue>> From<Option<T>> for CellValue {
+impl<T: Into<Self>> From<Option<T>> for CellValue {
     fn from(opt: Option<T>) -> Self {
         opt.map_or(Self::Empty, Into::into)
     }

@@ -15,7 +15,11 @@ pub struct ExcelRow<'a> {
 
 impl<'a> ExcelRow<'a> {
     pub fn new(line: usize, headers: &'a HashMap<String, usize>, cells: &'a [Data]) -> Self {
-        Self { line, headers, cells }
+        Self {
+            line,
+            headers,
+            cells,
+        }
     }
 
     /// 获取指定列名的原始 `calamine::Data` 引用
@@ -35,7 +39,8 @@ impl<'a> ExcelRow<'a> {
 
     /// 读取单元格纯文本字符串（自动格式化数字/日期）
     pub fn get_string(&self, column_name: &str) -> String {
-        self.get_cell(column_name).map_or_else(String::new, format_cell_value)
+        self.get_cell(column_name)
+            .map_or_else(String::new, format_cell_value)
     }
 
     /// 读取 64 位整数
@@ -79,21 +84,28 @@ pub fn resolve_target_sheets(
     specified_sheet_name: Option<&str>,
 ) -> Result<Vec<String>, Error> {
     if all_sheet_names.is_empty() {
-        return Err(Error::BadRequest("Excel 文件中不存在任何工作表".to_string()));
+        return Err(Error::BadRequest(
+            "Excel 文件中不存在任何工作表".to_string(),
+        ));
     }
 
     match specified_sheet_name {
         Some(target) => {
             let matched: Vec<String> = all_sheet_names
                 .iter()
-                .filter(|&name| name == target || name.strip_prefix(target).is_some_and(|rest| rest.starts_with('_')))
+                .filter(|&name| {
+                    name == target
+                        || name
+                            .strip_prefix(target)
+                            .is_some_and(|rest| rest.starts_with('_'))
+                })
                 .cloned()
                 .collect();
             if matched.is_empty() {
                 return Err(Error::BadRequest(format!("未找到工作表: {target}")));
             }
             Ok(matched)
-        }
+        },
         None => Ok(all_sheet_names.to_vec()),
     }
 }

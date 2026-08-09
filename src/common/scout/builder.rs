@@ -110,8 +110,8 @@ impl<'a> ScoutBuilder<'a> {
 
     /// 执行检索并获取 Meilisearch 的原始响应 JSON 数据包
     pub async fn get_raw(&self) -> Result<SearchResult> {
-        let config =
-            MeilisearchConfig::from_ctx(self.ctx).ok_or_else(|| Error::string("Meilisearch config is not set"))?;
+        let config = MeilisearchConfig::from_ctx(self.ctx)
+            .ok_or_else(|| Error::string("Meilisearch config is not set"))?;
 
         let engine = MeilisearchEngine::new(config)?;
         engine.search(&self.index_name, &self.query).await
@@ -158,7 +158,10 @@ impl<'a> ScoutBuilder<'a> {
             })
             .collect();
 
-        let ordered_models = ids.into_iter().filter_map(|id| model_map.remove(&id)).collect();
+        let ordered_models = ids
+            .into_iter()
+            .filter_map(|id| model_map.remove(&id))
+            .collect();
 
         Ok(ordered_models)
     }

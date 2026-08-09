@@ -38,7 +38,11 @@ impl Model {
     /// # Errors
     ///
     /// 当数据库插入失败时返回 `ModelError`
-    pub async fn create(db: &DatabaseConnection, title: Option<String>, content: Option<String>) -> ModelResult<Self> {
+    pub async fn create(
+        db: &DatabaseConnection,
+        title: Option<String>,
+        content: Option<String>,
+    ) -> ModelResult<Self> {
         let active = ActiveModel {
             title: ActiveValue::Set(title),
             content: ActiveValue::Set(content),
@@ -91,7 +95,7 @@ impl Entity {
         page: u64,
         page_size: u64,
     ) -> ModelResult<(Vec<Model>, u64)> {
-        let paginator = Entity::find()
+        let paginator = Self::find()
             .order_by_desc(super::_entities::posts::Column::CreatedAt)
             .paginate(db, page_size);
 
@@ -113,7 +117,7 @@ impl Entity {
         page_size: u64,
     ) -> ModelResult<(Vec<Model>, u64)> {
         let pattern = format!("%{keyword}%");
-        let query = Entity::find().filter(
+        let query = Self::find().filter(
             Condition::any()
                 .add(super::_entities::posts::Column::Title.contains(&pattern))
                 .add(super::_entities::posts::Column::Content.contains(&pattern)),
@@ -139,12 +143,15 @@ impl Entity {
             return Ok(0);
         }
 
-        let res = Entity::delete_many()
+        let res = Self::delete_many()
             .filter(super::_entities::posts::Column::Id.is_in(ids.to_vec()))
             .exec(db)
             .await?;
 
-        tracing::info!(count = res.rows_affected, "Successfully deleted posts by IDs");
+        tracing::info!(
+            count = res.rows_affected,
+            "Successfully deleted posts by IDs"
+        );
 
         Ok(res.rows_affected)
     }

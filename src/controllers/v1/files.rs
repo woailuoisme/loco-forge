@@ -31,7 +31,11 @@ use crate::{
     tag = TAG_FILES
 )]
 #[debug_handler]
-pub async fn upload(_auth: auth::JWT, State(ctx): State<AppContext>, multipart: Multipart) -> Result<Response> {
+pub async fn upload(
+    _auth: auth::JWT,
+    State(ctx): State<AppContext>,
+    multipart: Multipart,
+) -> Result<Response> {
     let uploaded_files = FileService::upload(&ctx, multipart).await?;
     format_res::ok(uploaded_files)
 }

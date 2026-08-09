@@ -20,9 +20,15 @@ pub struct TelegramChannel;
 
 impl TelegramChannel {
     /// 通过 Telegram Bot API 发送消息通知
-    pub async fn send(ctx: &AppContext, default_chat_id: &str, message: &TelegramMessage) -> Result<()> {
+    pub async fn send(
+        ctx: &AppContext,
+        default_chat_id: &str,
+        message: &TelegramMessage,
+    ) -> Result<()> {
         let Some(config) = TelegramConfig::from_ctx(ctx) else {
-            tracing::warn!("Telegram Bot 未配置 (缺少 TELEGRAM_BOT_TOKEN 或 YAML 配置)，跳过通知发送");
+            tracing::warn!(
+                "Telegram Bot 未配置 (缺少 TELEGRAM_BOT_TOKEN 或 YAML 配置)，跳过通知发送"
+            );
             return Ok(());
         };
 
@@ -74,16 +80,27 @@ impl TelegramChannel {
         }
 
         // 复用全局 HTTP 连接池发送请求
-        let response = HTTP_CLIENT.post(&url).json(&payload).send().await.map_err(|e| {
-            tracing::error!("Telegram HTTP 请求网络错误 -> chat_id({}): {:?}", target_chat_id, e);
-            Error::string(&format!("Telegram request error: {e}"))
-        })?;
+        let response = HTTP_CLIENT
+            .post(&url)
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|e| {
+                tracing::error!(
+                    "Telegram HTTP 请求网络错误 -> chat_id({}): {:?}",
+                    target_chat_id,
+                    e
+                );
+                Error::string(&format!("Telegram request error: {e}"))
+            })?;
 
         if !response.status().is_success() {
             let status = response.status();
             let err_body = response.text().await.unwrap_or_default();
             tracing::error!("Telegram API 响应状态错误 HTTP {}: {}", status, err_body);
-            return Err(Error::string(&format!("Telegram API error HTTP {status}: {err_body}")));
+            return Err(Error::string(&format!(
+                "Telegram API error HTTP {status}: {err_body}"
+            )));
         }
 
         tracing::info!("Telegram 消息成功发送至 -> Chat ID({})", target_chat_id);

@@ -19,9 +19,12 @@ impl FileService {
         }
         let path = StdPath::new(key);
         if path.is_absolute()
-            || path
-                .components()
-                .any(|c| matches!(c, std::path::Component::ParentDir | std::path::Component::RootDir))
+            || path.components().any(|c| {
+                matches!(
+                    c,
+                    std::path::Component::ParentDir | std::path::Component::RootDir
+                )
+            })
         {
             return None;
         }
@@ -48,7 +51,9 @@ impl FileService {
             let content_type = field.content_type().map(ToString::to_string);
 
             // 1. 后缀与 MIME 白名单预检
-            if let Err(err) = UploadUtil::validate_file(&filename_cow, content_type.as_deref(), config) {
+            if let Err(err) =
+                UploadUtil::validate_file(&filename_cow, content_type.as_deref(), config)
+            {
                 tracing::warn!(filename = %filename_cow, error = %err, "Upload file validation failed");
                 return Err(err);
             }

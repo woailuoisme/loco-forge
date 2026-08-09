@@ -71,7 +71,9 @@ impl Default for ImportOptions {
 }
 
 /// 将二进制 `.xlsx` 字节流解析为强类型列表与错误集合（支持泛型 `impl AsRef<[u8]>` 入参，支持自动拆分的多 Sheet 连续解析）
-pub fn import_from_bytes<T: ExcelImport>(bytes: impl AsRef<[u8]>) -> Result<ImportResult<T>, Error> {
+pub fn import_from_bytes<T: ExcelImport>(
+    bytes: impl AsRef<[u8]>,
+) -> Result<ImportResult<T>, Error> {
     let slice = bytes.as_ref();
     if slice.is_empty() {
         return Err(Error::BadRequest("Excel 导入数据字节流为空".to_string()));
@@ -95,7 +97,7 @@ pub fn import_from_bytes<T: ExcelImport>(bytes: impl AsRef<[u8]>) -> Result<Impo
             Err(e) => {
                 tracing::error!("读取工作表 '{}' 失败: {:?}", sheet_name, e);
                 continue;
-            }
+            },
         };
 
         let mut rows_iter = range.rows();
@@ -107,7 +109,10 @@ pub fn import_from_bytes<T: ExcelImport>(bytes: impl AsRef<[u8]>) -> Result<Impo
 
         for (row_idx, row_cells) in rows_iter.enumerate() {
             if errors.len() >= max_errors {
-                tracing::warn!("Excel 导入错误收集达到熔断阀值 ({})，提前终止后续行解析", max_errors);
+                tracing::warn!(
+                    "Excel 导入错误收集达到熔断阀值 ({})，提前终止后续行解析",
+                    max_errors
+                );
                 break;
             }
 

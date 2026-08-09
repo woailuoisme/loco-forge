@@ -53,5 +53,7 @@ pub async fn favicon() -> axum::http::StatusCode {
 }
 
 pub fn routes() -> Routes {
-    Routes::new().add("/", get(index)).add("/favicon.ico", get(favicon))
+    Routes::new()
+        .add("/", get(index))
+        .add("/favicon.ico", get(favicon))
 }

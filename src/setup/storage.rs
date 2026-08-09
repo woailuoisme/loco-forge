@@ -20,7 +20,9 @@ use loco_rs::{
 
 /// 从环境变量按优先级读取配置
 fn get_env(primary: &str, fallback: &str) -> Option<String> {
-    std::env::var(primary).or_else(|_| std::env::var(fallback)).ok()
+    std::env::var(primary)
+        .or_else(|_| std::env::var(fallback))
+        .ok()
 }
 
 /// 从环境变量列表按顺序读取首个有效的配置值
@@ -35,21 +37,26 @@ pub async fn init(mut ctx: AppContext) -> Result<AppContext> {
         Environment::Test => {
             tracing::info!(driver = "memory", "初始化测试环境内存对象存储驱动");
             Storage::single(mem::new())
-        }
+        },
         // 2. 开发与生产环境：从环境变量动态读取 S3 凭据与 Endpoint
         _ => {
-            let bucket = get_env("STORAGE_S3_BUCKET", "AWS_S3_BUCKET").unwrap_or_else(|| "default".to_string());
-            let region = get_env("STORAGE_S3_REGION", "AWS_REGION").unwrap_or_else(|| "garage".to_string());
+            let bucket = get_env("STORAGE_S3_BUCKET", "AWS_S3_BUCKET")
+                .unwrap_or_else(|| "default".to_string());
+            let region =
+                get_env("STORAGE_S3_REGION", "AWS_REGION").unwrap_or_else(|| "garage".to_string());
 
             let key_id = get_env("STORAGE_S3_ACCESS_KEY", "AWS_ACCESS_KEY_ID");
             let secret_key = get_env("STORAGE_S3_SECRET_KEY", "AWS_SECRET_ACCESS_KEY");
-            let endpoint = get_env_first(&["STORAGE_S3_ENDPOINT", "AWS_ENDPOINT_URL_S3", "AWS_ENDPOINT"]);
+            let endpoint =
+                get_env_first(&["STORAGE_S3_ENDPOINT", "AWS_ENDPOINT_URL_S3", "AWS_ENDPOINT"]);
 
-            let cred = key_id.zip(secret_key).map(|(key_id, secret_key)| Credential {
-                key_id,
-                secret_key,
-                token: std::env::var("AWS_SESSION_TOKEN").ok(),
-            });
+            let cred = key_id
+                .zip(secret_key)
+                .map(|(key_id, secret_key)| Credential {
+                    key_id,
+                    secret_key,
+                    token: std::env::var("AWS_SESSION_TOKEN").ok(),
+                });
 
             let store = match endpoint {
                 Some(endpoint) => {
@@ -59,7 +66,7 @@ pub async fn init(mut ctx: AppContext) -> Result<AppContext> {
                         token: None,
                     });
                     aws::with_credentials_and_endpoint(&bucket, &region, &endpoint, cred)?
-                }
+                },
                 None => match cred {
                     Some(cred) => aws::with_credentials(&bucket, &region, cred)?,
                     None => aws::new(&bucket, &region)?,
@@ -73,7 +80,7 @@ pub async fn init(mut ctx: AppContext) -> Result<AppContext> {
                 "初始化 S3 对象存储驱动"
             );
             Storage::single(store)
-        }
+        },
     };
 
     ctx.storage = storage.into();

@@ -17,7 +17,7 @@ use super::{ExcelExport, ExportOptions, engine};
 pub fn export_chunked_to_file<T, F>(
     mut fetch_chunk: F,
     file_path: impl AsRef<std::path::Path>,
-    options: ExportOptions,
+    options: &ExportOptions,
 ) -> Result<usize, Error>
 where
     T: ExcelExport,
@@ -71,7 +71,13 @@ where
             let cells = item.row_cells();
 
             for (col_idx, cell_value) in cells.into_iter().enumerate() {
-                engine::write_cell(current_worksheet, row_idx, col_idx as u16, cell_value, &styles)?;
+                engine::write_cell(
+                    current_worksheet,
+                    row_idx,
+                    col_idx as u16,
+                    cell_value,
+                    &styles,
+                )?;
             }
         }
 

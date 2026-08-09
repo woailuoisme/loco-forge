@@ -56,7 +56,9 @@ impl Task for SeedData {
 
     async fn run(&self, app_context: &AppContext, vars: &task::Vars) -> Result<()> {
         let has_refresh_arg = vars.cli_arg("refresh").is_ok();
-        let refresh_val = vars.cli_arg("refresh").is_ok_and(|refresh| refresh == "true");
+        let refresh_val = vars
+            .cli_arg("refresh")
+            .is_ok_and(|refresh| refresh == "true");
 
         // 确定执行模式：若有显式 CLI 参数则直接解析；无参数时调起 inquire Select 动态菜单
         let mode = if has_refresh_arg {
@@ -77,15 +79,15 @@ impl Task for SeedData {
             SeedMode::Cancel => {
                 tracing::info!("[Seed] 操作已取消，未执行数据播种");
                 return Ok(());
-            }
+            },
             SeedMode::ResetAndSeed => {
                 tracing::warn!("[Seed] 正在重置并重新执行数据库迁移...");
                 db::reset::<Migrator>(&app_context.db).await?;
                 tracing::info!("[Seed] 数据库重置完成");
-            }
+            },
             SeedMode::Append => {
                 tracing::info!("[Seed] 以追加模式执行数据播种");
-            }
+            },
         }
 
         tracing::info!("[Seed] 开始填充种子数据 (src/fixtures)...");

@@ -14,7 +14,10 @@ async fn auth_endpoint_rate_limiting_triggers_429() {
         let mut hit_429 = false;
 
         for _ in 0..12 {
-            let res = request.post("/api/v1/auth/login").json(&login_payload).await;
+            let res = request
+                .post("/api/v1/auth/login")
+                .json(&login_payload)
+                .await;
             if res.status_code() == axum::http::StatusCode::TOO_MANY_REQUESTS {
                 hit_429 = true;
                 // 验证返回包含 Retry-After 头与 429 状态码

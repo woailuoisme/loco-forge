@@ -43,7 +43,7 @@ pub use async_task::{spawn_excel_export, spawn_excel_import};
 pub use cell::CellValue;
 pub use export::{ExcelExport, ExportOptions, export_chunked_to_file, export_to_bytes};
 pub use import::{
-    ChunkImportSummary, ExcelImport, ExcelRow, ImportOptions, ImportResult, RowError, import_from_bytes,
-    import_in_chunks_from_reader,
+    ChunkImportSummary, ExcelImport, ExcelRow, ImportOptions, ImportResult, RowError,
+    import_from_bytes, import_in_chunks_from_reader,
 };
 pub use response::ExcelResponse;

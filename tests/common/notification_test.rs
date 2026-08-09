@@ -3,8 +3,8 @@
 use loco_rs::testing::prelude::*;
 use locos::app::App;
 use locos::common::notifications::{
-    AnonymousNotifiable, Channel, MailMessage, Notifiable, Notification, NotificationManager, TelegramInlineButton,
-    TelegramMessage, TelegramParseMode,
+    AnonymousNotifiable, Channel, MailMessage, Notifiable, Notification, NotificationManager,
+    TelegramInlineButton, TelegramMessage, TelegramParseMode,
 };
 
 /// 自定义业务通知样例 (WelcomeNotification)
@@ -22,16 +22,22 @@ impl Notification for WelcomeNotification {
             MailMessage::new()
                 .subject("欢迎注册平台账号")
                 .body(format!("亲爱的 {}，欢迎注册我们的服务！", self.user_name))
-                .html(format!("<h1>欢迎 {}</h1><p>感谢您的支持！</p>", self.user_name))
+                .html(format!(
+                    "<h1>欢迎 {}</h1><p>感谢您的支持！</p>",
+                    self.user_name
+                ))
                 .tag("welcome"),
         )
     }
 
     fn to_telegram(&self) -> Option<TelegramMessage> {
         Some(
-            TelegramMessage::new(format!("🎉 *新用户注册通知*\n\n欢迎用户: `{}`", self.user_name))
-                .markdown_v2()
-                .add_button(TelegramInlineButton::url("访问官网", "https://loco.rs")),
+            TelegramMessage::new(format!(
+                "🎉 *新用户注册通知*\n\n欢迎用户: `{}`",
+                self.user_name
+            ))
+            .markdown_v2()
+            .add_button(TelegramInlineButton::url("访问官网", "https://loco.rs")),
         )
     }
 }
@@ -91,10 +97,14 @@ fn test_notification_trait_methods() {
     let channels = notification.via();
     assert_eq!(channels, vec![Channel::Email, Channel::Telegram]);
 
-    let mail = notification.to_mail().expect("Should generate mail message");
+    let mail = notification
+        .to_mail()
+        .expect("Should generate mail message");
     assert_eq!(mail.subject, "欢迎注册平台账号");
 
-    let tg = notification.to_telegram().expect("Should generate telegram message");
+    let tg = notification
+        .to_telegram()
+        .expect("Should generate telegram message");
     assert!(tg.text.contains("Alice"));
 }
 
@@ -115,7 +125,11 @@ async fn test_notification_manager_send() {
             .expect("NotificationManager::send failed");
 
         // 回归断言: EmailChannel::send 应真实投递邮件到 Stub 发送器 (mailer.stub: true, ForegroundBlocking 同步执行)
-        let deliveries = ctx.mailer.as_ref().expect("测试环境应配置 mailer").deliveries();
+        let deliveries = ctx
+            .mailer
+            .as_ref()
+            .expect("测试环境应配置 mailer")
+            .deliveries();
         assert_eq!(deliveries.count, 1, "邮件通知应通过 Stub 恰好投递 1 封");
     })
     .await;

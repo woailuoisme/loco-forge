@@ -97,7 +97,12 @@ impl<T: Serialize> ApiResponse<T> {
     }
 
     /// 创建分页成功响应
-    pub fn page_response(items: Vec<T>, current_page: u64, per_page: u64, total: u64) -> ApiResponse<PaginatedData<T>>
+    pub fn page_response(
+        items: Vec<T>,
+        current_page: u64,
+        per_page: u64,
+        total: u64,
+    ) -> ApiResponse<PaginatedData<T>>
     where
         T: TS,
     {
@@ -206,7 +211,7 @@ impl ApiError {
 
 impl From<ApiError> for ApiResponse<serde_json::Value> {
     fn from(err: ApiError) -> Self {
-        ApiResponse {
+        Self {
             code: err.code,
             success: err.success,
             message: err.message,
@@ -219,7 +224,7 @@ impl From<ApiError> for ApiResponse<serde_json::Value> {
 
 impl From<ApiResponse<serde_json::Value>> for ApiError {
     fn from(res: ApiResponse<serde_json::Value>) -> Self {
-        ApiError {
+        Self {
             code: res.code,
             success: res.success,
             message: res.message,

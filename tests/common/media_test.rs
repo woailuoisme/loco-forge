@@ -1,8 +1,8 @@
 use axum::http::header;
 use image::{ImageFormat, Rgba, RgbaImage};
 use locos::common::media::{
-    ImageProcessor, MediaResponse, OutputFormat, QrCodeBuilder, QrLogoConfig, ResizeMode, WatermarkPosition,
-    spawn_media_task,
+    ImageProcessor, MediaResponse, OutputFormat, QrCodeBuilder, QrLogoConfig, ResizeMode,
+    WatermarkPosition, spawn_media_task,
 };
 use rstest::{fixture, rstest};
 use std::io::Cursor;
@@ -30,10 +30,14 @@ fn test_qr_code_generation_png_and_data_url() {
     assert!(!png_bytes.is_empty());
     assert_eq!(&png_bytes[0..4], &[0x89, 0x50, 0x4E, 0x47]);
 
-    let data_url = builder.to_data_url().expect("Should generate Data URL string");
+    let data_url = builder
+        .to_data_url()
+        .expect("Should generate Data URL string");
     assert!(data_url.starts_with("data:image/png;base64,"));
 
-    let dynamic_img = builder.to_dynamic_image().expect("Should generate DynamicImage");
+    let dynamic_img = builder
+        .to_dynamic_image()
+        .expect("Should generate DynamicImage");
     assert!(dynamic_img.width() >= 200);
 }
 
@@ -56,9 +60,13 @@ fn test_qr_code_with_logo_embedding() {
         .with_scale_ratio(0.25)
         .with_border_padding(3);
 
-    let builder = QrCodeBuilder::new("QR with Logo Center").size(320).with_logo(logo_cfg);
+    let builder = QrCodeBuilder::new("QR with Logo Center")
+        .size(320)
+        .with_logo(logo_cfg);
 
-    let png_bytes = builder.to_png_bytes().expect("Should generate QR code with Logo");
+    let png_bytes = builder
+        .to_png_bytes()
+        .expect("Should generate QR code with Logo");
     assert!(!png_bytes.is_empty());
 
     let img = image::load_from_memory(&png_bytes).unwrap();
@@ -100,9 +108,13 @@ fn test_image_processor_watermark_and_format() {
 
 #[tokio::test]
 async fn test_async_spawn_media_task() {
-    let res = spawn_media_task(|| QrCodeBuilder::new("Async QR Generation Test").size(150).to_png_bytes())
-        .await
-        .expect("Spawn media task should complete successfully");
+    let res = spawn_media_task(|| {
+        QrCodeBuilder::new("Async QR Generation Test")
+            .size(150)
+            .to_png_bytes()
+    })
+    .await
+    .expect("Spawn media task should complete successfully");
 
     assert!(!res.is_empty());
 }
@@ -119,7 +131,10 @@ fn test_media_response_headers() {
     assert_eq!(response.status(), axum::http::StatusCode::OK);
     let headers = response.headers();
     assert_eq!(headers.get(header::CONTENT_TYPE).unwrap(), "image/png");
-    assert_eq!(headers.get(header::CACHE_CONTROL).unwrap(), "public, max-age=86400");
+    assert_eq!(
+        headers.get(header::CACHE_CONTROL).unwrap(),
+        "public, max-age=86400"
+    );
 
     let svg_response = MediaResponse::svg("<svg></svg>").into_response();
     assert_eq!(
@@ -128,7 +143,10 @@ fn test_media_response_headers() {
     );
 
     let webp_response = MediaResponse::webp(vec![1, 2, 3]).into_response();
-    assert_eq!(webp_response.headers().get(header::CONTENT_TYPE).unwrap(), "image/webp");
+    assert_eq!(
+        webp_response.headers().get(header::CONTENT_TYPE).unwrap(),
+        "image/webp"
+    );
 }
 
 #[test]

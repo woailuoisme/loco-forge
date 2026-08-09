@@ -1,19 +1,20 @@
-# Loco 项目 Rustfmt 最佳实践配置
+# Loco 项目 Rustfmt 最佳实践配置 (纯 Stable 稳定版)
 
-# 1. 行宽与缩进规范 (Line Width & Indentation)
-max_width = 120                 # 每行最大字符数限制（适应现代宽屏显示器）
+# 1. 基础规范与换行 (Base & Newline)
+edition = "2024"                # 明确指定 Rust 2024 Edition 规范
+newline_style = "Unix"          # 强制使用 Unix (LF) 换行符 (防止跨平台 CRLF Git Diff 干扰)
+max_width = 100                 # 单行最大字符限制 (Rust 官方推荐标准 100)
 hard_tabs = false               # 使用空格缩进 (遵循 Rust 官方标准)
 tab_spaces = 4                  # 缩进使用 4 个空格
-newline_style = "Unix"          # 强制统一使用 Unix (LF) 换行符
 
-# 2. 启发式折行与排序 (Heuristics & Ordering)
-use_small_heuristics = "Default" # 保持 Rust 官方平衡折行密度
-reorder_imports = true          # 自动按字母顺序对导入路径 (use) 进行排序
-reorder_modules = true          # 自动按字母顺序对模块声明 (mod) 进行排序
+# 2. 现代语法简写 (Idiomatic Shorthand)
+use_field_init_shorthand = true # 强制结构体字段简写 (Point { x, y } 替代 Point { x: x, y: y })
+use_try_shorthand = true        # 强制使用 ? 运算符替代 try! 宏
 
-# 3. 高级导入分组与注释归并 (仅在 cargo +nightly fmt 下生效)
-# 若使用 Stable 工具链，取消注释以下选项会产生 Nightly 警告。若需开启，请使用 `cargo +nightly fmt`。
-# unstable_features = true
-# imports_granularity = "Crate"
-# group_imports = "StdExternalCrate"
-# wrap_comments = true
+# 3. Git Diff 友好规范 (Git Diff Friendly)
+match_block_trailing_comma = true # match 代码块分支末尾强制加逗号 (新增 match 分支时 Diff 最干净)
+
+# 4. 导入与模块排序 (Ordering)
+reorder_imports = true          # 自动按字母顺序排序 use 导入
+reorder_modules = true          # 自动按字母顺序排序 mod 模块
+

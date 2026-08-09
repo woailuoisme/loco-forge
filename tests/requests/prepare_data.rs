@@ -14,7 +14,11 @@ pub async fn init_user_login(request: &TestServer, ctx: &AppContext) -> LoggedIn
     init_user_login_with_email(request, ctx, USER_EMAIL).await
 }
 
-pub async fn init_user_login_with_email(request: &TestServer, ctx: &AppContext, email: &str) -> LoggedInUser {
+pub async fn init_user_login_with_email(
+    request: &TestServer,
+    ctx: &AppContext,
+    email: &str,
+) -> LoggedInUser {
     let register_payload = serde_json::json!({
         "name": "loco",
         "email": email,
@@ -22,7 +26,10 @@ pub async fn init_user_login_with_email(request: &TestServer, ctx: &AppContext, 
     });
 
     //Creating a new user
-    request.post("/api/v1/auth/register").json(&register_payload).await;
+    request
+        .post("/api/v1/auth/register")
+        .json(&register_payload)
+        .await;
     let user = users::Model::find_by_email(&ctx.db, email).await.unwrap();
 
     if let Some(token) = &user.email_verification_token {
@@ -37,7 +44,8 @@ pub async fn init_user_login_with_email(request: &TestServer, ctx: &AppContext, 
         }))
         .await;
 
-    let api_res: locos::dtos::common::ApiResponse<LoginResource> = serde_json::from_str(&response.text()).unwrap();
+    let api_res: locos::dtos::common::ApiResponse<LoginResource> =
+        serde_json::from_str(&response.text()).unwrap();
     let login_response = api_res.data.expect("Login response data expected");
 
     LoggedInUser {
@@ -59,7 +67,7 @@ pub async fn init_admin_login(request: &TestServer, ctx: &AppContext) -> LoggedI
 }
 
 pub fn auth_header(token: &str) -> (HeaderName, HeaderValue) {
-    let auth_header_value = HeaderValue::from_str(&format!("Bearer {}", token)).unwrap();
+    let auth_header_value = HeaderValue::from_str(&format!("Bearer {token}")).unwrap();
 
     (HeaderName::from_static("authorization"), auth_header_value)
 }

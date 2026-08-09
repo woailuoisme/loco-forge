@@ -54,7 +54,11 @@ impl MediaResponse {
     }
 
     /// 包装带 HTTP 缓存 (Cache-Control: public, max-age=N) 的媒体响应
-    pub fn with_cache(bytes: impl Into<Bytes>, content_type: &'static str, max_age_secs: u32) -> Self {
+    pub fn with_cache(
+        bytes: impl Into<Bytes>,
+        content_type: &'static str,
+        max_age_secs: u32,
+    ) -> Self {
         Self::new(bytes, content_type).with_cache_secs(max_age_secs)
     }
 }
@@ -70,11 +74,14 @@ impl IntoResponse for MediaResponse {
         let cache_val = self.cache_control.as_deref().map_or_else(
             || HeaderValue::from_static("public, max-age=86400"),
             |cache_str| {
-                HeaderValue::from_str(cache_str).unwrap_or_else(|_| HeaderValue::from_static("public, max-age=86400"))
+                HeaderValue::from_str(cache_str)
+                    .unwrap_or_else(|_| HeaderValue::from_static("public, max-age=86400"))
             },
         );
 
-        response.headers_mut().insert(header::CACHE_CONTROL, cache_val);
+        response
+            .headers_mut()
+            .insert(header::CACHE_CONTROL, cache_val);
 
         response
     }

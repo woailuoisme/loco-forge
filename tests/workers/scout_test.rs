@@ -31,5 +31,8 @@ async fn test_scout_worker_update() {
     };
 
     let res = worker.perform(args).await;
-    assert!(res.is_ok(), "ScoutWorker update should succeed with Meilisearch");
+    assert!(
+        res.is_ok(),
+        "ScoutWorker update should succeed with Meilisearch"
+    );
 }

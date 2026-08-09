@@ -84,7 +84,9 @@ async fn test_model() {
         .expect("Model::delete should succeed");
 
     assert!(
-        posts::Model::find_by_id(&boot.app_context.db, delete_id).await.is_err(),
+        posts::Model::find_by_id(&boot.app_context.db, delete_id)
+            .await
+            .is_err(),
         "Deleted post should not exist"
     );
 

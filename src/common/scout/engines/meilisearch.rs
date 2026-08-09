@@ -13,7 +13,8 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{LazyLock, RwLock};
 
-static CLIENT_CACHE: LazyLock<RwLock<HashMap<String, Client>>> = LazyLock::new(|| RwLock::new(HashMap::new()));
+static CLIENT_CACHE: LazyLock<RwLock<HashMap<String, Client>>> =
+    LazyLock::new(|| RwLock::new(HashMap::new()));
 
 /// Meilisearch 全文搜索引擎驱动结构体 (MeilisearchEngine)
 pub struct MeilisearchEngine {
@@ -52,7 +53,7 @@ impl MeilisearchEngine {
 }
 
 /// 构造 Meilisearch 异步任务响应 JSON（task_uid + index_uid）
-fn task_response(task_uid: u32, index_uid: Option<String>) -> Value {
+fn task_response(task_uid: u32, index_uid: Option<&str>) -> Value {
     serde_json::json!({
         "task_uid": task_uid,
         "index_uid": index_uid,
@@ -77,7 +78,10 @@ impl Engine for MeilisearchEngine {
             "Meilisearch 文档已提交索引任务"
         );
 
-        Ok(task_response(task_info.task_uid, task_info.index_uid))
+        Ok(task_response(
+            task_info.task_uid,
+            task_info.index_uid.as_deref(),
+        ))
     }
 
     async fn delete(&self, index_name: &str, ids: &[&str]) -> Result<Value> {
@@ -96,7 +100,10 @@ impl Engine for MeilisearchEngine {
             "Meilisearch 文档批量删除请求已提交"
         );
 
-        Ok(task_response(task_info.task_uid, task_info.index_uid))
+        Ok(task_response(
+            task_info.task_uid,
+            task_info.index_uid.as_deref(),
+        ))
     }
 
     async fn flush(&self, index_name: &str) -> Result<Value> {
@@ -114,7 +121,10 @@ impl Engine for MeilisearchEngine {
             "Meilisearch 索引清空请求已提交"
         );
 
-        Ok(task_response(task_info.task_uid, task_info.index_uid))
+        Ok(task_response(
+            task_info.task_uid,
+            task_info.index_uid.as_deref(),
+        ))
     }
 
     async fn search(&self, index_name: &str, query: &ScoutQuery) -> Result<SearchResult> {

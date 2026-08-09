@@ -28,6 +28,6 @@ pub type MediaResult<T> = Result<T, MediaError>;
 
 impl From<MediaError> for loco_rs::Error {
     fn from(err: MediaError) -> Self {
-        loco_rs::Error::string(&err.to_string())
+        Self::string(&err.to_string())
     }
 }

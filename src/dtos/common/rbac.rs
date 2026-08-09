@@ -53,7 +53,7 @@ where
             ));
         }
 
-        Ok(AdminUser(user))
+        Ok(Self(user))
     }
 }
 
@@ -70,6 +70,6 @@ where
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let user = find_user_from_request(parts, state).await?;
-        Ok(AuthenticatedUser(user))
+        Ok(Self(user))
     }
 }

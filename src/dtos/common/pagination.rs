@@ -29,7 +29,9 @@ impl PaginationRequest {
 
     /// 获取合法化的每页数量 (1..=100)
     pub fn per_page(&self) -> u64 {
-        self.per_page.unwrap_or(DEFAULT_PAGE_SIZE).clamp(1, MAX_PAGE_SIZE)
+        self.per_page
+            .unwrap_or(DEFAULT_PAGE_SIZE)
+            .clamp(1, MAX_PAGE_SIZE)
     }
 
     /// 获取 SQL 数据库查询 offset 偏移量

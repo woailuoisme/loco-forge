@@ -3,7 +3,10 @@ use loco_rs::prelude::*;
 use crate::{
     common::consts::{message::POST_NOT_FOUND, openapi::TAG_POSTS},
     dtos::{
-        common::{AdminUser, ApiError, ApiResponse, PaginatedResource, PaginationRequest, ValidJson, format_res},
+        common::{
+            AdminUser, ApiError, ApiResponse, PaginatedResource, PaginationRequest, ValidJson,
+            format_res,
+        },
         posts::{CreatePostRequest, PostResource, UpdatePostRequest},
     },
     services::admin::PostService,
@@ -53,7 +56,11 @@ pub async fn list(
     tag = TAG_POSTS
 )]
 #[debug_handler]
-pub async fn get_one(_auth: auth::JWT, State(ctx): State<AppContext>, Path(id): Path<i64>) -> Result<Response> {
+pub async fn get_one(
+    _auth: auth::JWT,
+    State(ctx): State<AppContext>,
+    Path(id): Path<i64>,
+) -> Result<Response> {
     let Some(dto) = PostService::get_one(&ctx, id).await? else {
         return format_res::not_found(POST_NOT_FOUND);
     };
@@ -137,7 +144,11 @@ pub async fn update(
     tag = TAG_POSTS
 )]
 #[debug_handler]
-pub async fn remove(_admin: AdminUser, State(ctx): State<AppContext>, Path(id): Path<i64>) -> Result<Response> {
+pub async fn remove(
+    _admin: AdminUser,
+    State(ctx): State<AppContext>,
+    Path(id): Path<i64>,
+) -> Result<Response> {
     if !PostService::remove(&ctx, id).await? {
         return format_res::not_found(POST_NOT_FOUND);
     }

@@ -36,7 +36,10 @@ impl QrLogoConfig {
     /// 设置 Logo 缩放比例
     #[must_use]
     pub fn with_scale_ratio(mut self, ratio: f32) -> Self {
-        self.scale_ratio = ratio.clamp(consts::qrcode::LOGO_MIN_SCALE, consts::qrcode::LOGO_MAX_SCALE);
+        self.scale_ratio = ratio.clamp(
+            consts::qrcode::LOGO_MIN_SCALE,
+            consts::qrcode::LOGO_MAX_SCALE,
+        );
         self
     }
 
@@ -121,7 +124,9 @@ impl QrCodeBuilder {
     /// 生成 `image::DynamicImage` 内存位图对象
     pub fn to_dynamic_image(&self) -> MediaResult<DynamicImage> {
         if self.content.is_empty() {
-            return Err(MediaError::InvalidInput("QR code content cannot be empty".to_string()));
+            return Err(MediaError::InvalidInput(
+                "QR code content cannot be empty".to_string(),
+            ));
         }
 
         // 1. 编码生成原始 QrCode 矩阵
@@ -157,7 +162,11 @@ impl QrCodeBuilder {
             let logo_target_size = (actual_size as f32 * logo_cfg.scale_ratio) as u32;
 
             if logo_target_size > 0 {
-                let resized_logo = logo_img.resize(logo_target_size, logo_target_size, imageops::FilterType::Lanczos3);
+                let resized_logo = logo_img.resize(
+                    logo_target_size,
+                    logo_target_size,
+                    imageops::FilterType::Lanczos3,
+                );
                 let (lw, lh) = resized_logo.dimensions();
                 let start_x = (actual_size - lw) / 2;
                 let start_y = (actual_size - lh) / 2;
@@ -184,7 +193,8 @@ impl QrCodeBuilder {
 
         // 5. 保持最近邻采样缩放至精确定制的尺寸 self.size
         if actual_size != self.size {
-            dynamic_img = dynamic_img.resize_exact(self.size, self.size, imageops::FilterType::Nearest);
+            dynamic_img =
+                dynamic_img.resize_exact(self.size, self.size, imageops::FilterType::Nearest);
         }
 
         Ok(dynamic_img)
@@ -209,7 +219,9 @@ impl QrCodeBuilder {
     /// 导出为 SVG 矢量文本字符串
     pub fn to_svg_string(&self) -> MediaResult<String> {
         if self.content.is_empty() {
-            return Err(MediaError::InvalidInput("QR code content cannot be empty".to_string()));
+            return Err(MediaError::InvalidInput(
+                "QR code content cannot be empty".to_string(),
+            ));
         }
 
         let code = QrCode::with_error_correction_level(self.content.as_bytes(), self.ec_level)?;

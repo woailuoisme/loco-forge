@@ -14,7 +14,8 @@ use std::sync::OnceLock;
 pub static EMAIL_DOMAIN_RE: OnceLock<Regex> = OnceLock::new();
 
 fn get_allow_email_domain_re() -> &'static Regex {
-    EMAIL_DOMAIN_RE.get_or_init(|| Regex::new(ALLOW_EMAIL_DOMAIN_PATTERN).expect("Failed to compile regex"))
+    EMAIL_DOMAIN_RE
+        .get_or_init(|| Regex::new(ALLOW_EMAIL_DOMAIN_PATTERN).expect("Failed to compile regex"))
 }
 
 pub struct AuthService;
@@ -33,10 +34,13 @@ impl AuthService {
                     "could not register user",
                 );
                 return Ok(());
-            }
+            },
         };
 
-        let user = user.into_active_model().set_email_verification_sent(&ctx.db).await?;
+        let user = user
+            .into_active_model()
+            .set_email_verification_sent(&ctx.db)
+            .await?;
         AuthMailer::send_welcome(ctx, &user).await?;
         Ok(())
     }
@@ -64,7 +68,10 @@ impl AuthService {
             return Ok(());
         };
 
-        let user = user.into_active_model().set_forgot_password_sent(&ctx.db).await?;
+        let user = user
+            .into_active_model()
+            .set_forgot_password_sent(&ctx.db)
+            .await?;
         AuthMailer::forgot_password(ctx, &user).await?;
         Ok(())
     }
@@ -76,16 +83,24 @@ impl AuthService {
             return Ok(());
         };
 
-        user.into_active_model().reset_password(&ctx.db, password).await?;
+        user.into_active_model()
+            .reset_password(&ctx.db, password)
+            .await?;
         Ok(())
     }
 
     /// 用户登录业务逻辑
-    pub async fn login(ctx: &AppContext, params: &LoginRequest) -> Result<Result<LoginResource, &'static str>> {
+    pub async fn login(
+        ctx: &AppContext,
+        params: &LoginRequest,
+    ) -> Result<Result<LoginResource, &'static str>> {
         use secrecy::ExposeSecret;
 
         let Ok(user) = users::Model::find_by_email(&ctx.db, &params.email).await else {
-            tracing::debug!(email = params.email, "login attempt with non-existent email");
+            tracing::debug!(
+                email = params.email,
+                "login attempt with non-existent email"
+            );
             return Ok(Err("Invalid credentials"));
         };
 
@@ -151,11 +166,17 @@ impl AuthService {
         };
 
         if user.email_verified_at.is_some() {
-            tracing::info!(pid = user.pid.to_string(), "User already verified, skipping resend");
+            tracing::info!(
+                pid = user.pid.to_string(),
+                "User already verified, skipping resend"
+            );
             return Ok(());
         }
 
-        let user = user.into_active_model().set_email_verification_sent(&ctx.db).await?;
+        let user = user
+            .into_active_model()
+            .set_email_verification_sent(&ctx.db)
+            .await?;
         AuthMailer::send_welcome(ctx, &user).await?;
         tracing::info!(pid = user.pid.to_string(), "Verification email re-sent");
 

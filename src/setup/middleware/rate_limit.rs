@@ -4,7 +4,9 @@
 
 use axum::{body::Body, http::Request};
 use governor::{clock::QuantaInstant, middleware::NoOpMiddleware};
-use tower_governor::{GovernorError, GovernorLayer, governor::GovernorConfigBuilder, key_extractor::KeyExtractor};
+use tower_governor::{
+    GovernorError, GovernorLayer, governor::GovernorConfigBuilder, key_extractor::KeyExtractor,
+};
 
 /// 智能 IP Key 提取器 (Smart IP Key Extractor)
 ///
@@ -52,7 +54,8 @@ impl KeyExtractor for SmartIpKeyExtractor {
 }
 
 /// 认证接口专用 Rate Limiter Layer 类型别名
-pub type AuthRateLimitLayer = GovernorLayer<SmartIpKeyExtractor, NoOpMiddleware<QuantaInstant>, Body>;
+pub type AuthRateLimitLayer =
+    GovernorLayer<SmartIpKeyExtractor, NoOpMiddleware<QuantaInstant>, Body>;
 
 /// 构造用于高风险认证接口 (/api/auth/*) 的 Rate Limiter Layer
 /// 配额：每 500 毫秒生成 1 令牌，突发容忍量为 10 次

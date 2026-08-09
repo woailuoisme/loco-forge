@@ -1,10 +1,12 @@
 #![allow(elided_lifetimes_in_paths)]
 #![allow(clippy::wildcard_imports)]
+#![allow(unreachable_pub)]
 pub use sea_orm_migration::prelude::*;
 mod m20220101_000001_users;
 
 mod m20260729_213140_posts;
 
+#[derive(Debug)]
 pub struct Migrator;
 
 #[async_trait::async_trait]

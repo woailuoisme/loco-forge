@@ -11,17 +11,42 @@ sea-orm = { version = "2.0" }
 sea-orm-migration = { version = "2.0" }
 
 [workspace.lints.rust]
-unsafe_code = "warn"                          # 警惕 unsafe 代码，保持纯安全 Rust
+unsafe_code = "forbid"                        # 绝对禁止 unsafe 代码，保持纯安全 Rust
+unreachable_pub = "warn"                      # 清理不可达的 pub 导出，保持接口可见性严谨
 
 [workspace.lints.clippy]
-# --- Rust 2024 现代编码范式 ---
+# --- Rust 2024 现代编码范式与语法 ---
 manual_let_else = "warn"                      # 强制使用 let-else 减少嵌套解包
-implicit_clone = "warn"                       # 避免隐式 Clone（如对 String 引用调 to_string）
+implicit_clone = "warn"                       # 避免隐式 Clone（如对 &String 调 to_string）
 redundant_closure_for_method_calls = "warn"   # 优先使用函数指针（如 ToString::to_string）
+uninlined_format_args = "warn"                # 强制现代化变量内联 format!("{var}")
+use_self = "warn"                             # impl 块内统一使用 Self 替代结构体名
 needless_lifetimes = "deny"                   # 消除冗余生命周期标注（Rust 2024 Elision）
 double_must_use = "deny"                      # 禁止重复标注 #[must_use]
+macro_use_imports = "warn"                    # 淘汰遗留的 #[macro_use]，倡导显式 use
+explicit_auto_deref = "warn"                  # 利用 Rust 自动解引用，消除冗余 &*s / &(*x)
+cloned_instead_of_copied = "warn"             # 对 Copy 类型强制用 .copied() 替代 .cloned()
+
+
+# --- 异步并发安全与生产环境硬性防护 ---
+await_holding_lock = "warn"                   # 严禁跨 .await 持有同步 Mutex 锁 (防 Tokio 死锁)
+if_let_mutex = "warn"                         # 严禁在 if let 语句块中隐式持有 Mutex 锁
+dbg_macro = "warn"                            # 严禁遗留 dbg! 调试宏 (统一使用 tracing)
+exit = "warn"                                 # 严禁在业务逻辑中直接调用 std::process::exit
+todo = "warn"                                 # 提示遗留的 todo! 未完成存根
+unimplemented = "warn"                        # 提示遗留的 unimplemented! 未实现分支
+
+# --- 类型设计与性能微调 ---
+fn_params_excessive_bools = "warn"            # 超过 3 个 bool 参数提示重构（防 API 误用）
+option_option = "warn"                        # 禁止低效且语义模糊的 Option<Option<T>>
+ref_option = "warn"                           # 倡导 Option<&T> 替代 &Option<T>
+needless_pass_by_value = "warn"               # 避免不需要转移所有权时的无谓 Move
+trivially_copy_pass_by_ref = "warn"           # 小 Copy 类型传值优先于传引用 (&i32 -> i32)
+redundant_clone = "warn"                      # 自动剔除无谓的堆内存 clone
+linkedlist = "warn"                           # 倡导连续内存集合 Vec 替代 LinkedList
+
 # --- 框架与第三方宏兼容放行 ---
-option_if_let_else = "allow"                  # 允许（防止 utoipa::ToSchema 泛型宏展开误报）
+option_if_let_else = "allow"                  # 允许（防止 utoipa::ToSchema 派生宏误报）
 
 [package]
 name = "locos"

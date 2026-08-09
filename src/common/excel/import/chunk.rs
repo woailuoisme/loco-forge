@@ -31,7 +31,7 @@ impl ChunkImportSummary {
 /// 4. **多 Sheet 无缝跨表连续解析**：自动顺序解析按 `Sheet`, `Sheet_2`, `Sheet_3` 拆分的海量数据表。
 pub fn import_in_chunks_from_reader<R, T, F>(
     reader: R,
-    options: ImportOptions,
+    options: &ImportOptions,
     mut on_chunk_cb: F,
 ) -> Result<ChunkImportSummary, Error>
 where
@@ -61,7 +61,7 @@ where
             Err(e) => {
                 tracing::error!("读取工作表 '{}' 失败: {:?}", sheet_name, e);
                 continue;
-            }
+            },
         };
 
         let mut rows_iter = range.rows();
@@ -93,7 +93,7 @@ where
                 Ok(item) => {
                     chunk_buffer.push(item);
                     total_valid_rows += 1;
-                }
+                },
                 Err(mut errs) => errors.append(&mut errs),
             }
 

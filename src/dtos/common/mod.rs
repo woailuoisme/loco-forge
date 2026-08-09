@@ -40,7 +40,8 @@ mod tests {
         let body_bytes = to_bytes(res.into_body(), usize::MAX)
             .await
             .expect("Failed to read response body");
-        let json: serde_json::Value = serde_json::from_slice(&body_bytes).expect("Invalid JSON response");
+        let json: serde_json::Value =
+            serde_json::from_slice(&body_bytes).expect("Invalid JSON response");
         (status, json)
     }
 
@@ -112,7 +113,8 @@ mod tests {
         assert_eq!(json["code"], 201);
         assert_eq!(json["message"], "创建成功");
 
-        let (status, json) = parse_response(format_res::created_msg("created_item", "item created").unwrap()).await;
+        let (status, json) =
+            parse_response(format_res::created_msg("created_item", "item created").unwrap()).await;
         assert_eq!(status, StatusCode::CREATED);
         assert_eq!(json["code"], 201);
         assert_eq!(json["message"], "item created");
@@ -128,7 +130,8 @@ mod tests {
         assert_eq!(json["message"], "deleted");
         assert!(json["data"].is_null());
 
-        let (status, json) = parse_response(format_res::page(vec!["a", "b"], 1, 10, 25).unwrap()).await;
+        let (status, json) =
+            parse_response(format_res::page(vec!["a", "b"], 1, 10, 25).unwrap()).await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(json["data"]["items"], serde_json::json!(["a", "b"]));
         assert_eq!(json["data"]["meta"]["total"], 25);
@@ -136,18 +139,21 @@ mod tests {
         assert!(json["data"]["extras"].is_null());
 
         let (status, json) = parse_response(
-            format_res::page_with_extras(vec!["a"], 1, 10, 1, serde_json::json!({"summary": "ok"})).unwrap(),
+            format_res::page_with_extras(vec!["a"], 1, 10, 1, serde_json::json!({"summary": "ok"}))
+                .unwrap(),
         )
         .await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(json["data"]["extras"]["summary"], "ok");
 
-        let (status, json) = parse_response(format_res::retrieved(serde_json::json!({"id": 1})).unwrap()).await;
+        let (status, json) =
+            parse_response(format_res::retrieved(serde_json::json!({"id": 1})).unwrap()).await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(json["message"], "数据获取成功");
         assert_eq!(json["data"]["id"], 1);
 
-        let (status, json) = parse_response(format_res::updated(serde_json::json!({"id": 3})).unwrap()).await;
+        let (status, json) =
+            parse_response(format_res::updated(serde_json::json!({"id": 3})).unwrap()).await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(json["message"], "数据更新成功");
 
@@ -156,7 +162,9 @@ mod tests {
         assert_eq!(json["message"], "数据删除成功");
         assert!(json["data"].is_null());
 
-        let (status, json) = parse_response(format_res::deleted_with_data(serde_json::json!({"id": 4})).unwrap()).await;
+        let (status, json) =
+            parse_response(format_res::deleted_with_data(serde_json::json!({"id": 4})).unwrap())
+                .await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(json["message"], "数据删除成功");
         assert_eq!(json["data"]["id"], 4);
@@ -167,19 +175,54 @@ mod tests {
     // =========================================================================
 
     #[rstest]
-    #[case::bad_request(format_res::bad_request("bad req"), StatusCode::BAD_REQUEST, 400, "bad req")]
-    #[case::bad_request_default(format_res::bad_request_default(), StatusCode::BAD_REQUEST, 400, "请求参数无效")]
-    #[case::unauthorized(format_res::unauthorized("unauth"), StatusCode::UNAUTHORIZED, 401, "unauth")]
-    #[case::forbidden(format_res::forbidden("forbidden"), StatusCode::FORBIDDEN, 403, "forbidden")]
-    #[case::not_found(format_res::not_found("not found"), StatusCode::NOT_FOUND, 404, "not found")]
-    #[case::route_not_found(format_res::route_not_found(), StatusCode::NOT_FOUND, 404, "请求的接口路径不存在")]
+    #[case::bad_request(
+        format_res::bad_request("bad req"),
+        StatusCode::BAD_REQUEST,
+        400,
+        "bad req"
+    )]
+    #[case::bad_request_default(
+        format_res::bad_request_default(),
+        StatusCode::BAD_REQUEST,
+        400,
+        "请求参数无效"
+    )]
+    #[case::unauthorized(
+        format_res::unauthorized("unauth"),
+        StatusCode::UNAUTHORIZED,
+        401,
+        "unauth"
+    )]
+    #[case::forbidden(
+        format_res::forbidden("forbidden"),
+        StatusCode::FORBIDDEN,
+        403,
+        "forbidden"
+    )]
+    #[case::not_found(
+        format_res::not_found("not found"),
+        StatusCode::NOT_FOUND,
+        404,
+        "not found"
+    )]
+    #[case::route_not_found(
+        format_res::route_not_found(),
+        StatusCode::NOT_FOUND,
+        404,
+        "请求的接口路径不存在"
+    )]
     #[case::method_not_allowed(
         format_res::method_not_allowed("method err"),
         StatusCode::METHOD_NOT_ALLOWED,
         405,
         "method err"
     )]
-    #[case::conflict(format_res::conflict("conflict"), StatusCode::CONFLICT, 409, "conflict")]
+    #[case::conflict(
+        format_res::conflict("conflict"),
+        StatusCode::CONFLICT,
+        409,
+        "conflict"
+    )]
     #[case::validation(
         format_res::validation_error("invalid"),
         StatusCode::UNPROCESSABLE_ENTITY,
@@ -222,14 +265,18 @@ mod tests {
     #[tokio::test]
     async fn test_format_res_error_with_details() {
         let details = serde_json::json!({ "field": ["is required"] });
-        let (status, json) =
-            parse_response(format_res::validation_error_with_details("val error", details.clone()).unwrap()).await;
+        let (status, json) = parse_response(
+            format_res::validation_error_with_details("val error", details.clone()).unwrap(),
+        )
+        .await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
         assert_eq!(json["code"], 422);
         assert_eq!(json["errors"], details);
 
-        let (status, json) =
-            parse_response(format_res::bad_request_with_details("bad req", details.clone()).unwrap()).await;
+        let (status, json) = parse_response(
+            format_res::bad_request_with_details("bad req", details.clone()).unwrap(),
+        )
+        .await;
         assert_eq!(status, StatusCode::BAD_REQUEST);
         assert_eq!(json["code"], 400);
         assert_eq!(json["errors"], details);
@@ -238,7 +285,12 @@ mod tests {
     #[tokio::test]
     async fn test_format_res_internal_error_with_debug() {
         let (status, json) = parse_response(
-            format_res::internal_error_with_debug("crash", "EyreError", vec!["stack line 1".into()]).unwrap(),
+            format_res::internal_error_with_debug(
+                "crash",
+                "EyreError",
+                vec!["stack line 1".into()],
+            )
+            .unwrap(),
         )
         .await;
         assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
@@ -267,15 +319,18 @@ mod tests {
         #[case] msg: &str,
         #[case] expected_status: StatusCode,
     ) {
-        let (status, json) = parse_response(format_res::custom_error(custom_code, msg).unwrap()).await;
+        let (status, json) =
+            parse_response(format_res::custom_error(custom_code, msg).unwrap()).await;
         assert_eq!(status, expected_status);
         assert_eq!(json["success"], false);
         assert_eq!(json["code"], custom_code);
         assert_eq!(json["message"], msg);
 
         let details = serde_json::json!({ "reason": "blocked" });
-        let (status_det, json_det) =
-            parse_response(format_res::custom_error_with_details(custom_code, msg, details.clone()).unwrap()).await;
+        let (status_det, json_det) = parse_response(
+            format_res::custom_error_with_details(custom_code, msg, details.clone()).unwrap(),
+        )
+        .await;
         assert_eq!(status_det, expected_status);
         assert_eq!(json_det["code"], custom_code);
         assert_eq!(json_det["errors"], details);
@@ -283,20 +338,28 @@ mod tests {
 
     #[tokio::test]
     async fn test_format_res_biz_helpers() {
-        let (status, json) = parse_response(format_res::biz(biz_code::USER_FROZEN, "账号已被冻结").unwrap()).await;
+        let (status, json) =
+            parse_response(format_res::biz(biz_code::USER_FROZEN, "账号已被冻结").unwrap()).await;
         assert_eq!(status, StatusCode::BAD_REQUEST);
         assert_eq!(json["code"], 601);
         assert_eq!(json["message"], "账号已被冻结");
 
-        let (status, json) =
-            parse_response(format_res::biz(biz_code::INSUFFICIENT_BALANCE, "custom balance msg").unwrap()).await;
+        let (status, json) = parse_response(
+            format_res::biz(biz_code::INSUFFICIENT_BALANCE, "custom balance msg").unwrap(),
+        )
+        .await;
         assert_eq!(status, StatusCode::BAD_REQUEST);
         assert_eq!(json["code"], 602);
         assert_eq!(json["message"], "custom balance msg");
 
         let details = serde_json::json!({ "required": 100 });
         let (status, json) = parse_response(
-            format_res::biz_with_details(biz_code::INSUFFICIENT_BALANCE, "余额不足", details.clone()).unwrap(),
+            format_res::biz_with_details(
+                biz_code::INSUFFICIENT_BALANCE,
+                "余额不足",
+                details.clone(),
+            )
+            .unwrap(),
         )
         .await;
         assert_eq!(status, StatusCode::BAD_REQUEST);
@@ -304,7 +367,12 @@ mod tests {
         assert_eq!(json["errors"], details);
 
         let (status, json) = parse_response(
-            format_res::biz_with_status(StatusCode::UNPROCESSABLE_ENTITY, biz_code::USER_FROZEN, "账号冻结").unwrap(),
+            format_res::biz_with_status(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                biz_code::USER_FROZEN,
+                "账号冻结",
+            )
+            .unwrap(),
         )
         .await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);

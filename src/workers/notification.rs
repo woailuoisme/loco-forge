@@ -43,17 +43,17 @@ impl BackgroundWorker<NotificationJobArgs> for NotificationWorker {
                 } else {
                     tracing::warn!("后台队列 Email Job 跳过: 未提供 MailMessage 内容");
                 }
-            }
+            },
             Channel::Telegram => {
                 if let Some(msg) = &args.telegram_message {
                     TelegramChannel::send(&self.ctx, &args.recipient, msg).await?;
                 } else {
                     tracing::warn!("后台队列 Telegram Job 跳过: 未提供 TelegramMessage 内容");
                 }
-            }
+            },
             Channel::Custom(name) => {
                 tracing::info!("自定义后台队列通知渠道暂未配置处理器: {}", name);
-            }
+            },
         }
         Ok(())
     }

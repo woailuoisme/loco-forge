@@ -20,7 +20,16 @@ pub const RESET_TOKEN_EXPIRATION_MIN: i64 = 30;
 
 /// 用户角色枚举定义
 #[derive(
-    Debug, Clone, PartialEq, Eq, Default, EnumIter, DeriveActiveEnum, Serialize, Deserialize, utoipa::ToSchema,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Default,
+    EnumIter,
+    DeriveActiveEnum,
+    Serialize,
+    Deserialize,
+    utoipa::ToSchema,
 )]
 #[sea_orm(rs_type = "String", db_type = "String(StringLen::None)")]
 pub enum UserRole {
@@ -121,7 +130,10 @@ impl Model {
     /// # Errors
     ///
     /// 当未找到对应用户记录或发生数据库查询错误时返回 `ModelError::EntityNotFound`
-    pub async fn find_by_verification_token(db: &DatabaseConnection, token: &str) -> ModelResult<Self> {
+    pub async fn find_by_verification_token(
+        db: &DatabaseConnection,
+        token: &str,
+    ) -> ModelResult<Self> {
         let user = users::Entity::find()
             .filter(users::Column::EmailVerificationToken.eq(token))
             .one(db)
@@ -221,7 +233,10 @@ impl Model {
     /// # Errors
     ///
     /// 当邮箱已被占用或数据库写入失败时返回 `ModelError`
-    pub async fn create_with_password(db: &DatabaseConnection, params: &RegisterRequest) -> ModelResult<Self> {
+    pub async fn create_with_password(
+        db: &DatabaseConnection,
+        params: &RegisterRequest,
+    ) -> ModelResult<Self> {
         let txn = db.begin().await?;
 
         if users::Entity::find()
@@ -233,8 +248,8 @@ impl Model {
             return Err(ModelError::EntityAlreadyExists {});
         }
 
-        let password_hash =
-            hash::hash_password(params.password.expose_secret()).map_err(|e| ModelError::Any(e.into()))?;
+        let password_hash = hash::hash_password(params.password.expose_secret())
+            .map_err(|e| ModelError::Any(e.into()))?;
         let user = users::ActiveModel {
             email: ActiveValue::set(params.email.clone()),
             password: ActiveValue::set(password_hash),
@@ -276,7 +291,10 @@ impl Model {
 
         // 批量置空过期的 reset_token
         let res1 = users::Entity::update_many()
-            .col_expr(users::Column::ResetToken, Expr::value(Option::<String>::None))
+            .col_expr(
+                users::Column::ResetToken,
+                Expr::value(Option::<String>::None),
+            )
             .col_expr(
                 users::Column::ResetSentAt,
                 Expr::value(Option::<chrono::DateTime<chrono::FixedOffset>>::None),
@@ -288,7 +306,10 @@ impl Model {
 
         // 批量置空过期的 magic_link_token
         let res2 = users::Entity::update_many()
-            .col_expr(users::Column::MagicLinkToken, Expr::value(Option::<String>::None))
+            .col_expr(
+                users::Column::MagicLinkToken,
+                Expr::value(Option::<String>::None),
+            )
             .col_expr(
                 users::Column::MagicLinkExpiration,
                 Expr::value(Option::<chrono::DateTime<chrono::FixedOffset>>::None),
@@ -313,7 +334,10 @@ impl ActiveModel {
     /// # Errors
     ///
     /// 当数据库更新失败时返回 `ModelError`
-    pub async fn set_email_verification_sent(mut self, db: &DatabaseConnection) -> ModelResult<Model> {
+    pub async fn set_email_verification_sent(
+        mut self,
+        db: &DatabaseConnection,
+    ) -> ModelResult<Model> {
         self.email_verification_sent_at = ActiveValue::set(Some(Local::now().into()));
         self.email_verification_token = ActiveValue::Set(Some(Uuid::new_v4().to_string()));
         self.update(db).await.map_err(ModelError::from)
@@ -347,8 +371,13 @@ impl ActiveModel {
     /// # Errors
     ///
     /// 当密码哈希计算失败或数据库更新失败时返回 `ModelError`
-    pub async fn reset_password(mut self, db: &DatabaseConnection, password: &str) -> ModelResult<Model> {
-        self.password = ActiveValue::set(hash::hash_password(password).map_err(|e| ModelError::Any(e.into()))?);
+    pub async fn reset_password(
+        mut self,
+        db: &DatabaseConnection,
+        password: &str,
+    ) -> ModelResult<Model> {
+        self.password =
+            ActiveValue::set(hash::hash_password(password).map_err(|e| ModelError::Any(e.into()))?);
         self.reset_token = ActiveValue::Set(None);
         self.reset_sent_at = ActiveValue::Set(None);
         self.update(db).await.map_err(ModelError::from)

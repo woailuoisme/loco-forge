@@ -37,5 +37,8 @@ async fn test_download_worker_without_url_ok() {
     };
 
     let res = worker.perform(args).await;
-    assert!(res.is_ok(), "DownloadWorker perform should succeed without url");
+    assert!(
+        res.is_ok(),
+        "DownloadWorker perform should succeed without url"
+    );
 }

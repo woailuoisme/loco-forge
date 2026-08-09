@@ -33,7 +33,9 @@ impl Hooks for App {
         format!(
             "{} ({})",
             env!("CARGO_PKG_VERSION"),
-            option_env!("BUILD_SHA").or(option_env!("GITHUB_SHA")).unwrap_or("dev")
+            option_env!("BUILD_SHA")
+                .or(option_env!("GITHUB_SHA"))
+                .unwrap_or("dev")
         )
     }
 
@@ -43,7 +45,11 @@ impl Hooks for App {
     }
 
     /// 引导启动底层网络服务与数据库迁移驱动
-    async fn boot(mode: StartMode, environment: &Environment, config: Config) -> Result<BootResult> {
+    async fn boot(
+        mode: StartMode,
+        environment: &Environment,
+        config: Config,
+    ) -> Result<BootResult> {
         create_app::<Self, Migrator>(mode, environment, config).await
     }
 
@@ -91,7 +97,8 @@ impl Hooks for App {
     /// 执行基础 Seed 种子数据注入
     async fn seed(ctx: &AppContext, base: &Path) -> Result<()> {
         // 步骤 1: 读取 users.yaml 并注入初始用户记录
-        db::seed::<users::ActiveModel>(&ctx.db, &base.join("users.yaml").display().to_string()).await?;
+        db::seed::<users::ActiveModel>(&ctx.db, &base.join("users.yaml").display().to_string())
+            .await?;
         Ok(())
     }
 }

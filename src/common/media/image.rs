@@ -76,7 +76,9 @@ impl ImageProcessor {
     pub fn from_bytes(bytes: impl AsRef<[u8]>) -> MediaResult<Self> {
         let slice = bytes.as_ref();
         if slice.is_empty() {
-            return Err(MediaError::InvalidInput("Image input byte array is empty".to_string()));
+            return Err(MediaError::InvalidInput(
+                "Image input byte array is empty".to_string(),
+            ));
         }
         let image = image::load_from_memory(slice)?;
         let (w, h) = image.dimensions();
@@ -135,12 +137,14 @@ impl ImageProcessor {
         }
 
         self.image = match mode {
-            ResizeMode::Fit => self
-                .image
-                .resize(target_width, target_height, imageops::FilterType::Lanczos3),
-            ResizeMode::Exact => self
-                .image
-                .resize_exact(target_width, target_height, imageops::FilterType::Lanczos3),
+            ResizeMode::Fit => {
+                self.image
+                    .resize(target_width, target_height, imageops::FilterType::Lanczos3)
+            },
+            ResizeMode::Exact => {
+                self.image
+                    .resize_exact(target_width, target_height, imageops::FilterType::Lanczos3)
+            },
             ResizeMode::Thumbnail => self.image.thumbnail(target_width, target_height),
             ResizeMode::FillCrop => {
                 let (orig_w, orig_h) = self.image.dimensions();
@@ -155,15 +159,15 @@ impl ImageProcessor {
                 let scaled_w = (orig_w as f32 * scale_ratio).round() as u32;
                 let scaled_h = (orig_h as f32 * scale_ratio).round() as u32;
 
-                let scaled_img = self
-                    .image
-                    .resize_exact(scaled_w, scaled_h, imageops::FilterType::Lanczos3);
+                let scaled_img =
+                    self.image
+                        .resize_exact(scaled_w, scaled_h, imageops::FilterType::Lanczos3);
 
                 let crop_x = (scaled_w.saturating_sub(target_width)) / 2;
                 let crop_y = (scaled_h.saturating_sub(target_height)) / 2;
 
                 scaled_img.crop_imm(crop_x, crop_y, target_width, target_height)
-            }
+            },
         };
 
         self
@@ -260,7 +264,11 @@ impl ImageProcessor {
         let max_wm_h = (base_h as f32 * consts::media::WATERMARK_MAX_RATIO) as u32;
 
         let final_wm_dynamic = if wm_w > max_wm_w || wm_h > max_wm_h {
-            watermark_dynamic.resize(max_wm_w.max(1), max_wm_h.max(1), imageops::FilterType::Lanczos3)
+            watermark_dynamic.resize(
+                max_wm_w.max(1),
+                max_wm_h.max(1),
+                imageops::FilterType::Lanczos3,
+            )
         } else {
             watermark_dynamic
         };
@@ -313,7 +321,7 @@ impl ImageProcessor {
         match self.format {
             OutputFormat::Png => {
                 self.image.write_to(&mut cursor, ImageFormat::Png)?;
-            }
+            },
             OutputFormat::Jpeg { quality } => {
                 let rgb_image = self.image.to_rgb8();
                 let mut encoder = JpegEncoder::new_with_quality(&mut cursor, quality.clamp(1, 100));
@@ -323,7 +331,7 @@ impl ImageProcessor {
                     rgb_image.height(),
                     image::ExtendedColorType::Rgb8,
                 )?;
-            }
+            },
             OutputFormat::Webp { quality } => {
                 let encoder = image::codecs::webp::WebPEncoder::new_lossless(&mut cursor);
                 if quality >= consts::media::WEBP_LOSSLESS_QUALITY {
@@ -331,13 +339,13 @@ impl ImageProcessor {
                 } else {
                     self.image.write_to(&mut cursor, ImageFormat::WebP)?;
                 }
-            }
+            },
             OutputFormat::Bmp => {
                 self.image.write_to(&mut cursor, ImageFormat::Bmp)?;
-            }
+            },
             OutputFormat::Ico => {
                 self.image.write_to(&mut cursor, ImageFormat::Ico)?;
-            }
+            },
         }
 
         Ok(Bytes::from(buffer))

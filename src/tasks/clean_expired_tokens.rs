@@ -22,7 +22,10 @@ impl Task for CleanExpiredTokens {
     /// 执行清理逻辑
     async fn run(&self, app_context: &AppContext, _vars: &task::Vars) -> Result<()> {
         let cleaned_count = users::Model::clean_expired_tokens(&app_context.db).await?;
-        tracing::info!(cleaned_count, "Successfully executed clean_expired_tokens task");
+        tracing::info!(
+            cleaned_count,
+            "Successfully executed clean_expired_tokens task"
+        );
         Ok(())
     }
 }
@@ -38,6 +41,6 @@ mod tests {
         let task = CleanExpiredTokens;
         let vars = task::Vars::default();
         let res = task.run(&boot.app_context, &vars).await;
-        assert!(res.is_ok(), "clean_expired_tokens task failed: {:?}", res);
+        assert!(res.is_ok(), "clean_expired_tokens task failed: {res:?}");
     }
 }

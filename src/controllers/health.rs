@@ -47,7 +47,9 @@ pub struct ReadinessData {
 /// 探针: 执行数据库 (PostgreSQL) ping 存活性与延迟检测
 async fn check_db(ctx: &AppContext) -> ComponentHealth {
     let start = Instant::now();
-    let kind = if ctx.config.database.uri.starts_with("postgres") || ctx.config.database.uri.starts_with("postgresql") {
+    let kind = if ctx.config.database.uri.starts_with("postgres")
+        || ctx.config.database.uri.starts_with("postgresql")
+    {
         "pg"
     } else if ctx.config.database.uri.starts_with("mysql") {
         "mysql"

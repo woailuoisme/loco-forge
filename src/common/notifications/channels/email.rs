@@ -10,7 +10,11 @@ impl Mailer for EmailChannel {}
 
 impl EmailChannel {
     /// 通过 Loco Mailer 系统发送邮件通知
-    pub async fn send(ctx: &AppContext, recipient_email: &str, message: &MailMessage) -> Result<()> {
+    pub async fn send(
+        ctx: &AppContext,
+        recipient_email: &str,
+        message: &MailMessage,
+    ) -> Result<()> {
         let email = mailer::Email {
             to: recipient_email.to_string(),
             subject: message.subject.clone(),
@@ -19,7 +23,7 @@ impl EmailChannel {
             ..Default::default()
         };
 
-        EmailChannel::mail(ctx, &email).await?;
+        Self::mail(ctx, &email).await?;
 
         tracing::info!(
             "邮件通知成功分发 -> to: {}, subject: {}",
