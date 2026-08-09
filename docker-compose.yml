@@ -4,13 +4,14 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: loco_app
+    command: start
     ports:
       - "5150:5150"
-    environment:
-      - LOCO_ENV=development
-      - LOCO_BINDING=0.0.0.0
-      - DATABASE_URL=${DATABASE_URL:-sqlite://loco-starter_development.sqlite?mode=rwc}
-      - JWT_SECRET=${JWT_SECRET:-mHuQ6y9WZiykqoDgaAEm}
+    env_file:
+      - .env.production
+    # volumes:
+    #   - ./config:/app/config
+    #   - ./locales:/app/locales
     # 允许容器通过 host.docker.internal 访问宿主机服务：
     # - Postgres: postgres://user:pass@host.docker.internal:5432/db_name
     # - Redis:    redis://host.docker.internal:6379
@@ -26,13 +27,14 @@ services:
       context: .
       dockerfile: Dockerfile.alpine
     container_name: loco_app_alpine
+    command: start
     ports:
       - "5151:5150"
-    environment:
-      - LOCO_ENV=development
-      - LOCO_BINDING=0.0.0.0
-      - DATABASE_URL=${DATABASE_URL:-sqlite://loco-starter_development.sqlite?mode=rwc}
-      - JWT_SECRET=${JWT_SECRET:-mHuQ6y9WZiykqoDgaAEm}
+    env_file:
+      - .env.production
+    # volumes:
+    #   - ./config:/app/config
+    #   - ./locales:/app/locales
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
@@ -41,4 +43,7 @@ services:
 
 networks:
   backend:
-    driver: bridge
+    external: true
+
+
+

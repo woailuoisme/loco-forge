@@ -1,63 +1,39 @@
-# Dockerfile.alpine — 静态链接 musl 多架构构建
-#
-# 构建命令：
-#   docker buildx build \
-#     --platform linux/amd64,linux/arm64 \
-#     -f Dockerfile.alpine \
-#     -t myrepo/locos:latest \
-#     --push .
-#
-# clux/muslrust 内置：musl 工具链 + cmake + aws-lc-sys 所需 C 依赖
-# 支持 linux/amd64 (x86_64) 和 linux/arm64 (aarch64) 双架构
+# ── 阶段 1：编译二进制（静态 musl）────────────────────────────────────────────
+FROM clux/muslrust:stable AS builder
+ENV CARGO_INCREMENTAL=0
 
-# ── 阶段 1：安装 cargo-chef ────────────────────────────────────────────────────
-FROM --platform=$BUILDPLATFORM clux/muslrust:stable AS chef
-USER root
-ENV CARGO_INCREMENTAL=0 \
-    CARGO_NET_GIT_FETCH_WITH_CLI=false \
-    CARGO_TERM_COLOR=never
-RUN cargo install cargo-chef --locked
 WORKDIR /app
-
-# ── 阶段 2：生成依赖缓存计划 ──────────────────────────────────────────────────
-FROM chef AS planner
 COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
+RUN cargo build --release --bin locos
 
-# ── 阶段 3：缓存依赖并编译（多架构）─────────────────────────────────────────
-FROM chef AS builder
-
-# 根据 TARGETPLATFORM 自动选择 musl 目标三元组
-ARG TARGETPLATFORM
-RUN case "$TARGETPLATFORM" in \
-    "linux/amd64")  echo "x86_64-unknown-linux-musl"   > /target.txt ;; \
-    "linux/arm64")  echo "aarch64-unknown-linux-musl"  > /target.txt ;; \
-    *)              echo "Unsupported platform: $TARGETPLATFORM" && exit 1 ;; \
-    esac
-
-COPY --from=planner /app/recipe.json recipe.json
-# 仅在依赖变更时重新编译（缓存层）
-RUN TARGET=$(cat /target.txt) && \
-    cargo chef cook --release --target "$TARGET" --recipe-path recipe.json
-
-COPY . .
-RUN TARGET=$(cat /target.txt) && \
-    cargo build --release --target "$TARGET" --bin locos && \
-    # 将二进制复制到固定路径，供下一阶段 COPY
-    cp target/"$TARGET"/release/locos /locos
-
-# ── 阶段 4：最小化 Alpine runtime 镜像 ───────────────────────────────────────
+# ── 阶段 2：最小化 Alpine runtime 镜像 ───────────────────────────────────────
 FROM alpine:3.24 AS runtime
 
-# 静态链接二进制无需 libc，仅添加 ca-certificates 用于 HTTPS
-RUN apk add --no-cache ca-certificates tzdata && \
-    addgroup -S -g 10001 app && \
-    adduser  -S -u 10001 -G app --no-create-home app
+ENV LOCO_ENV=production \
+    PORT=5150 \
+    BINDING=0.0.0.0 \
+    TZ=Asia/Shanghai
+
+RUN apk add --no-cache ca-certificates tzdata \
+    && cp /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
+    && addgroup -S -g 10001 app \
+    && adduser -S -u 10001 -G app --no-create-home app
 
 WORKDIR /app
 
-COPY --from=builder /locos /app/locos
+COPY --from=builder /app/target/release/locos .
+COPY config/ config/
+
+RUN mkdir -p storages/logs storages/uploads && chown -R app:app /app
 
 USER 10001:10001
 
-ENTRYPOINT ["/app/locos"]
+EXPOSE 5150
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget -qO- http://127.0.0.1:5150/health || exit 1
+
+ENTRYPOINT ["./locos"]
+CMD ["start"]
+
+

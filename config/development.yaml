@@ -145,7 +145,7 @@ database:
   min_connections: {{ get_env(name="DB_MIN_CONNECTIONS", default="1") }}
   max_connections: {{ get_env(name="DB_MAX_CONNECTIONS", default="10") }}
   # 应用启动时自动运行数据库迁移
-  auto_migrate: true
+  auto_migrate: {{ get_env(name="DB_AUTO_MIGRATE", default="true") }}
   # 启动时清空数据库 (危险操作，仅适用于开发/测试环境)
   dangerously_truncate: false
   # 启动时重建 Schema (危险操作，仅适用于开发/测试环境)
