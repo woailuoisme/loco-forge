@@ -30,7 +30,12 @@ impl Task for RouteList {
 
         let mut route_entries = Vec::with_capacity(routes.len());
         for route in routes {
-            let methods = route.actions.iter().map(reqwest::Method::as_str).collect::<Vec<_>>().join("|");
+            let methods = route
+                .actions
+                .iter()
+                .map(reqwest::Method::as_str)
+                .collect::<Vec<_>>()
+                .join("|");
             max_method_len = max_method_len.max(methods.len());
             max_uri_len = max_uri_len.max(route.uri.len());
             route_entries.push((methods, route.uri));

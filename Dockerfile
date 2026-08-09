@@ -1,7 +1,7 @@
 ARG CARGO_CHEF_VERSION=v0.1.77
 
 # ── 阶段 1：Chef 基础阶段（安装 cargo-chef 预编译二进制）──────────────────────
-FROM rust:1.97.1-slim AS chef
+FROM rust:1.97-slim-trixie AS chef
 ARG CARGO_CHEF_VERSION
 WORKDIR /src
 RUN apt-get update && apt-get install -y --no-install-recommends curl xz-utils \
