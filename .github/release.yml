@@ -1,0 +1,57 @@
+# GitHub Release Notes 自动分类汇总规范 (纯文字 / 无 Emoji 企业级最佳实践)
+
+changelog:
+  categories:
+    - title: 'Breaking Changes'
+      labels:
+        - 'breaking-change'
+        - 'breaking'
+
+    - title: 'Features & Enhancements'
+      labels:
+        - 'feature'
+        - 'enhancement'
+        - 'feat'
+
+    - title: 'Bug Fixes'
+      labels:
+        - 'bug'
+        - 'fix'
+        - 'bugfix'
+
+    - title: 'Performance & Security'
+      labels:
+        - 'performance'
+        - 'perf'
+        - 'security'
+
+    - title: 'Refactoring & Code Quality'
+      labels:
+        - 'refactor'
+        - 'quality'
+        - 'clippy'
+        - 'style'
+
+    - title: 'Documentation'
+      labels:
+        - 'documentation'
+        - 'docs'
+
+    - title: 'Maintenance & Infrastructure'
+      labels:
+        - 'dependencies'
+        - 'chore'
+        - 'ci'
+        - 'build'
+        - 'deps'
+
+  exclude:
+    labels:
+      - 'ignore-for-release'
+      - 'skip-changelog'
+      - 'duplicate'
+      - 'wontfix'
+      - 'invalid'
+    authors:
+      - 'dependabot[bot]'
+      - 'renovate[bot]'
