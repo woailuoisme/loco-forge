@@ -83,6 +83,13 @@ AI Agent 在此项目中编写、重构代码或排查问题时，必须严格�
    - **Workspace 依赖解析器**：项目统一配置 `edition = "2024"` 与 `resolver = "3"` (MSRV-aware 依赖解析器)。
    - **零 Clippy 警告门禁**：所有新增与重构代码必须通过 `cargo clippy --all-targets -- -D warnings` 零警告检查。
 
+10. **代码质量门禁 (Code Quality Gate)**
+    - **MUST**：每次完成全部代码修改后（一轮 multi-file 编辑结束、一个 feature/fix 任务收尾），**必须**按顺序执行：
+     1. `just fmt` — 统一格式化所有 Rust 源码与 Markdown 文档
+     2. `just lint` — 全量 Clippy 静态检查 (`--all-targets --all-features -- -D warnings`) + Markdown 审计
+    - 若 `just lint` 报错或警告，必须在任务结束前修复全部问题，确保零警告通过。
+    - 此门禁是"完成"的定义之一：未通过 `just lint` 的代码视为未完成。
+
 ---
 
 ## 分层架构与组件职责 (Layered Architecture & Responsibilities)
@@ -148,6 +155,7 @@ mise run down     # 停止并销毁 Docker Compose 容器
 >    - **`fd` (fd-find)**：替代传统 `find` 进行极速文件与目录树匹配
 >    - **`sd` (sed alternative)**：替代传统 `sed` 进行直观安全且支持 Regex 的批量文本替换
 > 2. **Token 压缩代理**：在终端执行 Git 和 Cargo 命令时，系统钩子会自动使用 `rtk` 进行 Token 压缩。请优先使用 `mise run <task>` 简写执行日常任务。
+> 3. **代码质量门禁（参见核心原则第 10 条）**：每轮完整代码修改后，**必须**依次执行 `just fmt` → `just lint`，零警告通过才算任务完成。
 
 ---
 
@@ -414,42 +422,3 @@ Entity::update_many()
 - [Loco 官方 Agent 指南](https://loco.rs/AGENTS.md)
 - [Loco 单文件完整参考](https://loco.rs/llms-full.txt)
 - [Loco 官方文档](https://loco.rs/docs)
-
-<!-- code-review-graph MCP tools -->
-## MCP Tools: code-review-graph
-
-**IMPORTANT: This project has a knowledge graph. ALWAYS use the
-code-review-graph MCP tools BEFORE using Grep/Glob/Read to explore
-the codebase.** The graph is faster, cheaper (fewer tokens), and gives
-you structural context (callers, dependents, test coverage) that file
-scanning cannot.
-
-### When to use graph tools FIRST
-
-- **Exploring code**: `semantic_search_nodes_tool` or `query_graph_tool` instead of Grep
-- **Understanding impact**: `get_impact_radius_tool` instead of manually tracing imports
-- **Code review**: `detect_changes_tool` + `get_review_context_tool` instead of reading entire files
-- **Finding relationships**: `query_graph_tool` with callers_of/callees_of/imports_of/tests_for
-- **Architecture questions**: `get_architecture_overview_tool` + `list_communities_tool`
-
-Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
-
-### Key Tools
-
-| Tool | Use when |
-| ------ | ---------- |
-| `detect_changes_tool` | Reviewing code changes — gives risk-scored analysis |
-| `get_review_context_tool` | Need source snippets for review — token-efficient |
-| `get_impact_radius_tool` | Understanding blast radius of a change |
-| `get_affected_flows_tool` | Finding which execution paths are impacted |
-| `query_graph_tool` | Tracing callers, callees, imports, tests, dependencies |
-| `semantic_search_nodes_tool` | Finding functions/classes by name or keyword |
-| `get_architecture_overview_tool` | Understanding high-level codebase structure |
-| `refactor_tool` | Planning renames, finding dead code |
-
-### Workflow
-
-1. The graph auto-updates on file changes (via hooks).
-2. Use `detect_changes_tool` for code review.
-3. Use `get_affected_flows_tool` to understand impact.
-4. Use `query_graph_tool` pattern="tests_for" to check coverage.

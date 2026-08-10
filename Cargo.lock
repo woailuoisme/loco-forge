@@ -3939,6 +3939,7 @@ dependencies = [
  "calamine",
  "chrono",
  "color-eyre",
+ "dotenvy",
  "fake",
  "geo",
  "governor",

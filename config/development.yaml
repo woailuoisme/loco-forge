@@ -133,12 +133,12 @@ storage:
       bucket: {{ get_env(name="STORAGE_S3_BUCKET", default="default") }}
       region: {{ get_env(name="STORAGE_S3_REGION", default="garage") }}
       endpoint: {{ get_env(name="STORAGE_S3_ENDPOINT", default="http://127.0.0.1:3900") }}
-      access_key_id: {{ get_env(name="STORAGE_S3_ACCESS_KEY", default="GKfd16f76e81fb861a868a01b9b19452ad") }}
-      secret_access_key: {{ get_env(name="STORAGE_S3_SECRET_KEY", default="18d5eda476ff7fb88f0bec38eae3a5e468020ae6dfc610defe2f3f72a65c4339") }}
+      access_key_id: {{ get_env(name="STORAGE_S3_ACCESS_KEY", default="change_me_s3_access_key") }}
+      secret_access_key: {{ get_env(name="STORAGE_S3_SECRET_KEY", default="change_me_s3_secret_key") }}
 
 # 6. 数据库配置 (Database - PostgreSQL / SQLite)
 database:
-  uri: {{ get_env(name="DATABASE_URL", default="postgres://postgres:598f18a1c99d539ced6631add2b428b3@127.0.0.1:45432/loco_starter_development") }}
+  uri: {{ get_env(name="DATABASE_URL", default="postgres://postgres:change_me_db_password@127.0.0.1:5432/locos_dev") }}
   enable_logging: false
   connect_timeout: {{ get_env(name="DB_CONNECT_TIMEOUT", default="500") }}
   idle_timeout: {{ get_env(name="DB_IDLE_TIMEOUT", default="500") }}
@@ -155,14 +155,14 @@ database:
 auth:
   jwt:
     # 用于 JWT 签名与验证的私钥
-    secret: {{ get_env(name="JWT_SECRET", default="7a0358d8737b4092856b124bc6eaa6e09107b3946d264c8bbf67af66873b7163") }}
+    secret: {{ get_env(name="JWT_SECRET", default="change_me_jwt_secret_64_hex_chars") }}
     # Token 过期时间 (秒，例如 604800 表示 7 天)
     expiration: {{ get_env(name="JWT_EXPIRATION", default="604800") }}
 
 # 8. 缓存配置 (Cache - Redis / Valkey 共享缓存)
 cache:
   kind: Redis
-  uri: "{{ get_env(name='REDIS_CACHE_URL', default='redis://:redis_secret@127.0.0.1:6379/1') }}"
+  uri: "{{ get_env(name='REDIS_CACHE_URL', default='redis://127.0.0.1:6379/1') }}"
   # 内存/连接最大限制
   max_size: {{ get_env(name='REDIS_CACHE_MAX_SIZE', default='10') }}
 

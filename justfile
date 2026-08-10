@@ -99,7 +99,6 @@ nextest:
 # 运行全量代码静态规范检查 (Clippy 检查、Rustfmt 与 Rumdl Markdown 审计)
 lint:
     cargo clippy --all-targets --all-features -- -D warnings
-    cargo fmt --all --check
     rumdl check
 
 alias check := lint

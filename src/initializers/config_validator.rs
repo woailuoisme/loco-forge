@@ -1,3 +1,4 @@
+use crate::tasks::jwt_secret::generate_and_persist_jwt_secret;
 use async_trait::async_trait;
 use loco_rs::{
     Error, Result,
@@ -13,35 +14,57 @@ impl Initializer for ConfigValidatorInitializer {
     }
 
     async fn before_run(&self, ctx: &AppContext) -> Result<()> {
-        // 在 test 环境下跳过配置强校验，方便 CI/CD 并行单元测试
+        // Skip strict config validation in test environment for CI/CD parallel unit tests
         if ctx.environment == loco_rs::environment::Environment::Test {
             return Ok(());
         }
 
-        // 1. 强校验 JWT 配置是否存在、非空且长度 >= 32 字符
-        let jwt_config = ctx
-            .config
-            .get_jwt_config()
-            .map_err(|e| Error::string(&format!("配置校验失败：无法获取 JWT 配置: {e}")))?;
+        // 1. Validate JWT config: exists, non-empty, and length >= 32 chars
+        let jwt_config = ctx.config.get_jwt_config().map_err(|e| {
+            Error::string(&format!(
+                "Config validation failed: unable to get JWT config: {e}"
+            ))
+        })?;
 
         let secret = jwt_config.secret.trim();
         if secret.is_empty() {
             return Err(Error::string(
-                "配置校验失败：auth.jwt.secret (JWT_SECRET) 不能为空",
+                "Config validation failed: auth.jwt.secret (JWT_SECRET) must not be empty",
             ));
         }
         if secret.len() < 32 {
+            // Auto-generate a strong key and write back to .env, avoiding manual jwt:secret run
+            let auto_gen_msg = match generate_and_persist_jwt_secret() {
+                Ok(new_secret) => {
+                    tracing::warn!(
+                        old_len = secret.len(),
+                        new_len = new_secret.len(),
+                        "JWT_SECRET too short, auto-generated a new key and wrote it to .env"
+                    );
+                    format!(
+                        "A strong JWT_SECRET key ({} chars) has been auto-generated and written to .env, please restart the application",
+                        new_secret.len()
+                    )
+                },
+                Err(e) => {
+                    tracing::error!(error = %e, "Auto-generation of JWT_SECRET failed");
+                    format!(
+                        "Auto-generation of secret failed ({e}), please run `cargo loco task jwt:secret` manually"
+                    )
+                },
+            };
+
             return Err(Error::string(&format!(
-                "配置校验失败：auth.jwt.secret 长度必须 ≥ 32 字符 (当前长度: {})，请在配置文件或环境变量中设置安全的随机密钥",
+                "Config validation failed: auth.jwt.secret must be at least 32 chars (current length: {}). {auto_gen_msg}",
                 secret.len()
             )));
         }
 
-        // 2. 强校验数据库连接 URI 存在性与协议格式
+        // 2. Validate database connection URI: exists and has a valid protocol prefix
         let db_uri = ctx.config.database.uri.trim();
         if db_uri.is_empty() {
             return Err(Error::string(
-                "配置校验失败：database.uri (DATABASE_URL) 不能为空",
+                "Config validation failed: database.uri (DATABASE_URL) must not be empty",
             ));
         }
 
@@ -52,7 +75,7 @@ impl Initializer for ConfigValidatorInitializer {
 
         if !is_valid_scheme {
             return Err(Error::string(&format!(
-                "配置校验失败：database.uri 连接串格式无效 ('{db_uri}')，仅支持 postgres://, mysql:// 或 sqlite:// 前缀"
+                "Config validation failed: invalid database.uri scheme ('{db_uri}'), only postgres://, mysql://, or sqlite:// prefixes are supported"
             )));
         }
 

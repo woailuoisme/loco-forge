@@ -161,6 +161,7 @@ rand = { version = "0.10", features = ["serde"] } # 加密安全伪随机数生�
 regex = { version = "1.13" } # 高性能正则表达式匹配工具
 rust-i18n = { version = "4" } # 多语言国际化 (i18n) 翻译框架
 sha2 = { version = "0.11" } # SHA-256 / SHA-512 高性能密码学哈希计算库 (文件去重与摘要)
+dotenvy = { version = "0.15" } # .env 配置文件自动加载（cargo task / cargo start 启动时加载）
 
 # 6. 命令行 CLI 与终端交互 (CLI & Terminal Interaction)
 inquire = { version = "0.9", features = [
