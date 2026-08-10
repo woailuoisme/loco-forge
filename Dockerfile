@@ -4,6 +4,7 @@ ARG CARGO_CHEF_VERSION=v0.1.77
 FROM rust:1.97-slim-trixie AS chef
 ARG CARGO_CHEF_VERSION
 WORKDIR /src
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update && apt-get install -y --no-install-recommends curl xz-utils \
     && curl --proto '=https' --tlsv1.2 -LsSf https://github.com/LukeMathWalker/cargo-chef/releases/download/${CARGO_CHEF_VERSION}/cargo-chef-installer.sh | sh \
     && rm -rf /var/lib/apt/lists/*
@@ -32,7 +33,7 @@ ENV LOCO_ENV=production \
     SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
 RUN apt-get update \
-    && apt-get install -y ca-certificates tzdata wget \
+    && apt-get install -y --no-install-recommends ca-certificates tzdata wget \
     && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd -g 10001 app \

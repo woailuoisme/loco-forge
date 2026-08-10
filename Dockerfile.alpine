@@ -3,6 +3,7 @@ ARG CARGO_CHEF_VERSION=v0.1.77
 # ── 阶段 1：Chef 基础阶段（Musl 环境安装 cargo-chef 预编译二进制）────────────
 FROM clux/muslrust:stable AS chef
 ARG CARGO_CHEF_VERSION
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 WORKDIR /app
 RUN curl --proto '=https' --tlsv1.2 -LsSf https://github.com/LukeMathWalker/cargo-chef/releases/download/${CARGO_CHEF_VERSION}/cargo-chef-installer.sh | sh
 
