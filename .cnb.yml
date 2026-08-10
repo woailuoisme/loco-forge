@@ -1,14 +1,112 @@
-# 这里是一个示例 .cnb.yml
-  
-  # 匹配main分支
-  main:
-    # 触发事件为 push 事件
-    push:
-      # 这里是阶段任务示例，可配置任意多个阶段，这里以一个阶段为例
-      - name: "your first CNB building"
-        stages:
-          # 使用流水线输出你的构建配置数据
-          - name: echo your build data
-            script: echo ${CNB_BUILD_USER} 通过 ${CNB_BRANCH} 分支触发了 ${CNB_EVENT} 事件
-  
-  # 更多资料见 https://docs.cnb.cool/build/quick-start.html
+# CNB 流水线 — Loco 应用 Docker 双镜像构建与推送
+# 文档: https://docs.cnb.cool/build/quick-start.html
+
+env:
+  # 镜像仓库根路径，例如 cnb.cool/your-org/your-repo
+  REGISTRY: ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}
+
+# ── main 分支 push：构建 trixie + alpine，推 latest / 变体 tag ──────────
+main:
+  push:
+    - services:
+        - docker
+      stages:
+        - name: Build and push (trixie)
+          script: |
+            set -euo pipefail
+
+            docker build \
+              --tag "${REGISTRY}:latest" \
+              --tag "${REGISTRY}:trixie" \
+              --file ./Dockerfile \
+              .
+
+            docker push "${REGISTRY}:latest"
+            docker push "${REGISTRY}:trixie"
+
+        - name: Build and push (alpine)
+          script: |
+            set -euo pipefail
+
+            docker build \
+              --tag "${REGISTRY}:alpine" \
+              --file ./Dockerfile.alpine \
+              .
+
+            docker push "${REGISTRY}:alpine"
+
+# ── 手动触发：在分支详情页点击按钮执行 ──────────────────────────────────
+$:
+  web_trigger:
+    - services:
+        - docker
+      stages:
+        - name: Build and push (trixie)
+          script: |
+            set -euo pipefail
+
+            TAG="${VERSION:-manual}"
+            docker build \
+              --tag "${REGISTRY}:latest" \
+              --tag "${REGISTRY}:trixie" \
+              --tag "${REGISTRY}:${TAG}" \
+              --tag "${REGISTRY}:${TAG}-trixie" \
+              --file ./Dockerfile \
+              .
+
+            docker push "${REGISTRY}:latest"
+            docker push "${REGISTRY}:trixie"
+            docker push "${REGISTRY}:${TAG}"
+            docker push "${REGISTRY}:${TAG}-trixie"
+
+        - name: Build and push (alpine)
+          script: |
+            set -euo pipefail
+
+            TAG="${VERSION:-manual}"
+            docker build \
+              --tag "${REGISTRY}:alpine" \
+              --tag "${REGISTRY}:${TAG}-alpine" \
+              --file ./Dockerfile.alpine \
+              .
+
+            docker push "${REGISTRY}:alpine"
+            docker push "${REGISTRY}:${TAG}-alpine"
+
+# ── v* tag push：额外推送版本化 tag ──────────────────────────────────────
+  tag_push:
+    - services:
+        - docker
+      stages:
+        - name: Build and push release (trixie)
+          script: |
+            set -euo pipefail
+
+            # 从 refs/tags/v1.2.3 提取 v1.2.3
+            VERSION="${CNB_BRANCH##*/}"
+
+            docker build \
+              --tag "${REGISTRY}:latest" \
+              --tag "${REGISTRY}:${VERSION}" \
+              --tag "${REGISTRY}:${VERSION}-trixie" \
+              --file ./Dockerfile \
+              .
+
+            docker push "${REGISTRY}:latest"
+            docker push "${REGISTRY}:${VERSION}"
+            docker push "${REGISTRY}:${VERSION}-trixie"
+
+        - name: Build and push release (alpine)
+          script: |
+            set -euo pipefail
+
+            VERSION="${CNB_BRANCH##*/}"
+
+            docker build \
+              --tag "${REGISTRY}:alpine" \
+              --tag "${REGISTRY}:${VERSION}-alpine" \
+              --file ./Dockerfile.alpine \
+              .
+
+            docker push "${REGISTRY}:alpine"
+            docker push "${REGISTRY}:${VERSION}-alpine"

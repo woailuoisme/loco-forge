@@ -1,0 +1,40 @@
+# 自定义部署流程 — 多环境 Docker 部署
+# 文档: https://docs.cnb.cool/zh/build/deploy.html
+#
+# 对应 .cnb.yml 中的事件:
+#   $: tag_deploy.staging  — 预发布
+#   $: tag_deploy.production — 生产
+
+environments:
+  - name: staging
+    description: 预发布环境
+    env:
+      name: staging
+      tag_name: $CNB_BRANCH
+    deploy:
+      - name: 部署到预发布
+        description: "部署 ${CNB_BRANCH} 到预发布环境"
+    button:
+      - name: 运行集成测试
+        description: 触发预发布前测试
+        event: web_trigger_integration_test
+
+  - name: production
+    description: 生产环境
+    env:
+      name: production
+      tag_name: $CNB_BRANCH
+    require:
+      - environmentName: staging       # 必须先成功部署 staging
+      - approver:
+          roles:
+            - owner
+            - master
+        title: 上线审批
+    permissions:
+      roles:
+        - owner
+        - master
+    deploy:
+      - name: 部署到生产
+        description: "部署 ${CNB_BRANCH} 到生产环境"

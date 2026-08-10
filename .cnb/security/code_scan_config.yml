@@ -1,0 +1,34 @@
+# 代码安全扫描配置
+# 文档: https://docs.cnb.cool/zh/build/configuration.html
+#
+# Schema: https://docs.cnb.cool/code-security-conf-schema-zh.json
+# 各扫描能力默认开启，通过 ignoreFrom 指向 gitignore 文件来关闭
+
+# 密钥检测
+secrets:
+  scan:
+    paths:
+      - "**"
+    ignoreFrom: ".scanignore"
+  rules:
+    - name: "忽略测试数据中的假密钥"
+      when:
+        paths: ["**/tests/**"]
+        severity: ["low"]
+      then:
+        ignore: true
+        reason: "测试 fixtures 中的示例凭据"
+
+# 软件成分分析
+software-composition-analysis:
+  scan:
+    ignoreFrom: ".scanignore"
+
+# 代码分析 (TCA)
+tca:
+  scan:
+    paths:
+      - "src/**"
+      - "migration/**"
+      - "tests/**"
+    ignoreFrom: ".scanignore"

@@ -1,0 +1,17 @@
+# 手动触发按钮 — 分支详情页显示
+# 文档: https://docs.cnb.cool/zh/build/web-trigger.html
+
+branch:
+  - buttons:
+      - name: Docker 构建并推送
+        description: ${VERSION} 发布到仓库
+        event: web_trigger
+        env:
+          VERSION: ${VERSION}
+        inputs:
+          VERSION:
+            name: 版本号
+            description: 例如 v1.2.3
+            required: true
+            type: input
+            default: latest
