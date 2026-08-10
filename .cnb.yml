@@ -4,40 +4,45 @@
 # 内置变量 (CNB 自动注入):
 #   CNB_DOCKER_REGISTRY      — 镜像仓库地址，如 docker.cnb.cool
 #   CNB_REPO_SLUG_LOWERCASE  — 仓库路径小写，如 my-org/my-repo
+#
+# 同事件下多个 pipeline 并行执行（类似 GitHub Actions matrix）
 
-# ── main 分支 push：构建 trixie + alpine，推 latest / 变体 tag ──────────
-main:
-  push:
-    - services:
-        - docker
-      stages:
-        - name: Build and push (trixie)
-          script: |
-            set -euo pipefail
-            REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
+# ── main 分支 push（已禁用：push 不自动构建）────────────────────────────
+# main:
+#   push:
+#     - services:
+#         - docker
+#       stages:
+#         - name: Build and push (trixie)
+#           script: |
+#             set -euo pipefail
+#             REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
+#
+#             docker build \
+#               --tag "${REGISTRY}:latest" \
+#               --tag "${REGISTRY}:trixie" \
+#               --file ./Dockerfile \
+#               .
+#
+#             docker push "${REGISTRY}:latest"
+#             docker push "${REGISTRY}:trixie"
+#
+#     - services:
+#         - docker
+#       stages:
+#         - name: Build and push (alpine)
+#           script: |
+#             set -euo pipefail
+#             REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
+#
+#             docker build \
+#               --tag "${REGISTRY}:alpine" \
+#               --file ./Dockerfile.alpine \
+#               .
+#
+#             docker push "${REGISTRY}:alpine"
 
-            docker build \
-              --tag "${REGISTRY}:latest" \
-              --tag "${REGISTRY}:trixie" \
-              --file ./Dockerfile \
-              .
-
-            docker push "${REGISTRY}:latest"
-            docker push "${REGISTRY}:trixie"
-
-        - name: Build and push (alpine)
-          script: |
-            set -euo pipefail
-            REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
-
-            docker build \
-              --tag "${REGISTRY}:alpine" \
-              --file ./Dockerfile.alpine \
-              .
-
-            docker push "${REGISTRY}:alpine"
-
-# ── 手动触发：在分支详情页点击按钮执行 ──────────────────────────────────
+# ── 手动触发：并行构建 trixie + alpine ────────────────────────────────
 $:
   web_trigger:
     - services:
@@ -62,6 +67,9 @@ $:
             docker push "${REGISTRY}:${TAG}"
             docker push "${REGISTRY}:${TAG}-trixie"
 
+    - services:
+        - docker
+      stages:
         - name: Build and push (alpine)
           script: |
             set -euo pipefail
@@ -77,7 +85,7 @@ $:
             docker push "${REGISTRY}:alpine"
             docker push "${REGISTRY}:${TAG}-alpine"
 
-# ── v* tag push：额外推送版本化 tag ──────────────────────────────────────
+# ── v* tag push：并行构建并推送版本化 tag ─────────────────────────────
   tag_push:
     - services:
         - docker
@@ -86,7 +94,6 @@ $:
           script: |
             set -euo pipefail
             REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
-            # 从 refs/tags/v1.2.3 提取 v1.2.3
             VERSION="${CNB_BRANCH##*/}"
 
             docker build \
@@ -100,6 +107,9 @@ $:
             docker push "${REGISTRY}:${VERSION}"
             docker push "${REGISTRY}:${VERSION}-trixie"
 
+    - services:
+        - docker
+      stages:
         - name: Build and push release (alpine)
           script: |
             set -euo pipefail
