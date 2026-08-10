@@ -1,4 +1,4 @@
-# CNB 流水线 — Loco 应用 Docker 双镜像多架构构建与推送
+# CNB 流水线 — Loco 应用 Docker 镜像构建与推送（Trixie Debian Slim）
 # 文档: https://docs.cnb.cool/build/quick-start.html
 #
 # 内置变量 (CNB 自动注入):
@@ -6,35 +6,25 @@
 #   CNB_REPO_SLUG_LOWERCASE  — 仓库路径小写，如 my-org/my-repo
 #
 # 同事件下多个 pipeline 并行执行（类似 GitHub Actions matrix）
-# 支持 linux/amd64 + linux/arm64 双架构（通过 QEMU 模拟）
-
-x-init-buildx: &init-buildx
-  script: |
-    set -euo pipefail
-    # 安装 QEMU 模拟器，使默认 builder 支持 linux/arm64 交叉构建
-    docker run --privileged --rm tonistiigi/binfmt --install all
+# 仅构建 linux/amd64（CNB runner 不支持 --privileged 无法运行 QEMU 交叉编译）
 
 # ── main 分支 push（已禁用：push 不自动构建）────────────────────────────
 # main:
 #   push:
 #     ...
 
-# ── 手动触发：并行构建 trixie + alpine，推 amd64 + arm64 ──────────────
+# ── 手动触发：构建 trixie 镜像 ──────────────────────────────────────────
 $:
   web_trigger:
     - services:
         - docker
       stages:
-        - name: Init buildx
-          <<: *init-buildx
-
-        - name: Build and push multiarch (trixie)
+        - name: Build and push (trixie)
           script: |
             set -euo pipefail
             REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
 
             docker buildx build \
-              --platform linux/amd64,linux/arm64 \
               --tag "${REGISTRY}:trixie" \
               --file ./Dockerfile \
               --cache-from "type=registry,ref=${REGISTRY}:buildcache-trixie" \
@@ -42,68 +32,22 @@ $:
               --push \
               .
 
-    - services:
-        - docker
-      stages:
-        - name: Init buildx
-          <<: *init-buildx
-
-        - name: Build and push multiarch (alpine)
-          script: |
-            set -euo pipefail
-            REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
-
-            docker buildx build \
-              --platform linux/amd64,linux/arm64 \
-              --tag "${REGISTRY}:alpine" \
-              --file ./Dockerfile.alpine \
-              --cache-from "type=registry,ref=${REGISTRY}:buildcache-alpine" \
-              --cache-to "type=registry,ref=${REGISTRY}:buildcache-alpine,mode=max" \
-              --push \
-              .
-
-# ── v* tag push：并行构建并推送多架构版本化 tag ────────────────────────
+# ── v* tag push：构建并推送版本化 tag ──────────────────────────────────
   tag_push:
     - services:
         - docker
       stages:
-        - name: Init buildx
-          <<: *init-buildx
-
-        - name: Build and push multiarch release (trixie)
+        - name: Build and push release (trixie)
           script: |
             set -euo pipefail
             REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
             VERSION="${CNB_BRANCH##*/}"
 
             docker buildx build \
-              --platform linux/amd64,linux/arm64 \
               --tag "${REGISTRY}:${VERSION}" \
               --tag "${REGISTRY}:${VERSION}-trixie" \
               --file ./Dockerfile \
               --cache-from "type=registry,ref=${REGISTRY}:buildcache-trixie" \
               --cache-to "type=registry,ref=${REGISTRY}:buildcache-trixie,mode=max" \
-              --push \
-              .
-
-    - services:
-        - docker
-      stages:
-        - name: Init buildx
-          <<: *init-buildx
-
-        - name: Build and push multiarch release (alpine)
-          script: |
-            set -euo pipefail
-            REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
-            VERSION="${CNB_BRANCH##*/}"
-
-            docker buildx build \
-              --platform linux/amd64,linux/arm64 \
-              --tag "${REGISTRY}:alpine" \
-              --tag "${REGISTRY}:${VERSION}-alpine" \
-              --file ./Dockerfile.alpine \
-              --cache-from "type=registry,ref=${REGISTRY}:buildcache-alpine" \
-              --cache-to "type=registry,ref=${REGISTRY}:buildcache-alpine,mode=max" \
               --push \
               .

@@ -5,55 +5,15 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
-    inputs:
-      build_trixie:
-        description: "Build Debian Slim (trixie) image"
-        type: boolean
-        default: true
-      build_alpine:
-        description: "Build Alpine Musl (alpine) image"
-        type: boolean
-        default: true
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  prepare:
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-    steps:
-      - name: Set build matrix
-        id: set-matrix
-        run: |
-          BUILD_TRIXIE="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_trixie || 'true' }}"
-          BUILD_ALPINE="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_alpine || 'true' }}"
-
-          ITEMS=()
-          if [ "$BUILD_TRIXIE" = "true" ]; then
-            ITEMS+=('{"variant":"trixie","dockerfile":"Dockerfile"}')
-          fi
-          if [ "$BUILD_ALPINE" = "true" ]; then
-            ITEMS+=('{"variant":"alpine","dockerfile":"Dockerfile.alpine"}')
-          fi
-
-          if [ ${#ITEMS[@]} -eq 0 ]; then
-            echo "Error: no image variant selected"
-            exit 1
-          fi
-
-          JSON=$(IFS=,; echo "[${ITEMS[*]}]")
-          echo "matrix={\"include\":$JSON}" >> "$GITHUB_OUTPUT"
-
   build-and-push:
-    name: Build & Push (${{ matrix.variant }})
-    needs: prepare
+    name: Build & Push (trixie)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
 
     permissions:
       contents: read
@@ -79,21 +39,21 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            # Distro tag: :trixie or :alpine
-            type=raw,value=${{ matrix.variant }}
+            # Distro tag: :trixie
+            type=raw,value=trixie
             # Git tag with variant suffix: v1.0.0-trixie
-            type=ref,event=tag,suffix=-${{ matrix.variant }}
-            # `:latest` only when releasing trixie on a v* tag
-            type=raw,value=latest,enable=${{ matrix.variant == 'trixie' && startsWith(github.ref, 'refs/tags/v') }}
+            type=ref,event=tag,suffix=-trixie
+            # :latest on default branch
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: ./${{ matrix.dockerfile }}
+          file: ./Dockerfile
           platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ matrix.variant }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.variant }}
+          cache-from: type=gha,scope=trixie
+          cache-to: type=gha,mode=max,scope=trixie

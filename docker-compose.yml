@@ -22,25 +22,6 @@ services:
       - backend
     restart: unless-stopped
 
-  app-alpine:
-    build:
-      context: .
-      dockerfile: Dockerfile.alpine
-    container_name: loco_app_alpine
-    command: start
-    ports:
-      - "5151:5150"
-    env_file:
-      - .env.production
-    # volumes:
-    #   - ./config:/app/config
-    #   - ./locales:/app/locales
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - backend
-    restart: unless-stopped
-
 networks:
   backend:
     external: true
