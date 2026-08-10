@@ -1,0 +1,78 @@
+# 生产环境覆盖值
+# 用法: helm install locos ./chart -f values-production.yaml
+
+# ── 高可用配置 ──────────────────────────────────────────────
+replicaCount: 2
+
+image:
+  tag: "trixie"        # CNB 构建产出的 trixie tag
+  pullPolicy: IfNotPresent
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "5150"
+
+# ── 亲和性 ──────────────────────────────────────────────────
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: locos
+          topologyKey: kubernetes.io/hostname
+
+# ── 资源配置（生产）─────────────────────────────────────────
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+# ── Ingress 入口示例 ────────────────────────────────────────
+ingress:
+  enabled: true
+  ingressClassName: "nginx"
+  host: locos.your-domain.com
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  tls: true
+
+# ── 非敏感配置覆盖 ─────────────────────────────────────────
+config:
+  logger:
+    level: "warn"
+    format: "json"
+    fileAppender: "false"
+
+  workerMode: "BackgroundQueue"
+
+  database:
+    maxConnections: "20"
+    autoMigrate: "true"
+
+  storage:
+    s3:
+      bucket: "locos-prod"
+      region: "auto"
+      endpoint: ""      # 填写实际 S3 endpoint
+
+  smtp:
+    enable: "true"
+    host: ""            # 填写实际 SMTP 主机
+    port: "587"
+    secure: "true"
+    user: ""            # 填写实际 SMTP 用户
+
+# ── 敏感配置 — 务必通过外部注入，不要在此文件中填写真实值 ────
+# 推荐方式：
+#   helm install locos ./chart -f values-production.yaml \
+#     --set secrets.databaseUrl="postgres://..." \
+#     --set secrets.jwtSecret="..." \
+#     --set secrets.redisCacheUrl="redis://..." \
+#     --set secrets.storageS3AccessKey="..." \
+#     --set secrets.storageS3SecretKey="..." \
+#     --set secrets.smtpPassword="..."

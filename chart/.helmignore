@@ -1,0 +1,31 @@
+# Patterns to ignore when packaging Helm charts.
+
+.git/
+.gitignore
+.helmignore
+.vscode/
+.idea/
+*.swp
+*.bak
+*.tmp
+*.orig
+*~
+.DS_Store
+# Project files (not part of the chart)
+src/
+migration/
+tests/
+locales/
+scripts/
+config/
+Cargo.*
+rust-toolchain.toml
+rustfmt.toml
+Dockerfile
+docker-compose.yml
+justfile
+lefthook.yml
+README.md
+AGENTS.md
+CLAUDE.md
+GEMINI.md

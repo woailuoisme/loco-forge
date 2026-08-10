@@ -27,10 +27,11 @@ $:
             docker buildx build \
               --tag "${REGISTRY}:trixie" \
               --file ./Dockerfile \
-              --cache-from "type=registry,ref=${REGISTRY}:buildcache-trixie" \
-              --cache-to "type=registry,ref=${REGISTRY}:buildcache-trixie,mode=max" \
+              --cache-from "type=registry,ref=${REGISTRY}:trixie" \
+              --cache-to type=inline,mode=max \
               --push \
               .
+
 
 # ── v* tag push：构建并推送版本化 tag ──────────────────────────────────
   tag_push:
@@ -47,7 +48,7 @@ $:
               --tag "${REGISTRY}:${VERSION}" \
               --tag "${REGISTRY}:${VERSION}-trixie" \
               --file ./Dockerfile \
-              --cache-from "type=registry,ref=${REGISTRY}:buildcache-trixie" \
-              --cache-to "type=registry,ref=${REGISTRY}:buildcache-trixie,mode=max" \
+              --cache-from "type=registry,ref=${REGISTRY}:trixie" \
+              --cache-to type=inline,mode=max \
               --push \
               .

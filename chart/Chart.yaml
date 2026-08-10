@@ -1,0 +1,12 @@
+apiVersion: v2
+name: locos
+description: Helm chart for locos — a Loco.rs full-stack Rust web application
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - loco
+  - rust
+  - web
+maintainers:
+  - name: locos-team

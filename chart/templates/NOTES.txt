@@ -1,0 +1,18 @@
+locos — Loco.rs Application deployed successfully!
+
+{{- if .Values.ingress.enabled }}
+Access the application at:
+  http{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.host }}
+{{- else }}
+Access the application within the cluster:
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "locos.fullname" . }} 5150:{{ .Values.service.port }}
+{{- end }}
+
+Health check endpoint: /health
+
+{{- if not .Values.ingress.enabled }}
+To expose externally, enable ingress in values.yaml:
+  ingress:
+    enabled: true
+    host: your-domain.example.com
+{{- end }}

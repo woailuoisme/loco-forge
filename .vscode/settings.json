@@ -9,7 +9,8 @@
   "files.associations": {
     "*.t": "jinja-html",
     "*.yaml": "yaml",
-    "*.toml": "toml"
+    "*.toml": "toml",
+    "**/chart/templates/**/*.yaml": "helm"
   },
   "files.watcherExclude": {
     "**/target/**": true,

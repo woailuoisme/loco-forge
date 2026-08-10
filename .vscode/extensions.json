@@ -4,6 +4,8 @@
     "tamasfe.even-toml",
     "editorconfig.editorconfig",
     "evilmartians.lefthook",
-    "samuelcolvin.jinjahtml"
+    "samuelcolvin.jinjahtml",
+    "exiasr.hadolint",
+    "ms-kubernetes-tools.vscode-kubernetes-tools"
   ]
 }
