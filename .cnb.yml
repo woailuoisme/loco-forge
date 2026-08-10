@@ -11,11 +11,8 @@
 x-init-buildx: &init-buildx
   script: |
     set -euo pipefail
-    # 安装 QEMU 模拟器，支持非本机架构构建
+    # 安装 QEMU 模拟器，使默认 builder 支持 linux/arm64 交叉构建
     docker run --privileged --rm tonistiigi/binfmt --install all
-    # 创建并使用 multiarch builder
-    docker buildx create --name multiarch --use
-    docker buildx inspect --bootstrap
 
 # ── main 分支 push（已禁用：push 不自动构建）────────────────────────────
 # main:
