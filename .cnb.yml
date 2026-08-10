@@ -1,9 +1,9 @@
 # CNB 流水线 — Loco 应用 Docker 双镜像构建与推送
 # 文档: https://docs.cnb.cool/build/quick-start.html
-
-env:
-  # 镜像仓库根路径，例如 cnb.cool/your-org/your-repo
-  REGISTRY: ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}
+#
+# 内置变量 (CNB 自动注入):
+#   CNB_DOCKER_REGISTRY      — 镜像仓库地址，如 docker.cnb.cool
+#   CNB_REPO_SLUG_LOWERCASE  — 仓库路径小写，如 my-org/my-repo
 
 # ── main 分支 push：构建 trixie + alpine，推 latest / 变体 tag ──────────
 main:
@@ -14,6 +14,7 @@ main:
         - name: Build and push (trixie)
           script: |
             set -euo pipefail
+            REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
 
             docker build \
               --tag "${REGISTRY}:latest" \
@@ -27,6 +28,7 @@ main:
         - name: Build and push (alpine)
           script: |
             set -euo pipefail
+            REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
 
             docker build \
               --tag "${REGISTRY}:alpine" \
@@ -44,8 +46,9 @@ $:
         - name: Build and push (trixie)
           script: |
             set -euo pipefail
-
+            REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
             TAG="${VERSION:-manual}"
+
             docker build \
               --tag "${REGISTRY}:latest" \
               --tag "${REGISTRY}:trixie" \
@@ -62,8 +65,9 @@ $:
         - name: Build and push (alpine)
           script: |
             set -euo pipefail
-
+            REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
             TAG="${VERSION:-manual}"
+
             docker build \
               --tag "${REGISTRY}:alpine" \
               --tag "${REGISTRY}:${TAG}-alpine" \
@@ -81,7 +85,7 @@ $:
         - name: Build and push release (trixie)
           script: |
             set -euo pipefail
-
+            REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
             # 从 refs/tags/v1.2.3 提取 v1.2.3
             VERSION="${CNB_BRANCH##*/}"
 
@@ -99,7 +103,7 @@ $:
         - name: Build and push release (alpine)
           script: |
             set -euo pipefail
-
+            REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
             VERSION="${CNB_BRANCH##*/}"
 
             docker build \
