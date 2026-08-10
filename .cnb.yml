@@ -52,20 +52,15 @@ $:
           script: |
             set -euo pipefail
             REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
-            TAG="${VERSION:-manual}"
 
             docker build \
               --tag "${REGISTRY}:latest" \
               --tag "${REGISTRY}:trixie" \
-              --tag "${REGISTRY}:${TAG}" \
-              --tag "${REGISTRY}:${TAG}-trixie" \
               --file ./Dockerfile \
               .
 
             docker push "${REGISTRY}:latest"
             docker push "${REGISTRY}:trixie"
-            docker push "${REGISTRY}:${TAG}"
-            docker push "${REGISTRY}:${TAG}-trixie"
 
     - services:
         - docker
@@ -74,16 +69,13 @@ $:
           script: |
             set -euo pipefail
             REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
-            TAG="${VERSION:-manual}"
 
             docker build \
               --tag "${REGISTRY}:alpine" \
-              --tag "${REGISTRY}:${TAG}-alpine" \
               --file ./Dockerfile.alpine \
               .
 
             docker push "${REGISTRY}:alpine"
-            docker push "${REGISTRY}:${TAG}-alpine"
 
 # ── v* tag push：并行构建并推送版本化 tag ─────────────────────────────
   tag_push:
