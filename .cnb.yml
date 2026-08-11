@@ -27,8 +27,8 @@ $:
             docker buildx build \
               --tag "${REGISTRY}:trixie" \
               --file ./Dockerfile \
-              --cache-from "type=registry,ref=${REGISTRY}:trixie" \
-              --cache-to type=inline,mode=max \
+              --cache-from "type=registry,ref=${REGISTRY}:cache" \
+              --cache-to "type=registry,ref=${REGISTRY}:cache,mode=max" \
               --push \
               .
 
@@ -48,7 +48,7 @@ $:
               --tag "${REGISTRY}:${VERSION}" \
               --tag "${REGISTRY}:${VERSION}-trixie" \
               --file ./Dockerfile \
-              --cache-from "type=registry,ref=${REGISTRY}:trixie" \
-              --cache-to type=inline,mode=max \
+              --cache-from "type=registry,ref=${REGISTRY}:cache" \
+              --cache-to "type=registry,ref=${REGISTRY}:cache,mode=max" \
               --push \
               .
