@@ -43,7 +43,7 @@ fn error_response(
     status: StatusCode,
     message: impl Into<String>,
 ) -> loco_rs::prelude::Result<Response> {
-    let res = ApiResponse::<serde_json::Value>::error_simple(status.as_u16() as u32, message);
+    let res = ApiResponse::<serde_json::Value>::error_simple(u32::from(status.as_u16()), message);
     respond(status, res)
 }
 
@@ -53,7 +53,8 @@ fn error_response_with_details<D: Serialize>(
     message: impl Into<String>,
     details: D,
 ) -> loco_rs::prelude::Result<Response> {
-    let mut res = ApiResponse::<serde_json::Value>::error_simple(status.as_u16() as u32, message);
+    let mut res =
+        ApiResponse::<serde_json::Value>::error_simple(u32::from(status.as_u16()), message);
     res.errors = serde_json::to_value(details).ok();
     respond(status, res)
 }
@@ -95,7 +96,7 @@ pub fn created_msg<T: Serialize>(
 pub fn accepted_msg(message: impl Into<String>) -> loco_rs::prelude::Result<Response> {
     respond(
         StatusCode::ACCEPTED,
-        ApiResponse::success_empty_with_code(StatusCode::ACCEPTED.as_u16() as u32, message),
+        ApiResponse::success_empty_with_code(u32::from(StatusCode::ACCEPTED.as_u16()), message),
     )
 }
 
@@ -242,7 +243,7 @@ pub fn internal_error_with_debug(
         None
     };
     let res = ApiResponse::<serde_json::Value>::error_with_trace(
-        StatusCode::INTERNAL_SERVER_ERROR.as_u16() as u32,
+        u32::from(StatusCode::INTERNAL_SERVER_ERROR.as_u16()),
         message,
         None,
         opt_trace,

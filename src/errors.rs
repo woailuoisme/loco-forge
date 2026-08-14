@@ -54,18 +54,16 @@ impl AppError {
     /// 获取标准错误码数字 (3位 HTTP 状态码数字或 600~999 业务错误码)
     pub fn error_code(&self) -> u32 {
         match self {
-            Self::Custom(status, _) => status.as_u16() as u32,
+            Self::Custom(status, _) => u32::from(status.as_u16()),
             Self::Biz(code, _) => *code,
-            Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR.as_u16() as u32,
+            Self::Internal(_) => u32::from(StatusCode::INTERNAL_SERVER_ERROR.as_u16()),
         }
     }
 
     /// 提取异常的真实原始消息
     pub fn message(&self) -> &str {
         match self {
-            Self::Custom(_, msg) => msg.as_str(),
-            Self::Biz(_, msg) => msg.as_str(),
-            Self::Internal(msg) => msg.as_str(),
+            Self::Custom(_, msg) | Self::Biz(_, msg) | Self::Internal(msg) => msg.as_str(),
         }
     }
 }

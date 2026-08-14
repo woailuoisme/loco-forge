@@ -26,7 +26,7 @@ impl From<&str> for CellValue {
 
 impl From<i32> for CellValue {
     fn from(val: i32) -> Self {
-        Self::Int(val as i64)
+        Self::Int(i64::from(val))
     }
 }
 
@@ -38,7 +38,7 @@ impl From<i64> for CellValue {
 
 impl From<u32> for CellValue {
     fn from(val: u32) -> Self {
-        Self::Int(val as i64)
+        Self::Int(i64::from(val))
     }
 }
 
@@ -50,7 +50,7 @@ impl From<u64> for CellValue {
 
 impl From<f32> for CellValue {
     fn from(val: f32) -> Self {
-        Self::Float(val as f64)
+        Self::Float(f64::from(val))
     }
 }
 

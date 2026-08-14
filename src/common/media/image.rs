@@ -279,7 +279,7 @@ impl ImageProcessor {
         let alpha = opacity.clamp(0.0, 1.0);
         if alpha < 1.0 {
             for pixel in wm_rgba.pixels_mut() {
-                pixel[3] = ((pixel[3] as f32) * alpha) as u8;
+                pixel[3] = (f32::from(pixel[3]) * alpha) as u8;
             }
         }
 
@@ -302,7 +302,7 @@ impl ImageProcessor {
         };
 
         let mut base_rgba = self.image.to_rgba8();
-        imageops::overlay(&mut base_rgba, &wm_rgba, x as i64, y as i64);
+        imageops::overlay(&mut base_rgba, &wm_rgba, i64::from(x), i64::from(y));
         self.image = DynamicImage::ImageRgba8(base_rgba);
 
         Ok(self)

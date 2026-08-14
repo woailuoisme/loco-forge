@@ -5,6 +5,12 @@ resolver = "3"               # 依赖解析器版本 (可选值: "1" | "2" | "3"
 # - "2": 按 target 隔离 features (2021+ edition 默认)
 # - "3": MSRV-aware 解析器 (2024 edition 起稳定，自动回退不兼容 MSRV 的依赖版本)
 
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97.1"
+publish = false
+
 [workspace.dependencies]
 loco-rs = { version = "1.0" }
 sea-orm = { version = "2.0" }
@@ -27,33 +33,39 @@ macro_use_imports = "warn"                    # 淘汰遗留的 #[macro_use]，�
 explicit_auto_deref = "warn"                  # 利用 Rust 自动解引用，消除冗余 &*s / &(*x)
 cloned_instead_of_copied = "warn"             # 对 Copy 类型强制用 .copied() 替代 .cloned()
 
-
 # --- 异步并发安全与生产环境硬性防护 ---
 await_holding_lock = "warn"                   # 严禁跨 .await 持有同步 Mutex 锁 (防 Tokio 死锁)
 if_let_mutex = "warn"                         # 严禁在 if let 语句块中隐式持有 Mutex 锁
+large_futures = "warn"                        # 提示过大的 async 状态机 Future (防 Tokio 任务栈溢出)
+large_stack_arrays = "warn"                   # 提示栈上分配过大数组 (防线程调用栈溢出)
 dbg_macro = "warn"                            # 严禁遗留 dbg! 调试宏 (统一使用 tracing)
 exit = "warn"                                 # 严禁在业务逻辑中直接调用 std::process::exit
 todo = "warn"                                 # 提示遗留的 todo! 未完成存根
 unimplemented = "warn"                        # 提示遗留的 unimplemented! 未实现分支
 
-# --- 类型设计与性能微调 ---
+# --- 类型设计、模式匹配与性能微调 ---
 fn_params_excessive_bools = "warn"            # 超过 3 个 bool 参数提示重构（防 API 误用）
 option_option = "warn"                        # 禁止低效且语义模糊的 Option<Option<T>>
 ref_option = "warn"                           # 倡导 Option<&T> 替代 &Option<T>
 needless_pass_by_value = "warn"               # 避免不需要转移所有权时的无谓 Move
 trivially_copy_pass_by_ref = "warn"           # 小 Copy 类型传值优先于传引用 (&i32 -> i32)
+cast_lossless = "warn"                        # 无损数值转换倡导 From::from 替代 as 强转
 redundant_clone = "warn"                      # 自动剔除无谓的堆内存 clone
 linkedlist = "warn"                           # 倡导连续内存集合 Vec 替代 LinkedList
+flat_map_option = "warn"                      # 倡导 filter_map 替代 flat_map
+map_unwrap_or = "warn"                        # 倡导 map_or 替代 map().unwrap_or()
+match_same_arms = "warn"                      # 提示 match 中重复逻辑分支
+semicolon_if_nothing_returned = "warn"        # 语句无返回值时统一补全末尾分号
 
 # --- 框架与第三方宏兼容放行 ---
 option_if_let_else = "allow"                  # 允许（防止 utoipa::ToSchema 派生宏误报）
 
 [package]
 name = "locos"
-version = "0.1.0"
-edition = "2024"
-publish = false
-rust-version = "1.97.1"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
 default-run = "locos"
 
 [lints]
@@ -100,11 +112,12 @@ sea-orm = { workspace = true, features = [
 ] }
 
 # 3. 网络、检索与 HTTP 客户端 (Networking, Search & HTTP Client)
-reqwest = { version = "0.13.4", features = [
+reqwest = { version = "0.12", default-features = false, features = [
+  "rustls-tls",
   "json",
   "stream",
   "multipart",
-] } # 异步 HTTP 客户端 (支持 JSON、流式 Stream 下载与 Multipart 表单)
+] } # 异步 HTTP 客户端 (使用 Rustls 纯 Rust TLS 实现，支持 JSON、流式 Stream 与 Multipart 表单)
 meilisearch-sdk = { version = "0.33" } # Meilisearch 全文搜索引擎 SDK
 mime_guess = { version = "2" } # 根据文件后缀或路径推导 RFC 标准 MIME/Content-Type 类型
 bytes = { version = "1", features = [
@@ -229,11 +242,36 @@ insta = { version = "1.48", features = [
   "colors",
 ] }
 
-# 优化开发构建体积 (把调试信息级别降为 1 并在 macOS 开启 unpacked 符号拆分，同时保留 panic 堆栈追踪)
+# ── 1. 业务代码开发构建优化 (不优化业务代码保证增量秒级编译，保留行号确保 Panic 堆栈清晰)
 [profile.dev]
-debug = 1
-split-debuginfo = "unpacked"
+opt-level = 0                  # 关闭优化以保证增量编译速度最快，修改代码秒级生效
+debug = 1                      # 仅生成行号表(line-tables-only)，保留 panic 堆栈行号同时大幅减小调试符号体积
+split-debuginfo = "unpacked"   # macOS 专属：避免调用 dsymutil 打包 dSYM 文件夹，显著削减磁盘写入与构建耗时
 
-# 屏蔽所有第三方依赖包的调试符号（仅保留项目自身代码符号，大幅削减 target/debug/deps 体积）
+# ── 2. 第三方依赖包开发优化 (开启 Level 2 优化加速鉴权/哈希/编解码，剥离符号大幅削减体积并加速链接)
 [profile.dev.package."*"]
-debug = 0
+opt-level = 2                  # 依赖包开启中高等级优化，让 Argon2/JWT/图片/Excel 等底层计算提速 10~30 倍
+debug = 0                      # 彻底关闭依赖包的调试符号，大幅减少 target 目录体积并减轻链接器负载
+
+# ── 3. 测试模式依赖包优化 (同步提升单元测试与集成测试中密集计算的执行速度)
+[profile.test.package."*"]
+opt-level = 2                  # 测试时依赖包同样开启优化，使单元测试与集成测试运行更流畅
+debug = 0                      # 剥离测试依赖包的调试符号，加速测试二进制文件的构建与链接
+
+# ── 4. 生产发布构建极致优化 (最大化优化等级、开启 ThinLTO、单代码生成单元、自动剥离调试符号)
+[profile.release]
+opt-level = 3                  # 开启最高等级全量性能优化，最大化运行时吞吐与执行效率
+lto = "thin"                   # 开启跨 Crate 的 Thin 链接时优化，消除无效代码并增强内联
+codegen-units = 1              # 限制单代码生成单元，牺牲编译并行度换取 LLVM 全局极致优化
+strip = true                   # 自动剥离二进制中的所有调试符号与文件名信息，削减 40%~60% 镜像体积
+
+# ── 5. CI 流水线极速构建优化 (彻底关闭调试信息，减小 CI Cache 缓存体积与上传耗时)
+[profile.ci]
+inherits = "dev"               # 继承自开发环境配置
+debug = 0                      # 剥离所有调试符号，大幅减小 CI 缓存体积
+strip = true                   # 剔除二进制符号表加速 CI 打包
+
+[profile.ci.package."*"]
+opt-level = 2                  # 依赖包开启优化加速 CI 自动化测试执行
+debug = 0                      # 剥离依赖包符号表
+

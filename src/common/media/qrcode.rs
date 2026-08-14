@@ -185,7 +185,12 @@ impl QrCodeBuilder {
                 }
 
                 // 混合合成 Logo 图片
-                imageops::overlay(&mut img, &resized_logo, start_x as i64, start_y as i64);
+                imageops::overlay(
+                    &mut img,
+                    &resized_logo,
+                    i64::from(start_x),
+                    i64::from(start_y),
+                );
             }
         }
 

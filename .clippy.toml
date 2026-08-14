@@ -12,5 +12,9 @@ cognitive-complexity-threshold = 25
 too-many-arguments-threshold = 8
 
 # 文档注释中允许包含的专有名词/大写缩写列表 (Doc Markdown Exemption)
-# 防止 clippy::doc_markdown 将技术名词识别为缺少反引号包裹的语法错误
-doc-valid-idents = ["Loco", "SeaORM", "Axum", "Tokio", "Redis", "Meilisearch", "DTO", "JWT"]
+# 防止 clippy 检查将技术专有名词识别为缺少反引号包裹的格式警告
+doc-valid-idents = [
+    "Loco", "SeaORM", "Axum", "Tokio", "Redis", "Meilisearch", "DTO", "JWT",
+    "PostgreSQL", "SQLite", "OpenAPI", "Valkey", "Garage", "UUID", "MSRV", "S3",
+    "JSON", "HTTP", "URL", "HTML", "REST"
+]

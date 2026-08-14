@@ -31,8 +31,7 @@ impl<'a> ExcelRow<'a> {
     /// 读取单元格纯文本切片（零拷贝 &str）
     pub fn get_str(&self, column_name: &str) -> Option<&'a str> {
         match self.get_cell(column_name)? {
-            Data::String(s) => Some(s.as_str()),
-            Data::DateTimeIso(s) | Data::DurationIso(s) => Some(s.as_str()),
+            Data::String(s) | Data::DateTimeIso(s) | Data::DurationIso(s) => Some(s.as_str()),
             _ => None,
         }
     }

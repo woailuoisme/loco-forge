@@ -88,13 +88,13 @@ doctor:
 # 3. 代码质量与测试 (Quality, Formatting & Testing)
 # ==============================================================================
 
-# 运行项目单元测试与集成测试
+# 运行项目单元测试与集成测试 (确保加载 test 环境)
 test:
-    cargo test
+    LOCO_ENV=test cargo test -- --test-threads=1
 
-# 使用 nextest 运行极速并行测试
+# 使用 nextest 运行极速测试 (确保加载 test 环境，单线程运行以杜绝 SQLite 数据库测试文件锁冲突)
 nextest:
-    cargo nextest run --no-fail-fast
+    LOCO_ENV=test cargo nextest run --no-fail-fast -j 1
 
 # 运行全量代码静态规范检查 (Clippy 检查、Rustfmt 与 Rumdl Markdown 审计)
 lint:

@@ -17,11 +17,15 @@ RUN cargo chef prepare --recipe-path recipe.json
 # ── 阶段 3：Builder 预编译与源码构建阶段 ────────────────────────────────────────
 FROM chef AS builder
 COPY --from=planner /src/recipe.json recipe.json
-# 缓存第三方依赖编译产物，只有 Cargo.toml / Cargo.lock 变动时才会重新编译
-RUN cargo chef cook --release --recipe-path recipe.json
+# 缓存第三方依赖编译产物，利用 BuildKit 缓存挂载避免重复下载 registry / git 依赖
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    cargo chef cook --release --recipe-path recipe.json
 # 复制源码并编译最终二进制
 COPY . .
-RUN cargo build --release --bin locos
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    cargo build --release --bin locos
 
 # ── 阶段 4：最小化 runtime 镜像 ───────────────────────────────────────────────
 FROM debian:trixie-slim AS runtime
