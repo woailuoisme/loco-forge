@@ -42,8 +42,8 @@ $:
               --tag "${REGISTRY}:trixie" \
               --tag "${REGISTRY}:trixie-multi" \
               --file ./Dockerfile \
-              --cache-from "type=registry,ref=${REGISTRY}:cache" \
-              --cache-to "type=registry,ref=${REGISTRY}:cache,mode=max" \
+              --cache-from "type=registry,ref=${REGISTRY}:cache-multi" \
+              --cache-to "type=registry,ref=${REGISTRY}:cache-multi,mode=max" \
               --push \
               .
 
@@ -63,7 +63,7 @@ $:
               --tag "${REGISTRY}:${VERSION}" \
               --tag "${REGISTRY}:${VERSION}-trixie" \
               --file ./Dockerfile \
-              --cache-from "type=registry,ref=${REGISTRY}:cache" \
-              --cache-to "type=registry,ref=${REGISTRY}:cache,mode=max" \
+              --cache-from "type=registry,ref=${REGISTRY}:cache-multi" \
+              --cache-to "type=registry,ref=${REGISTRY}:cache-multi,mode=max" \
               --push \
               .
