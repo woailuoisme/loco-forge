@@ -3,6 +3,10 @@
 
 branch:
   - buttons:
-      - name: Docker 构建并推送
-        description: 构建并推送 trixie 镜像
-        event: web_trigger
+      - name: 极速构建 (仅 AMD64)
+        description: 仅构建 linux/amd64 架构镜像 (无 QEMU 模拟，耗时最短)
+        event: web_trigger_amd64
+
+      - name: 全架构构建 (AMD64 + ARM64)
+        description: 构建并推送 linux/amd64 与 linux/arm64 双架构镜像
+        event: web_trigger_multi
