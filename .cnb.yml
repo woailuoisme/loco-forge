@@ -23,7 +23,7 @@ $:
               --tag "${REGISTRY}:trixie-amd64" \
               --file ./Dockerfile \
               --cache-from "type=registry,ref=${REGISTRY}:cache-amd64" \
-              --cache-to "type=registry,ref=${REGISTRY}:cache-amd64,mode=max" \
+              --cache-to "type=registry,ref=${REGISTRY}:cache-amd64,mode=max,image-manifest=true,oci-mediatypes=true" \
               --push \
               .
 
@@ -43,7 +43,7 @@ $:
               --tag "${REGISTRY}:trixie-multi" \
               --file ./Dockerfile \
               --cache-from "type=registry,ref=${REGISTRY}:cache-multi" \
-              --cache-to "type=registry,ref=${REGISTRY}:cache-multi,mode=max" \
+              --cache-to "type=registry,ref=${REGISTRY}:cache-multi,mode=max,image-manifest=true,oci-mediatypes=true" \
               --push \
               .
 
@@ -63,7 +63,7 @@ $:
               --tag "${REGISTRY}:alpine-amd64" \
               --file ./Dockerfile.alpine \
               --cache-from "type=registry,ref=${REGISTRY}:cache-alpine-amd64" \
-              --cache-to "type=registry,ref=${REGISTRY}:cache-alpine-amd64,mode=max" \
+              --cache-to "type=registry,ref=${REGISTRY}:cache-alpine-amd64,mode=max,image-manifest=true,oci-mediatypes=true" \
               --push \
               .
 
@@ -83,7 +83,7 @@ $:
               --tag "${REGISTRY}:alpine-multi" \
               --file ./Dockerfile.alpine \
               --cache-from "type=registry,ref=${REGISTRY}:cache-alpine-multi" \
-              --cache-to "type=registry,ref=${REGISTRY}:cache-alpine-multi,mode=max" \
+              --cache-to "type=registry,ref=${REGISTRY}:cache-alpine-multi,mode=max,image-manifest=true,oci-mediatypes=true" \
               --push \
               .
 
@@ -104,6 +104,6 @@ $:
               --tag "${REGISTRY}:${VERSION}-trixie" \
               --file ./Dockerfile \
               --cache-from "type=registry,ref=${REGISTRY}:cache-multi" \
-              --cache-to "type=registry,ref=${REGISTRY}:cache-multi,mode=max" \
+              --cache-to "type=registry,ref=${REGISTRY}:cache-multi,mode=max,image-manifest=true,oci-mediatypes=true" \
               --push \
               .
