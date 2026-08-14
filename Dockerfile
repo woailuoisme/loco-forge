@@ -2,42 +2,24 @@
 # 文件作用：Debian (Glibc) 多阶段高性能容器镜像构建规范
 # 生效时机：执行 `docker build -f Dockerfile .` 或生产 CI/CD 流水线时执行
 # 核心职责：
-#   1. 利用 cargo-chef 深度预热并缓存 Cargo 依赖层，实现秒级增量编译
+#   1. 多阶段构建，分离编译环境与运行环境，减小最终镜像体积
 #   2. 采用 Debian Slim 作为极简 Runtime，兼顾 Glibc 极致性能与基础环境兼容性
 #   3. 配置非 Root 最小权限运行用户 (UID 10001)、时区与健康检查自愈探针
 # ==============================================================================
 
 # ── 全局构建参数 ─────────────────────────────────────────────────────────────
 ARG RUST_VERSION=1.97.1
-ARG CARGO_CHEF_VERSION=v0.1.77
 
-# ── 阶段 1：Chef 基础阶段（安装 cargo-chef 预编译二进制）──────────────────────
-FROM rust:${RUST_VERSION}-slim-trixie AS chef
-ARG CARGO_CHEF_VERSION
+# ── 阶段 1：Builder 源码构建阶段 ─────────────────────────────────────────────
+FROM rust:${RUST_VERSION}-slim-trixie AS builder
 WORKDIR /src
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-
-RUN apt-get update && apt-get install -y --no-install-recommends curl xz-utils \
-    && curl --proto '=https' --tlsv1.2 -LsSf https://github.com/LukeMathWalker/cargo-chef/releases/download/${CARGO_CHEF_VERSION}/cargo-chef-installer.sh | sh \
-    && rm -rf /var/lib/apt/lists/*
-
-# ── 阶段 2：Planner 依赖分析阶段（生成 recipe.json）───────────────────────────
-FROM chef AS planner
-COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
-
-# ── 阶段 3：Builder 预编译与源码构建阶段 ────────────────────────────────────────
-FROM chef AS builder
-COPY --from=planner /src/recipe.json recipe.json
-
-# 预编译第三方依赖
-RUN cargo chef cook --release --recipe-path recipe.json
 
 # 复制源码并编译最终 Release 二进制程序
 COPY . .
 RUN cargo build --release --bin locos
 
-# ── 阶段 4：最小化 Runtime 生产运行镜像 ───────────────────────────────────────
+# ── 阶段 2：最小化 Runtime 生产运行镜像 ───────────────────────────────────────
 FROM debian:trixie-slim AS runtime
 
 ENV LOCO_ENV=production \

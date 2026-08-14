@@ -7,35 +7,17 @@
 #   3. 适用于对容器冷启动速度与磁盘占用要求极苛刻的云原生 / Serverless 环境
 # ==============================================================================
 
-# ── 全局构建参数 ─────────────────────────────────────────────────────────────
-ARG CARGO_CHEF_VERSION=v0.1.77
-
-# ── 阶段 1：Chef 基础阶段（Musl 环境安装 cargo-chef 预编译二进制）────────────
-FROM clux/muslrust:stable AS chef
-ARG CARGO_CHEF_VERSION
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+# ── 阶段 1：Builder 源码构建阶段 ─────────────────────────────────────────────
+FROM clux/muslrust:stable AS builder
 WORKDIR /app
-
-RUN curl --proto '=https' --tlsv1.2 -LsSf https://github.com/LukeMathWalker/cargo-chef/releases/download/${CARGO_CHEF_VERSION}/cargo-chef-installer.sh | sh
-
-# ── 阶段 2：Planner 依赖分析阶段 ───────────────────────────────────────────────
-FROM chef AS planner
-COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
-
-# ── 阶段 3：Builder 预编译 Musl 依赖与源码构建阶段 ────────────────────────────
-FROM chef AS builder
-COPY --from=planner /app/recipe.json recipe.json
-
-# 预编译 Musl 第三方依赖
-RUN cargo chef cook --release --recipe-path recipe.json
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # 复制源码并编译 Musl 纯静态二进制
 COPY . .
 RUN cargo build --release --bin locos \
     && cp target/*/release/locos /locos
 
-# ── 阶段 4：最小化 Alpine Runtime 运行镜像 ───────────────────────────────────
+# ── 阶段 2：最小化 Alpine Runtime 运行镜像 ───────────────────────────────────
 FROM alpine:3.21 AS runtime
 
 ENV LOCO_ENV=production \
