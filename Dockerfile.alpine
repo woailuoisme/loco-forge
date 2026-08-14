@@ -1,31 +1,50 @@
 # ==============================================================================
-# 文件作用：Alpine (Musl) 纯静态极致轻量容器镜像构建规范
-# 生效时机：执行 `docker build -f Dockerfile.alpine .` 时执行
+# 文件作用：Alpine (Musl) + cargo-chef 纯静态极致轻量容器镜像构建规范
+# 生效时机：执行 `docker build -f Dockerfile.alpine .` 或生产 CI/CD 流水线时执行
 # 核心职责：
-#   1. 使用 musl-gcc 静态交叉编译出完全零动态依赖的独立 Rust 二进制程序
-#   2. 采用 Alpine Linux 最小运行底包，最终容器镜像体积仅 ~30MB
-#   3. 适用于对容器冷启动速度与磁盘占用要求极苛刻的云原生 / Serverless 环境
+#   1. 基于 lukemathwalker/cargo-chef 预热并缓存依赖层，实现秒级增量编译
+#   2. 使用 musl 静态编译出完全零动态依赖的独立 Rust 二进制程序
+#   3. 采用 Alpine Linux 最小运行底包，最终容器镜像体积仅 ~30MB
+#   4. 配置非 Root 最小权限运行用户 (UID 10001) 与时区
 # ==============================================================================
 
-# ── 阶段 1：Builder 源码构建阶段 ─────────────────────────────────────────────
-FROM clux/muslrust:stable AS builder
+# ── 全局构建参数 ─────────────────────────────────────────────────────────────
+ARG RUST_VERSION=1.97.1
+ARG ALPINE_VERSION=3.24
+
+# ── 阶段 1：Chef 基础阶段（直接使用官方 cargo-chef Alpine 预装镜像）───────────────
+FROM lukemathwalker/cargo-chef:latest-rust-${RUST_VERSION}-alpine${ALPINE_VERSION} AS chef
 WORKDIR /app
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+SHELL ["/bin/sh", "-o", "pipefail", "-c"]
+
+# 安装 Musl 编译环境所需的底层工具与开发库
+RUN apk add --no-cache musl-dev
+
+# ── 阶段 2：Planner 依赖分析阶段（生成 recipe.json）───────────────────────────
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+# ── 阶段 3：Builder 预编译 Musl 依赖与源码构建阶段 ────────────────────
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+
+# 预编译 Musl 第三方依赖
+RUN cargo chef cook --release --recipe-path recipe.json
 
 # 复制源码并编译 Musl 纯静态二进制
 COPY . .
-RUN cargo build --release --bin locos \
-    && cp target/*/release/locos /locos
+RUN cargo build --release --bin locos
 
-# ── 阶段 2：最小化 Alpine Runtime 运行镜像 ───────────────────────────────────
-FROM alpine:3.21 AS runtime
+# ── 阶段 4：最小化 Alpine Runtime 运行镜像 ───────────────────────────────────
+FROM alpine:${ALPINE_VERSION} AS runtime
 
 ENV LOCO_ENV=production \
     PORT=5150 \
     BINDING=0.0.0.0 \
     TZ=Asia/Shanghai
 
-RUN apk add --no-cache ca-certificates tzdata wget \
+RUN apk add --no-cache ca-certificates tzdata \
     && cp /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && addgroup -S -g 10001 app \
     && adduser -S -u 10001 -G app --no-create-home app
@@ -33,7 +52,7 @@ RUN apk add --no-cache ca-certificates tzdata wget \
 WORKDIR /app
 
 # 从 Builder 阶段复制静态二进制与配置文件
-COPY --from=builder /locos /app/locos
+COPY --from=builder /app/target/release/locos /app/locos
 COPY config/ /app/config/
 
 # 预建运行时可写目录
@@ -41,10 +60,6 @@ RUN mkdir -p storages/logs storages/uploads storages/tmp && chown -R app:app /ap
 
 USER 10001:10001
 EXPOSE 5150
-
-# 容器健康检查探针
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget -qO- http://127.0.0.1:5150/health || exit 1
 
 ENTRYPOINT ["/app/locos"]
 CMD ["start"]

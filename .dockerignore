@@ -62,8 +62,7 @@ README.md
 AGENTS.md
 CLAUDE.md
 GEMINI.md
-Dockerfile
-Dockerfile.alpine
+Dockerfile*
 docker-compose*.yml
 LICENSE*
 
