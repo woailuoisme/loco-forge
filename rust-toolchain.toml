@@ -1,18 +1,28 @@
-# Loco 项目 Rust 工具链统一配置文件 (Rust Toolchain Configuration)
+# ==============================================================================
+# 文件作用：Rustup 工具链环境声明文件 (Rust Toolchain Specification)
+# 生效时机：Rustup 与 Cargo 在进入项目目录时自动解析并应用
+# 核心职责：
+#   1. 锁定编译器精确版本 (channel)，保障团队全员、CI/CD 与生产构建环境绝对一致
+#   2. 预装核心组件 (components)，确保 IDE 语言服务、代码格式化与 Clippy 静态检查就绪
+#   3. 预下载目标平台标准库 (targets)，支持开箱即用的 Linux 交叉编译与 Docker 容器构建
+# ==============================================================================
 
 [toolchain]
-# 1. 编译器渠道：使用最新稳定版 Stable (保障生产环境与 CI/CD 极度稳定)
-channel = "stable"
+# 1. 编译器渠道：锁定 1.97.1 稳定版本 (配合 Cargo.toml 的 rust-version="1.97.1" 与 edition="2024")
+channel = "1.97.1"
 
-# 2. 核心组件：格式化 (rustfmt)、静态检查 (clippy)、标准库源码 (rust-src)、IDE 分析器 (rust-analyzer)
+# 2. 安装预设：minimal 避免在 CI / Docker / 本地自动下载冗余的文档与示例 (体积与安装速度优化)
+profile = "minimal"
+
+# 3. 核心组件：格式化 (rustfmt)、静态分析 (clippy)、IDE 语言服务 (rust-analyzer)
 components = [
-    "rustfmt",
-    "clippy",
-    "rust-src",        # rust-analyzer 标准库智能补全与代码跳转所必需
-    "rust-analyzer",   # Rust-Analyzer 官方分析器组件
+  "rustfmt",
+  "clippy",
+  "rust-analyzer",
 ]
 
-# 3. 目标架构：Linux 部署目标链 (方便本地与 CI 直接进行 Linux 交叉编译/Docker 构建)
+# 4. 交叉编译目标：Linux x86_64 与 ARM64 生产部署标准库 (供本地交叉编译与 Docker 多架构构建)
 targets = [
-    "x86_64-unknown-linux-gnu",
+  "x86_64-unknown-linux-gnu",
+  "aarch64-unknown-linux-gnu",
 ]

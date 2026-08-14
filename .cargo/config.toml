@@ -1,20 +1,42 @@
+# ==============================================================================
+# 文件作用：Cargo 构建系统项目级配置文件 (Cargo Build Configuration)
+# 生效时机：执行任何 `cargo <command>` 时自动分层加载与合并
+# 核心职责：
+#   1. 定义项目专有 CLI 快捷别名 ([alias])，无缝对接 Loco 原生脚手架与开发工作流
+#   2. 定制跨平台构建与极速链接器 ([target.<triple>])，本地开发提速 2x~5x (rust-lld)
+#   3. 针对不同操作系统适配优化编译与链接参数 (rustflags)
+# ==============================================================================
+
 [alias]
-# 核心别名：支持 `cargo loco <subcommand>` 语法，直接将子命令（如 start, routes, db migrate）传递给本地编译出的二进制程序
+# ── 核心 Loco 框架快捷命令 ───────────────────────────────────────────────────
+# 支持 `cargo loco <subcommand>` 语法（如: cargo loco start, cargo loco routes）
 loco = "run --"
 
-# 后台与管理任务别名：快捷运行 Loco Task 任务（如 `cargo task` 列出所有 Task，或 `cargo task <name>` 运行指定 Task）
+# 后台与管理任务快捷命令（如: cargo task 列出任务，或 cargo task seed_data 运行种子数据填充）
 task = "run -- task"
 
-# 开发热重载别名：使用 cargo-watch 监听 src/ 与 config/ 目录，文件变更时自动重新编译并运行 `cargo run -- start`
+# 数据库迁移快捷命令（如: cargo migrate 执行迁移）
+migrate = "run -- db migrate"
+
+# 路由表查看快捷命令（执行: cargo routes）
+routes = "run -- routes"
+
+# ── 本地开发热重载命令 ───────────────────────────────────────────────────────
+# 使用 cargo-watch 监听 src/ 与 config/ 目录，文件变更时自动增量编译并运行 Web 服务
 dev = ["watch", "-w", "src", "-w", "config", "-s", "cargo run -- start"]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 跨平台极速链接器配置 (rust-lld / lld)
-# 在开发迭代时加速 Rust 二进制文件的链接阶段 (提速 2x - 5x)
+# 在本地开发迭代调试时大幅加速 Rust 二进制文件的链接阶段 (提速 2x - 5x)
 # ─────────────────────────────────────────────────────────────────────────────
 
-# macOS (Apple Silicon)
+# macOS (Apple Silicon: M1/M2/M3/M4)
 [target.aarch64-apple-darwin]
+linker = "rust-lld"
+rustflags = ["-C", "link-arg=-w"]
+
+# macOS (Intel x86_64)
+[target.x86_64-apple-darwin]
 linker = "rust-lld"
 rustflags = ["-C", "link-arg=-w"]
 

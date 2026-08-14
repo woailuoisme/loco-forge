@@ -1,22 +1,35 @@
-# Lefthook Git hooks configuration
-# Docs: https://lefthook.dev/configuration/
+# ==============================================================================
+# 文件作用：Git Hooks 统一自动化拦截与质量门禁配置 (Lefthook Configuration)
+# 生效时机：执行 `git commit` (pre-commit) 与 `git push` (pre-push) 时自动触发
+# 核心职责：
+#   1. 提交前自动格式化 Rust 与 Markdown 代码，并通过 stage_fixed 自动重新暂存
+#   2. 严格执行 Clippy -D warnings 零警告门禁，将代码隐患拦截在本地
+#   3. 推送前可选自动化运行极速测试 (nextest)，杜绝推送破坏性改动到远端仓库
+# ==============================================================================
 
 pre-commit:
   parallel: false
   jobs:
+    # 1. 自动格式化 Rust 源代码 (并自动重新暂存)
     - name: fmt
       glob: "*.rs"
       run: cargo fmt --all
+      stage_fixed: true
 
-    - name: clippy
-      glob: "*.rs"
-      run: cargo clippy --fix --allow-dirty --allow-staged
-
+    # 2. 自动格式化 Markdown 文档 (并自动重新暂存)
     - name: rumdl
       glob: "*.md"
       run: rumdl fmt {staged_files}
+      stage_fixed: true
 
+    # 3. 静态代码质量严格门禁 (全 Target、全 Features、零警告拦截)
+    - name: clippy
+      glob: "*.rs"
+      run: cargo clippy --all-targets --all-features -- -D warnings
+
+# 推送前质量验证 (按需开启：防止破坏性修改推送到远程分支)
 # pre-push:
+#   parallel: false
 #   jobs:
-#     - name: test
-#       run: cargo nextest run
+#     - name: nextest
+#       run: LOCO_ENV=test cargo nextest run --no-fail-fast -j 1

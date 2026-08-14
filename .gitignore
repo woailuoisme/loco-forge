@@ -1,53 +1,76 @@
-# ── Rust / Cargo ─────────────────────────────────────────────────────────────
+# ==============================================================================
+# 文件作用：Git 版本控制忽略规则清单 (Git Ignore Specification)
+# 生效时机：执行 `git status`、`git add` 与提交时由 Git 自动解析过滤
+# 核心职责：
+#   1. 彻底隔离 Rust 编译产物、调试符号与测试快照临时文件
+#   2. 严格防护敏感环境配置 (.env, production.yaml, secrets.ini) 防泄漏
+#   3. 过滤本地 SQLite 数据库、动态上传存储、OS 缓存与各 IDE / AI 辅助工具私有目录
+# ==============================================================================
+
+# ── 1. Rust 编译产物与测试临时文件 (Rust & Cargo Build Artifacts) ──────────────
 target/
 debug/
 **/*.rs.bk
 *.pdb
 **/*.snap.new
+cobertura.xml
+lcov.info
+tarpaulin-report.html
 
-# Keep Cargo.lock for application builds
+# 锁定并保留 Cargo.lock (确保 Web 应用依赖版本绝对可复现)
 !Cargo.lock
 
-# ── Loco Configuration & Environments ─────────────────────────────────────────
+# ── 2. 敏感凭据与环境配置文件 (Credentials & Environment Configs) ──────────────
 config/local.yaml
 config/*.local.yaml
 config/production.yaml
 .env
 .env.*
 !.env.example
+secrets.ini
 
-# ── Databases & Dynamic Storage ───────────────────────────────────────────────
+# ── 3. 本地数据库与动态上传文件 (Databases, Logs & Storages) ───────────────────
 *.sqlite
 *.sqlite-*
 *.db
 *.db-*
 *.log
+logs/
+tmp/
+uploads/
 /storages/*/*
 !/storages/*/.gitignore
 !/storages/*/.gitkeep
 
-# ── OS & IDE / Tooling ────────────────────────────────────────────────────────
+# ── 4. 操作系统与本地 IDE 配置 (OS & IDE Tooling) ───────────────────────────────
 .DS_Store
 Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
-.idea/
-*.swp
-*.swo
 .mise.local.toml
-secrets.ini
 
-# ── AI Coding Tools (all private, not committed) ──────────────────────────────
-.agents
-.claude
-.gemini
-.codex
-.cursor
-.windsurf
-.opencode
-.continue
-.kiro
-.qoder
-.codebuddy
+# ── 5. AI 编程助手与私有记忆库 (AI Agents & Private Contexts) ─────────────────
+.agents/
+.claude/
+.gemini/
+.codex/
+.cursor/
+.windsurf/
+.opencode/
+.continue/
+.kiro/
+.qoder/
+.codebuddy/
 .code-review-graph/
+.cursorrules
+.windsurfrules
+.mcp.json
+skills-lock.json
+opencode.jsonc
+CODEBUDDY.md
+QODER.md

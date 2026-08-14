@@ -1,10 +1,23 @@
-# ── Rust Build Artifacts ──────────────────────────────────────────────────────
+# ==============================================================================
+# 文件作用：Docker 镜像构建上下文忽略清单 (Docker Ignore Specification)
+# 生效时机：执行 `docker build` 或 `cargo chef prepare/cook` 时由 Docker 引擎自动解析
+# 核心职责：
+#   1. 排除本地 target 产物、Git 历史与开发工具链配置，最大化构建缓存命中率
+#   2. 严格阻断 .env / secrets 等本地敏感文件拷贝进镜像，杜绝容器镜像信息泄露
+#   3. 剥离文档、Markdown 规范与本地数据库，显著缩减 Docker Build Context 体积
+# ==============================================================================
+
+# ── 1. Rust 编译产物与调试符号 (Rust Build Artifacts) ─────────────────────────
 target/
 debug/
 **/*.rs.bk
 *.pdb
+**/*.snap.new
+cobertura.xml
+lcov.info
+tarpaulin-report.html
 
-# ── Version Control & Project Metadata ────────────────────────────────────────
+# ── 2. 版本控制与项目元数据 (Version Control & CI/CD) ─────────────────────────
 .git/
 .gitignore
 .dockerignore
@@ -12,15 +25,19 @@ debug/
 .agents/
 .codegraph/
 
-# ── IDEs & Tooling ────────────────────────────────────────────────────────────
+# ── 3. 本地 IDE 与代码开发工具链 (IDEs & Local Dev Tooling) ────────────────────
 .vscode/
 .idea/
 .mise.toml
 .mise.local.toml
 lefthook.yml
+justfile
+rust-toolchain.toml
+rust-analyzer.toml
+rustfmt.toml
 secrets.ini
 
-# ── AI Coding Tools & MCP Configs ─────────────────────────────────────────────
+# ── 4. AI 编程工具与 Prompt 规则库 (AI Tools & Local Contexts) ────────────────
 .claude/
 .gemini/
 .codex/
@@ -40,16 +57,17 @@ opencode.jsonc
 CODEBUDDY.md
 QODER.md
 
-# ── Documentation & Specs ─────────────────────────────────────────────────────
+# ── 5. 项目说明文档与规范 (Docs & Specs) ──────────────────────────────────────
 README.md
 AGENTS.md
 CLAUDE.md
 GEMINI.md
 Dockerfile
 Dockerfile.alpine
-docker-compose.yml
+docker-compose*.yml
+LICENSE*
 
-# ── Local Databases, Logs & Temporary Files ──────────────────────────────────
+# ── 6. 本地数据库、日志与临时上传存储 (Local DBs, Logs & Storages) ─────────────
 *.sqlite
 *.sqlite-*
 *.db
@@ -57,10 +75,11 @@ docker-compose.yml
 *.log
 logs/
 uploads/
+storages/
 storage/
 tmp/
 
-# ── Environment & Secrets ─────────────────────────────────────────────────────
+# ── 7. 敏感环境变量与密钥配置 (Environment & Secrets) ─────────────────────────
 .env*
 config/*.local.yaml
 config/local.yaml

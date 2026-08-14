@@ -88,13 +88,16 @@ doctor:
 # 3. 代码质量与测试 (Quality, Formatting & Testing)
 # ==============================================================================
 
-# 运行项目单元测试与集成测试 (确保加载 test 环境)
-test:
-    LOCO_ENV=test cargo test -- --test-threads=1
+# 运行全量单元与集成测试 (基于 nextest 极速执行，支持参数透传如 `just test auth` 或 `just test requests::files`)
+test *args="":
+    LOCO_ENV=test cargo nextest run --no-fail-fast {{args}}
 
-# 使用 nextest 运行极速测试 (确保加载 test 环境，单线程运行以杜绝 SQLite 数据库测试文件锁冲突)
-nextest:
-    LOCO_ENV=test cargo nextest run --no-fail-fast -j 1
+# 兼容快捷别名 (nextest -> test)
+alias nextest := test
+
+# 运行 Rust 原生文档测试 (cargo test --doc，用于测试文档注释代码块)
+test-doc:
+    LOCO_ENV=test cargo test --doc
 
 # 运行全量代码静态规范检查 (Clippy 检查、Rustfmt 与 Rumdl Markdown 审计)
 lint:

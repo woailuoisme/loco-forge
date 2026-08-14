@@ -161,9 +161,8 @@ mise run down     # 停止并销毁 Docker Compose 容器
 
 ## 测试规范 (Testing Guidelines)
 
-- **推荐测试运行器**: 优先使用 `cargo nextest run` (或 `mise run test`)
-  进行极速并行测试（已配置 `.config/nextest.toml`
-  控制数据库单线程串行与纯逻辑多线程并发）。
+- **推荐测试运行器**: 优先使用 `just test` (或 `cargo nextest run` / `mise run test`)
+  进行极速并行测试（支持参数透传，例如 `just test auth` 可仅运行认证相关测试；已通过 `.config/nextest.toml` 控制数据库单线程串行与纯逻辑多线程并发）。文档测试可通过 `just test-doc` 单独运行。
 - **测试表达力与参数化**: 优先使用 **`rstest`**
   (`#[rstest]`, `#[case(...)]`, `#[fixture]`)
   替代冗余模板代码，精确定位用例边界断言。
