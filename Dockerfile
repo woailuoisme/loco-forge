@@ -1,10 +1,22 @@
+# ==============================================================================
+# 文件作用：Debian (Glibc) 多阶段高性能容器镜像构建规范
+# 生效时机：执行 `docker build -f Dockerfile .` 或生产 CI/CD 流水线时执行
+# 核心职责：
+#   1. 利用 cargo-chef 深度预热并缓存 Cargo 依赖层，实现秒级增量编译
+#   2. 采用 Debian Slim 作为极简 Runtime，兼顾 Glibc 极致性能与基础环境兼容性
+#   3. 配置非 Root 最小权限运行用户 (UID 10001)、时区与健康检查自愈探针
+# ==============================================================================
+
+# ── 全局构建参数 ─────────────────────────────────────────────────────────────
+ARG RUST_VERSION=1.97.1
 ARG CARGO_CHEF_VERSION=v0.1.77
 
 # ── 阶段 1：Chef 基础阶段（安装 cargo-chef 预编译二进制）──────────────────────
-FROM rust:1.97-slim-trixie AS chef
+FROM rust:${RUST_VERSION}-slim-trixie AS chef
 ARG CARGO_CHEF_VERSION
 WORKDIR /src
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 RUN apt-get update && apt-get install -y --no-install-recommends curl xz-utils \
     && curl --proto '=https' --tlsv1.2 -LsSf https://github.com/LukeMathWalker/cargo-chef/releases/download/${CARGO_CHEF_VERSION}/cargo-chef-installer.sh | sh \
     && rm -rf /var/lib/apt/lists/*
@@ -17,17 +29,19 @@ RUN cargo chef prepare --recipe-path recipe.json
 # ── 阶段 3：Builder 预编译与源码构建阶段 ────────────────────────────────────────
 FROM chef AS builder
 COPY --from=planner /src/recipe.json recipe.json
-# 缓存第三方依赖编译产物，利用 BuildKit 缓存挂载避免重复下载 registry / git 依赖
+
+# 缓存第三方依赖编译产物，利用 BuildKit 缓存挂载避免重复下载依赖
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     cargo chef cook --release --recipe-path recipe.json
-# 复制源码并编译最终二进制
+
+# 复制源码并编译最终 Release 二进制程序
 COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     cargo build --release --bin locos
 
-# ── 阶段 4：最小化 runtime 镜像 ───────────────────────────────────────────────
+# ── 阶段 4：最小化 Runtime 生产运行镜像 ───────────────────────────────────────
 FROM debian:trixie-slim AS runtime
 
 ENV LOCO_ENV=production \
@@ -45,17 +59,19 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY --from=builder /src/target/release/locos .
-COPY config/ config/
+# 从 Builder 阶段复制可执行文件与运行时配置文件
+COPY --from=builder /src/target/release/locos /app/locos
+COPY config/ /app/config/
 
-RUN mkdir -p storages/logs storages/uploads && chown -R app:app /app
+# 预建运行时所需的可写存储目录并授权给非 root 用户
+RUN mkdir -p storages/logs storages/uploads storages/tmp && chown -R app:app /app
 
 USER 10001:10001
-
 EXPOSE 5150
 
-HEALTHCHECK --interval=60s --timeout=3s --start-period=5s --retries=3 \
+# 容器健康检查自愈探针
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget -qO- http://127.0.0.1:5150/health || exit 1
 
-ENTRYPOINT ["./locos"]
+ENTRYPOINT ["/app/locos"]
 CMD ["start"]
