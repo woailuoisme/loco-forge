@@ -6,7 +6,7 @@
 #   CNB_REPO_SLUG_LOWERCASE  — 仓库路径小写，如 my-org/my-repo
 #
 # 同事件下多个 pipeline 并行执行（类似 GitHub Actions matrix）
-# 仅构建 linux/amd64（CNB runner 不支持 --privileged 无法运行 QEMU 交叉编译）
+# 构建 linux/amd64 与 linux/arm64 多平台镜像（通过 QEMU binfmt 交叉编译）
 
 # ── main 分支 push（已禁用：push 不自动构建）────────────────────────────
 # main:
@@ -25,6 +25,7 @@ $:
             REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
 
             docker buildx build \
+              --platform linux/amd64,linux/arm64 \
               --tag "${REGISTRY}:trixie" \
               --file ./Dockerfile \
               --cache-from "type=registry,ref=${REGISTRY}:cache" \
@@ -45,6 +46,7 @@ $:
             VERSION="${CNB_BRANCH##*/}"
 
             docker buildx build \
+              --platform linux/amd64,linux/arm64 \
               --tag "${REGISTRY}:${VERSION}" \
               --tag "${REGISTRY}:${VERSION}-trixie" \
               --file ./Dockerfile \
