@@ -17,48 +17,48 @@ sea-orm = { version = "2.0" }
 sea-orm-migration = { version = "2.0" }
 
 [workspace.lints.rust]
-unsafe_code = "forbid"                        # 绝对禁止 unsafe 代码，保持纯安全 Rust
-unreachable_pub = "warn"                      # 清理不可达的 pub 导出，保持接口可见性严谨
+unsafe_code = "forbid"   # 绝对禁止 unsafe 代码，保持纯安全 Rust
+unreachable_pub = "warn" # 清理不可达的 pub 导出，保持接口可见性严谨
 
 [workspace.lints.clippy]
 # --- Rust 2024 现代编码范式与语法 ---
-manual_let_else = "warn"                      # 强制使用 let-else 减少嵌套解包
-implicit_clone = "warn"                       # 避免隐式 Clone（如对 &String 调 to_string）
-redundant_closure_for_method_calls = "warn"   # 优先使用函数指针（如 ToString::to_string）
-uninlined_format_args = "warn"                # 强制现代化变量内联 format!("{var}")
-use_self = "warn"                             # impl 块内统一使用 Self 替代结构体名
-needless_lifetimes = "deny"                   # 消除冗余生命周期标注（Rust 2024 Elision）
-double_must_use = "deny"                      # 禁止重复标注 #[must_use]
-macro_use_imports = "warn"                    # 淘汰遗留的 #[macro_use]，倡导显式 use
-explicit_auto_deref = "warn"                  # 利用 Rust 自动解引用，消除冗余 &*s / &(*x)
-cloned_instead_of_copied = "warn"             # 对 Copy 类型强制用 .copied() 替代 .cloned()
+manual_let_else = "warn"                    # 强制使用 let-else 减少嵌套解包
+implicit_clone = "warn"                     # 避免隐式 Clone（如对 &String 调 to_string）
+redundant_closure_for_method_calls = "warn" # 优先使用函数指针（如 ToString::to_string）
+uninlined_format_args = "warn"              # 强制现代化变量内联 format!("{var}")
+use_self = "warn"                           # impl 块内统一使用 Self 替代结构体名
+needless_lifetimes = "deny"                 # 消除冗余生命周期标注（Rust 2024 Elision）
+double_must_use = "deny"                    # 禁止重复标注 #[must_use]
+macro_use_imports = "warn"                  # 淘汰遗留的 #[macro_use]，倡导显式 use
+explicit_auto_deref = "warn"                # 利用 Rust 自动解引用，消除冗余 &*s / &(*x)
+cloned_instead_of_copied = "warn"           # 对 Copy 类型强制用 .copied() 替代 .cloned()
 
 # --- 异步并发安全与生产环境硬性防护 ---
-await_holding_lock = "warn"                   # 严禁跨 .await 持有同步 Mutex 锁 (防 Tokio 死锁)
-if_let_mutex = "warn"                         # 严禁在 if let 语句块中隐式持有 Mutex 锁
-large_futures = "warn"                        # 提示过大的 async 状态机 Future (防 Tokio 任务栈溢出)
-large_stack_arrays = "warn"                   # 提示栈上分配过大数组 (防线程调用栈溢出)
-dbg_macro = "warn"                            # 严禁遗留 dbg! 调试宏 (统一使用 tracing)
-exit = "warn"                                 # 严禁在业务逻辑中直接调用 std::process::exit
-todo = "warn"                                 # 提示遗留的 todo! 未完成存根
-unimplemented = "warn"                        # 提示遗留的 unimplemented! 未实现分支
+await_holding_lock = "warn" # 严禁跨 .await 持有同步 Mutex 锁 (防 Tokio 死锁)
+if_let_mutex = "warn"       # 严禁在 if let 语句块中隐式持有 Mutex 锁
+large_futures = "warn"      # 提示过大的 async 状态机 Future (防 Tokio 任务栈溢出)
+large_stack_arrays = "warn" # 提示栈上分配过大数组 (防线程调用栈溢出)
+dbg_macro = "warn"          # 严禁遗留 dbg! 调试宏 (统一使用 tracing)
+exit = "warn"               # 严禁在业务逻辑中直接调用 std::process::exit
+todo = "warn"               # 提示遗留的 todo! 未完成存根
+unimplemented = "warn"      # 提示遗留的 unimplemented! 未实现分支
 
 # --- 类型设计、模式匹配与性能微调 ---
-fn_params_excessive_bools = "warn"            # 超过 3 个 bool 参数提示重构（防 API 误用）
-option_option = "warn"                        # 禁止低效且语义模糊的 Option<Option<T>>
-ref_option = "warn"                           # 倡导 Option<&T> 替代 &Option<T>
-needless_pass_by_value = "warn"               # 避免不需要转移所有权时的无谓 Move
-trivially_copy_pass_by_ref = "warn"           # 小 Copy 类型传值优先于传引用 (&i32 -> i32)
-cast_lossless = "warn"                        # 无损数值转换倡导 From::from 替代 as 强转
-redundant_clone = "warn"                      # 自动剔除无谓的堆内存 clone
-linkedlist = "warn"                           # 倡导连续内存集合 Vec 替代 LinkedList
-flat_map_option = "warn"                      # 倡导 filter_map 替代 flat_map
-map_unwrap_or = "warn"                        # 倡导 map_or 替代 map().unwrap_or()
-match_same_arms = "warn"                      # 提示 match 中重复逻辑分支
-semicolon_if_nothing_returned = "warn"        # 语句无返回值时统一补全末尾分号
+fn_params_excessive_bools = "warn"     # 超过 3 个 bool 参数提示重构（防 API 误用）
+option_option = "warn"                 # 禁止低效且语义模糊的 Option<Option<T>>
+ref_option = "warn"                    # 倡导 Option<&T> 替代 &Option<T>
+needless_pass_by_value = "warn"        # 避免不需要转移所有权时的无谓 Move
+trivially_copy_pass_by_ref = "warn"    # 小 Copy 类型传值优先于传引用 (&i32 -> i32)
+cast_lossless = "warn"                 # 无损数值转换倡导 From::from 替代 as 强转
+redundant_clone = "warn"               # 自动剔除无谓的堆内存 clone
+linkedlist = "warn"                    # 倡导连续内存集合 Vec 替代 LinkedList
+flat_map_option = "warn"               # 倡导 filter_map 替代 flat_map
+map_unwrap_or = "warn"                 # 倡导 map_or 替代 map().unwrap_or()
+match_same_arms = "warn"               # 提示 match 中重复逻辑分支
+semicolon_if_nothing_returned = "warn" # 语句无返回值时统一补全末尾分号
 
 # --- 框架与第三方宏兼容放行 ---
-option_if_let_else = "allow"                  # 允许（防止 utoipa::ToSchema 派生宏误报）
+option_if_let_else = "allow" # 允许（防止 utoipa::ToSchema 派生宏误报）
 
 [package]
 name = "locos"
@@ -112,8 +112,8 @@ sea-orm = { workspace = true, features = [
 ] }
 
 # 3. 网络、检索与 HTTP 客户端 (Networking, Search & HTTP Client)
-reqwest = { version = "0.12", default-features = false, features = [
-  "rustls-tls",
+reqwest = { version = "0.13", default-features = false, features = [
+  "rustls",
   "json",
   "stream",
   "multipart",
@@ -192,7 +192,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 calamine = { version = "0.36", features = [
   "chrono",
 ] } # Excel/Spreadsheet 读取解析工具 (开启 Chrono 原生时间支持)
-rust_xlsxwriter = { version = "0.97", features = [
+rust_xlsxwriter = { version = "0.98", features = [
   "constant_memory",
   "chrono",
   "serde",
@@ -244,34 +244,39 @@ insta = { version = "1.48", features = [
 
 # ── 1. 业务代码开发构建优化 (不优化业务代码保证增量秒级编译，保留行号确保 Panic 堆栈清晰)
 [profile.dev]
-opt-level = 0                  # 关闭优化以保证增量编译速度最快，修改代码秒级生效
-debug = 1                      # 仅生成行号表(line-tables-only)，保留 panic 堆栈行号同时大幅减小调试符号体积
-split-debuginfo = "unpacked"   # macOS 专属：避免调用 dsymutil 打包 dSYM 文件夹，显著削减磁盘写入与构建耗时
+opt-level = 0                # 关闭优化以保证增量编译速度最快，修改代码秒级生效
+debug = 1                    # 仅生成行号表(line-tables-only)，保留 panic 堆栈行号同时大幅减小调试符号体积
+split-debuginfo = "unpacked" # macOS 专属：避免调用 dsymutil 打包 dSYM 文件夹，显著削减磁盘写入与构建耗时
 
 # ── 2. 第三方依赖包开发优化 (开启 Level 2 优化加速鉴权/哈希/编解码，剥离符号大幅削减体积并加速链接)
 [profile.dev.package."*"]
-opt-level = 2                  # 依赖包开启中高等级优化，让 Argon2/JWT/图片/Excel 等底层计算提速 10~30 倍
-debug = 0                      # 彻底关闭依赖包的调试符号，大幅减少 target 目录体积并减轻链接器负载
+opt-level = 2 # 依赖包开启中高等级优化，让 Argon2/JWT/图片/Excel 等底层计算提速 10~30 倍
+debug = 0     # 彻底关闭依赖包的调试符号，大幅减少 target 目录体积并减轻链接器负载
 
 # ── 3. 测试模式依赖包优化 (同步提升单元测试与集成测试中密集计算的执行速度)
 [profile.test.package."*"]
-opt-level = 2                  # 测试时依赖包同样开启优化，使单元测试与集成测试运行更流畅
-debug = 0                      # 剥离测试依赖包的调试符号，加速测试二进制文件的构建与链接
+opt-level = 2 # 测试时依赖包同样开启优化，使单元测试与集成测试运行更流畅
+debug = 0     # 剥离测试依赖包的调试符号，加速测试二进制文件的构建与链接
 
 # ── 4. 生产发布构建极致优化 (最大化优化等级、开启 ThinLTO、单代码生成单元、自动剥离调试符号)
 [profile.release]
-opt-level = 3                  # 开启最高等级全量性能优化，最大化运行时吞吐与执行效率
-lto = "thin"                   # 开启跨 Crate 的 Thin 链接时优化，消除无效代码并增强内联
-codegen-units = 1              # 限制单代码生成单元，牺牲编译并行度换取 LLVM 全局极致优化
-strip = true                   # 自动剥离二进制中的所有调试符号与文件名信息，削减 40%~60% 镜像体积
+opt-level = 3     # 开启最高等级全量性能优化，最大化运行时吞吐与执行效率
+lto = "thin"      # 开启跨 Crate 的 Thin 链接时优化，消除无效代码并增强内联
+codegen-units = 1 # 限制单代码生成单元，牺牲编译并行度换取 LLVM 全局极致优化
+strip = true      # 自动剥离二进制中的所有调试符号与文件名信息，削减 40%~60% 镜像体积
+panic = "abort"   # 生产环境禁用栈展开，削减二进制体积并提升指令分支预测效率
+
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+tikv-jemallocator = { version = "0.6", features = [
+  "unprefixed_malloc_on_supported_platforms",
+] }
 
 # ── 5. CI 流水线极速构建优化 (彻底关闭调试信息，减小 CI Cache 缓存体积与上传耗时)
 [profile.ci]
-inherits = "dev"               # 继承自开发环境配置
-debug = 0                      # 剥离所有调试符号，大幅减小 CI 缓存体积
-strip = true                   # 剔除二进制符号表加速 CI 打包
+inherits = "dev" # 继承自开发环境配置
+debug = 0        # 剥离所有调试符号，大幅减小 CI 缓存体积
+strip = true     # 剔除二进制符号表加速 CI 打包
 
 [profile.ci.package."*"]
-opt-level = 2                  # 依赖包开启优化加速 CI 自动化测试执行
-debug = 0                      # 剥离依赖包符号表
-
+opt-level = 2 # 依赖包开启优化加速 CI 自动化测试执行
+debug = 0     # 剥离依赖包符号表

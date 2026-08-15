@@ -143,6 +143,8 @@ outdated:
 # ★ 日常推荐 ★ 刷新 Cargo.lock 锁文件并下载安装最新依赖补丁包 (类比 bun install / npm install)
 update:
     cargo update
+update-p *args="":
+    cargo update -p {{args}}
 
 alias install := update
 

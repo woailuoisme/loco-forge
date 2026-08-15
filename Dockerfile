@@ -24,12 +24,16 @@ RUN cargo chef prepare --recipe-path recipe.json
 FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
 
-# 预编译第三方依赖
-RUN cargo chef cook --release --recipe-path recipe.json
+# 预编译第三方依赖 (启用 BuildKit Cargo 缓存挂载)
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    cargo chef cook --release --recipe-path recipe.json
 
 # 复制源码并编译最终 Release 二进制程序
 COPY . .
-RUN cargo build --release --bin locos
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    cargo build --release --bin locos
 
 # ── 阶段 4：最小化 Runtime 生产运行镜像 ───────────────────────────────────────
 FROM debian:trixie-slim AS runtime
@@ -41,7 +45,7 @@ ENV LOCO_ENV=production \
     SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates tzdata \
+    && apt-get install -y --no-install-recommends ca-certificates tzdata curl \
     && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd -g 10001 app \
@@ -49,15 +53,20 @@ RUN apt-get update \
 
 WORKDIR /app
 
-# 从 Builder 阶段复制可执行文件与运行时配置文件
+# 从 Builder 阶段复制可执行文件、运行时配置文件与国际化资源
 COPY --from=builder /app/target/release/locos /app/locos
 COPY config/ /app/config/
+COPY locales/ /app/locales/
 
 # 预建运行时所需的可写存储目录并授权给非 root 用户
 RUN mkdir -p storages/logs storages/uploads storages/tmp && chown -R app:app /app
 
 USER 10001:10001
 EXPOSE 5150
+
+# 生产健康检查 (通过 /api/health 接口感知实例活性)
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:5150/api/health || exit 1
 
 ENTRYPOINT ["/app/locos"]
 CMD ["start"]
