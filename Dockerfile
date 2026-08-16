@@ -24,16 +24,12 @@ RUN cargo chef prepare --recipe-path recipe.json
 FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
 
-# 预编译第三方依赖 (启用 BuildKit Cargo 缓存挂载)
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
-    cargo chef cook --release --recipe-path recipe.json
+# 预编译第三方依赖
+RUN cargo chef cook --release --recipe-path recipe.json
 
 # 复制源码并编译最终 Release 二进制程序
 COPY . .
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
-    cargo build --release --bin locos
+RUN cargo build --release --bin locos
 
 # ── 阶段 4：最小化 Runtime 生产运行镜像 ───────────────────────────────────────
 FROM debian:trixie-slim AS runtime
