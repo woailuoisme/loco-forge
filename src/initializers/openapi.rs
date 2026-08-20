@@ -13,7 +13,7 @@ use utoipa_scalar::{Scalar, Servable as ScalarServable};
 
 use crate::{
     common::consts::openapi::{TAG_AUTH, TAG_FILES, TAG_POSTS},
-    controllers, dtos, models,
+    controllers, dtos,
 };
 
 #[derive(OpenApi)]
@@ -25,8 +25,8 @@ use crate::{
         controllers::v1::auth::forgot,
         controllers::v1::auth::reset,
         controllers::v1::auth::current,
-        controllers::v1::auth::magic_link,
-        controllers::v1::auth::magic_link_verify,
+        controllers::v1::auth::send_otp,
+        controllers::v1::auth::verify_otp,
         controllers::v1::auth::resend_verification_email,
         controllers::v1::admin::posts::list,
         controllers::v1::admin::posts::get_one,
@@ -40,7 +40,7 @@ use crate::{
         schemas(
             dtos::files::FileUploadResource,
             dtos::common::ApiError,
-            // 无载荷成功响应 (注册/验证/重置密码/魔术链接等)
+            // 无载荷成功响应 (注册/验证/重置密码/验证码等)
             dtos::common::ApiResponse,
             // 文章接口具化响应
             dtos::common::ApiResponse<dtos::posts::PostResource>,
@@ -56,12 +56,13 @@ use crate::{
             dtos::posts::PostResource,
             dtos::posts::CreatePostRequest,
             dtos::posts::UpdatePostRequest,
+            dtos::auth::LoginRequest,
+            dtos::auth::RegisterRequest,
             dtos::auth::ForgotPasswordRequest,
             dtos::auth::ResetPasswordRequest,
-            dtos::auth::MagicLinkRequest,
+            dtos::auth::SendOtpRequest,
+            dtos::auth::VerifyOtpRequest,
             dtos::auth::ResendVerificationRequest,
-            models::users::LoginRequest,
-            models::users::RegisterRequest,
             dtos::auth::LoginResource,
             dtos::auth::CurrentUserResource,
         )

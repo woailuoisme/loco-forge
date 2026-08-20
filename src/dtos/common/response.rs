@@ -233,3 +233,35 @@ impl From<ApiResponse<serde_json::Value>> for ApiError {
         }
     }
 }
+
+impl<T: Serialize> axum::response::IntoResponse for ApiResponse<T> {
+    fn into_response(self) -> axum::response::Response {
+        let status = match self.code {
+            201 => axum::http::StatusCode::CREATED,
+            202 => axum::http::StatusCode::ACCEPTED,
+            204 => axum::http::StatusCode::NO_CONTENT,
+            400 => axum::http::StatusCode::BAD_REQUEST,
+            401 => axum::http::StatusCode::UNAUTHORIZED,
+            403 => axum::http::StatusCode::FORBIDDEN,
+            404 => axum::http::StatusCode::NOT_FOUND,
+            422 => axum::http::StatusCode::UNPROCESSABLE_ENTITY,
+            500..=599 => axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            _ => axum::http::StatusCode::OK,
+        };
+        (status, axum::Json(self)).into_response()
+    }
+}
+
+impl axum::response::IntoResponse for ApiError {
+    fn into_response(self) -> axum::response::Response {
+        let status = match self.code {
+            401 => axum::http::StatusCode::UNAUTHORIZED,
+            403 => axum::http::StatusCode::FORBIDDEN,
+            404 => axum::http::StatusCode::NOT_FOUND,
+            422 => axum::http::StatusCode::UNPROCESSABLE_ENTITY,
+            500..=599 => axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            _ => axum::http::StatusCode::BAD_REQUEST,
+        };
+        (status, axum::Json(self)).into_response()
+    }
+}

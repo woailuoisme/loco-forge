@@ -37,6 +37,7 @@
 pub mod channel;
 pub mod channels;
 pub mod config;
+pub mod hub;
 pub mod messages;
 pub mod notifiable;
 pub mod notification;
@@ -44,6 +45,7 @@ pub mod notification;
 pub use channel::Channel;
 pub use channels::{EmailChannel, TelegramChannel};
 pub use config::TelegramConfig;
+pub use hub::NotificationHub;
 pub use messages::{MailMessage, TelegramInlineButton, TelegramMessage, TelegramParseMode};
 pub use notifiable::{AnonymousNotifiable, Notifiable};
 pub use notification::{Notification, NotificationManager};

@@ -6,9 +6,12 @@ use crate::common::consts::pagination::{DEFAULT_PAGE, DEFAULT_PAGE_SIZE, MAX_PAG
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 use utoipa::ToSchema;
+use validator::Validate;
 
 /// 通用分页查询提取参数 (Pagination Query Params)
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, utoipa::IntoParams, utoipa::ToSchema)]
+#[derive(
+    Debug, Clone, Copy, Serialize, Deserialize, Validate, utoipa::IntoParams, utoipa::ToSchema,
+)]
 pub struct PaginationRequest {
     /// 页码 (从 1 开始，默认 1)
     pub page: Option<u64>,
@@ -98,6 +101,48 @@ pub struct PaginatedResource<T: TS> {
 pub type Page<T> = PaginatedResource<T>;
 /// 兼容别名 `PaginatedData<T>`
 pub type PaginatedData<T> = PaginatedResource<T>;
+
+use super::response::ApiResponse;
+
+/// 分页数据到 DTO 响应转换扩展算子 (PaginateExt)
+pub trait PaginateExt<M> {
+    /// 转换为 `PaginatedResource<R>`
+    fn into_paginated_resource<R: From<M> + TS>(
+        self,
+        page: u64,
+        per_page: u64,
+    ) -> PaginatedResource<R>;
+
+    /// 转换为标准 200 成功分页响应 `ApiResponse<PaginatedResource<R>>`
+    fn into_page_response<R: From<M> + Serialize + TS>(
+        self,
+        page: u64,
+        per_page: u64,
+    ) -> ApiResponse<PaginatedResource<R>>;
+}
+
+impl<M> PaginateExt<M> for (Vec<M>, u64) {
+    fn into_paginated_resource<R: From<M> + TS>(
+        self,
+        page: u64,
+        per_page: u64,
+    ) -> PaginatedResource<R> {
+        let (items, total) = self;
+        PaginatedResource {
+            items: items.into_iter().map(R::from).collect(),
+            meta: PageMeta::new(page, per_page, total),
+            extras: None,
+        }
+    }
+
+    fn into_page_response<R: From<M> + Serialize + TS>(
+        self,
+        page: u64,
+        per_page: u64,
+    ) -> ApiResponse<PaginatedResource<R>> {
+        ApiResponse::ok(self.into_paginated_resource(page, per_page))
+    }
+}
 
 #[cfg(test)]
 mod tests {

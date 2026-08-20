@@ -70,18 +70,10 @@ where
             })?;
 
         if let Err(validation_errors) = data.validate() {
-            let details = serde_json::to_value(&validation_errors).ok();
-            return Err(super::format_res::validation_error_with_details(
+            return Err(format_validation_rejection(
                 "Invalid request payload parameters",
-                details,
-            )
-            .unwrap_or_else(|_| {
-                (
-                    axum::http::StatusCode::UNPROCESSABLE_ENTITY,
-                    "Validation Error",
-                )
-                    .into_response()
-            }));
+                &validation_errors,
+            ));
         }
 
         Ok(Self(data))
@@ -116,22 +108,25 @@ where
                 })?;
 
         if let Err(validation_errors) = data.validate() {
-            let details = serde_json::to_value(&validation_errors).ok();
-            return Err(super::format_res::validation_error_with_details(
+            return Err(format_validation_rejection(
                 "Invalid request query parameters",
-                details,
-            )
-            .unwrap_or_else(|_| {
-                (
-                    axum::http::StatusCode::UNPROCESSABLE_ENTITY,
-                    "Validation Error",
-                )
-                    .into_response()
-            }));
+                &validation_errors,
+            ));
         }
 
         Ok(Self(data))
     }
+}
+
+fn format_validation_rejection(msg: &str, errors: &validator::ValidationErrors) -> Response {
+    let details = serde_json::to_value(errors).ok();
+    super::format_res::validation_error_with_details(msg, details).unwrap_or_else(|_| {
+        (
+            axum::http::StatusCode::UNPROCESSABLE_ENTITY,
+            "Validation Error",
+        )
+            .into_response()
+    })
 }
 
 #[cfg(test)]

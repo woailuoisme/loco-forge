@@ -320,62 +320,6 @@ async fn can_get_current_user() {
 
 #[tokio::test]
 #[serial]
-async fn can_auth_with_magic_link() {
-    configure_insta!("auth_request");
-    request::<App, _, _>(|request, ctx| async move {
-        seed::<App>(&ctx).await.unwrap();
-
-        let payload = serde_json::json!({
-            "email": "user1@example.com",
-        });
-        let response = request.post("/api/v1/auth/magic-link").json(&payload).await;
-        assert_eq!(
-            response.status_code(),
-            200,
-            "Magic link request should succeed"
-        );
-
-        let deliveries = ctx.mailer.unwrap().deliveries();
-        assert_eq!(deliveries.count, 1, "Exactly one email should be sent");
-
-        // let redact_token = format!("[a-zA-Z0-9]{{{}}}", users::MAGIC_LINK_LENGTH);
-        // with_settings!({
-        //      filters => {
-        //          let mut combined_filters = cleanup_email().clone();
-        //         combined_filters.extend(vec![(r"(\\r\\n|=\\r\\n)", ""), (redact_token.as_str(), "[REDACT_TOKEN]") ]);
-        //         combined_filters
-        //     }
-        // }, {
-        //     assert_debug_snapshot!(deliveries.messages);
-        // });
-
-        let user = users::Model::find_by_email(&ctx.db, "user1@example.com")
-            .await
-            .expect("User should be found");
-
-        let magic_link_token = user
-            .magic_link_token
-            .expect("Magic link token should be generated");
-        let magic_link_response = request
-            .get(&format!("/api/v1/auth/magic-link/{magic_link_token}"))
-            .await;
-        assert_eq!(
-            magic_link_response.status_code(),
-            200,
-            "Magic link authentication should succeed"
-        );
-
-        with_settings!({
-            filters => cleanup_user_model()
-        }, {
-            assert_debug_snapshot!(magic_link_response.text());
-        });
-    })
-    .await;
-}
-
-#[tokio::test]
-#[serial]
 async fn can_reject_invalid_email() {
     configure_insta!("auth_request");
     request::<App, _, _>(|request, _ctx| async move {
@@ -383,28 +327,11 @@ async fn can_reject_invalid_email() {
         let payload = serde_json::json!({
             "email": invalid_email,
         });
-        let response = request.post("/api/v1/auth/magic-link").json(&payload).await;
+        let response = request.post("/api/v1/auth/otp/send").json(&payload).await;
         assert_eq!(
             response.status_code(),
             400,
             "Expected request with invalid email '{invalid_email}' to be blocked, but it was allowed."
-        );
-    })
-    .await;
-}
-
-#[tokio::test]
-#[serial]
-async fn can_reject_invalid_magic_link_token() {
-    configure_insta!("auth_request");
-    request::<App, _, _>(|request, ctx| async move {
-        seed::<App>(&ctx).await.unwrap();
-
-        let magic_link_response = request.get("/api/v1/auth/magic-link/invalid-token").await;
-        assert_eq!(
-            magic_link_response.status_code(),
-            401,
-            "Magic link authentication should be rejected"
         );
     })
     .await;
@@ -502,6 +429,72 @@ async fn cannot_resend_email_if_already_verified() {
         assert_eq!(
             deliveries.count, 1,
             "Only the original welcome email should be sent"
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
+async fn can_auth_with_otp() {
+    request::<App, _, _>(|request, ctx| async move {
+        seed::<App>(&ctx).await.unwrap();
+
+        let email = "user1@example.com";
+        let send_res = request
+            .post("/api/v1/auth/otp/send")
+            .json(&serde_json::json!({ "email": email }))
+            .await;
+        assert_eq!(
+            send_res.status_code(),
+            200,
+            "Send OTP request should succeed"
+        );
+
+        let user = users::Model::find_by_email(&ctx.db, email)
+            .await
+            .expect("User should be found");
+        let otp_code = user.magic_link_token.expect("OTP code should be generated");
+        assert_eq!(otp_code.len(), 6, "OTP code should be exactly 6 digits");
+        assert!(
+            otp_code.chars().all(|c| c.is_ascii_digit()),
+            "OTP code should be all numeric digits"
+        );
+
+        let verify_res = request
+            .post("/api/v1/auth/otp/verify")
+            .json(&serde_json::json!({
+                "email": email,
+                "code": otp_code
+            }))
+            .await;
+        assert_eq!(verify_res.status_code(), 200, "Verify OTP should succeed");
+
+        let body: serde_json::Value = serde_json::from_str(&verify_res.text()).unwrap();
+        assert!(body["success"].as_bool().unwrap());
+        assert!(body["data"]["token"].is_string());
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
+async fn cannot_auth_with_invalid_otp() {
+    request::<App, _, _>(|request, ctx| async move {
+        seed::<App>(&ctx).await.unwrap();
+
+        let email = "user1@example.com";
+        let verify_res = request
+            .post("/api/v1/auth/otp/verify")
+            .json(&serde_json::json!({
+                "email": email,
+                "code": "000000"
+            }))
+            .await;
+        assert_eq!(
+            verify_res.status_code(),
+            401,
+            "Invalid OTP should return 401"
         );
     })
     .await;

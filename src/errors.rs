@@ -66,11 +66,79 @@ impl AppError {
             Self::Custom(_, msg) | Self::Biz(_, msg) | Self::Internal(msg) => msg.as_str(),
         }
     }
+
+    /// 构造 401 Unauthorized 异常
+    pub fn unauthorized(msg: impl Into<String>) -> Self {
+        Self::Custom(StatusCode::UNAUTHORIZED, msg.into())
+    }
+
+    /// 构造 404 Not Found 异常
+    pub fn not_found(msg: impl Into<String>) -> Self {
+        Self::Custom(StatusCode::NOT_FOUND, msg.into())
+    }
+
+    /// 构造 400 Bad Request 异常
+    pub fn bad_request(msg: impl Into<String>) -> Self {
+        Self::Custom(StatusCode::BAD_REQUEST, msg.into())
+    }
+
+    /// 构造 403 Forbidden 异常
+    pub fn forbidden(msg: impl Into<String>) -> Self {
+        Self::Custom(StatusCode::FORBIDDEN, msg.into())
+    }
+
+    /// 构造 500 Internal Server Error 异常
+    pub fn internal(msg: impl Into<String>) -> Self {
+        Self::Internal(msg.into())
+    }
+
+    /// 构造 600~999 业务异常
+    pub fn biz(code: u32, msg: impl Into<String>) -> Self {
+        Self::Biz(code, msg.into())
+    }
 }
 
 impl From<loco_rs::Error> for AppError {
     fn from(err: loco_rs::Error) -> Self {
-        Self::Internal(err.to_string())
+        match err {
+            loco_rs::Error::NotFound => {
+                Self::Custom(StatusCode::NOT_FOUND, "Resource not found".to_string())
+            },
+            loco_rs::Error::Unauthorized(msg) => Self::Custom(StatusCode::UNAUTHORIZED, msg),
+            loco_rs::Error::BadRequest(msg) => Self::Custom(StatusCode::BAD_REQUEST, msg),
+            loco_rs::Error::Model(model_err) => Self::from(model_err),
+            loco_rs::Error::CustomError(status, data) => {
+                let msg = data
+                    .error
+                    .or(data.description)
+                    .unwrap_or_else(|| "Custom error".to_string());
+                Self::Custom(status, msg)
+            },
+            _ => Self::Internal(err.to_string()),
+        }
+    }
+}
+
+impl From<loco_rs::model::ModelError> for AppError {
+    fn from(err: loco_rs::model::ModelError) -> Self {
+        match err {
+            loco_rs::model::ModelError::EntityNotFound => {
+                Self::Custom(StatusCode::NOT_FOUND, "Entity not found".to_string())
+            },
+            loco_rs::model::ModelError::EntityAlreadyExists => {
+                Self::Custom(StatusCode::BAD_REQUEST, "Entity already exists".to_string())
+            },
+            loco_rs::model::ModelError::Validation(v) => {
+                Self::Custom(StatusCode::UNPROCESSABLE_ENTITY, v.to_string())
+            },
+            _ => Self::Internal(err.to_string()),
+        }
+    }
+}
+
+impl From<AppError> for loco_rs::Error {
+    fn from(err: AppError) -> Self {
+        Self::string(&err.to_string())
     }
 }
 

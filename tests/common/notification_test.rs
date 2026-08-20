@@ -134,3 +134,31 @@ async fn test_notification_manager_send() {
     })
     .await;
 }
+
+#[tokio::test]
+#[serial_test::serial]
+async fn test_notification_hub_send() {
+    use locos::common::notifications::NotificationHub;
+
+    request::<App, _, _>(|_request, ctx| async move {
+        let target = AnonymousNotifiable::new()
+            .route_mail("bob@example.com")
+            .route_telegram("987654321");
+
+        let notification = WelcomeNotification {
+            user_name: "Bob".to_string(),
+        };
+
+        NotificationHub::send(&ctx, &target, &notification)
+            .await
+            .expect("NotificationHub::send failed");
+
+        let deliveries = ctx
+            .mailer
+            .as_ref()
+            .expect("测试环境应配置 mailer")
+            .deliveries();
+        assert_eq!(deliveries.count, 1, "邮件通知应通过 Stub 投递 1 封");
+    })
+    .await;
+}

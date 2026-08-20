@@ -3,10 +3,12 @@ use crate::{
     dtos::{
         auth::{
             CurrentUserResource, ForgotPasswordRequest, LoginRequest, LoginResource,
-            MagicLinkRequest, RegisterRequest, ResendVerificationRequest, ResetPasswordRequest,
+            RegisterRequest, ResendVerificationRequest, ResetPasswordRequest, SendOtpRequest,
+            VerifyOtpRequest,
         },
-        common::{ApiError, ApiResponse, ValidJson, format_res},
+        common::{ApiError, ApiResponse, ValidJson},
     },
+    errors::AppResult,
     services::AuthService,
 };
 use loco_rs::prelude::*;
@@ -27,9 +29,9 @@ use loco_rs::prelude::*;
 pub async fn register(
     State(ctx): State<AppContext>,
     ValidJson(params): ValidJson<RegisterRequest>,
-) -> Result<Response> {
+) -> AppResult<ApiResponse<serde_json::Value>> {
     AuthService::register(&ctx, &params).await?;
-    format_res::empty_msg("注册请求已受理")
+    Ok(ApiResponse::success_empty("注册请求已受理"))
 }
 
 /// 邮箱验证
@@ -48,11 +50,12 @@ pub async fn register(
     tag = TAG_AUTH
 )]
 #[debug_handler]
-pub async fn verify(State(ctx): State<AppContext>, Path(token): Path<String>) -> Result<Response> {
-    if !AuthService::verify(&ctx, &token).await? {
-        return format_res::unauthorized("Invalid token");
-    }
-    format_res::empty_msg("邮箱验证成功")
+pub async fn verify(
+    State(ctx): State<AppContext>,
+    Path(token): Path<String>,
+) -> AppResult<ApiResponse<serde_json::Value>> {
+    AuthService::verify(&ctx, &token).await?;
+    Ok(ApiResponse::success_empty("邮箱验证成功"))
 }
 
 /// 忘记密码
@@ -71,9 +74,9 @@ pub async fn verify(State(ctx): State<AppContext>, Path(token): Path<String>) ->
 pub async fn forgot(
     State(ctx): State<AppContext>,
     ValidJson(params): ValidJson<ForgotPasswordRequest>,
-) -> Result<Response> {
+) -> AppResult<ApiResponse<serde_json::Value>> {
     AuthService::forgot(&ctx, &params.email).await?;
-    format_res::empty_msg("重置密码邮件已发送")
+    Ok(ApiResponse::success_empty("重置密码邮件已发送"))
 }
 
 /// 重置密码
@@ -92,10 +95,10 @@ pub async fn forgot(
 pub async fn reset(
     State(ctx): State<AppContext>,
     ValidJson(params): ValidJson<ResetPasswordRequest>,
-) -> Result<Response> {
+) -> AppResult<ApiResponse<serde_json::Value>> {
     use secrecy::ExposeSecret;
     AuthService::reset(&ctx, &params.token, params.password.expose_secret()).await?;
-    format_res::empty_msg("密码重置成功")
+    Ok(ApiResponse::success_empty("密码重置成功"))
 }
 
 /// 用户登录
@@ -115,11 +118,9 @@ pub async fn reset(
 pub async fn login(
     State(ctx): State<AppContext>,
     ValidJson(params): ValidJson<LoginRequest>,
-) -> Result<Response> {
-    match AuthService::login(&ctx, &params).await? {
-        Ok(res) => format_res::ok(res),
-        Err(msg) => format_res::unauthorized(msg),
-    }
+) -> AppResult<ApiResponse<LoginResource>> {
+    let res = AuthService::login(&ctx, &params).await?;
+    Ok(ApiResponse::ok(res))
 }
 
 /// 获取当前用户信息
@@ -138,58 +139,55 @@ pub async fn login(
     tag = TAG_AUTH
 )]
 #[debug_handler]
-pub async fn current(auth: auth::JWT, State(ctx): State<AppContext>) -> Result<Response> {
+pub async fn current(
+    auth: auth::JWT,
+    State(ctx): State<AppContext>,
+) -> AppResult<ApiResponse<CurrentUserResource>> {
     let res = AuthService::current(&ctx, &auth.claims.pid).await?;
-    format_res::ok(res)
+    Ok(ApiResponse::ok(res))
 }
 
-/// 请求魔术链接登录
+/// 发送 6 位数字登录验证码 (OTP)
 #[utoipa::path(
     post,
-    path = "/api/v1/auth/magic-link",
-    summary = "请求魔术链接登录",
-    description = "向指定邮箱发送免密登录魔术链接",
-    request_body = MagicLinkRequest,
+    path = "/api/v1/auth/otp/send",
+    summary = "发送登录验证码",
+    description = "向指定邮箱发送 6 位数字登录验证码",
+    request_body = SendOtpRequest,
     responses(
-        (status = 200, description = "魔术链接发送请求已受理", body = ApiResponse<serde_json::Value>)
+        (status = 200, description = "验证码发送请求已受理", body = ApiResponse<serde_json::Value>)
     ),
     tag = TAG_AUTH
 )]
 #[debug_handler]
-pub async fn magic_link(
+pub async fn send_otp(
     State(ctx): State<AppContext>,
-    ValidJson(params): ValidJson<MagicLinkRequest>,
-) -> Result<Response> {
-    if !AuthService::magic_link(&ctx, &params.email).await? {
-        return format_res::bad_request("Invalid request");
-    }
-    format_res::empty_msg("魔术链接已发送")
+    ValidJson(params): ValidJson<SendOtpRequest>,
+) -> AppResult<ApiResponse<serde_json::Value>> {
+    AuthService::send_otp(&ctx, &params.email).await?;
+    Ok(ApiResponse::success_empty("验证码已发送"))
 }
 
-/// 验证魔术链接
+/// 校验 6 位数字验证码登录 (OTP Verify)
 #[utoipa::path(
-    get,
-    path = "/api/v1/auth/magic-link/{token}",
-    summary = "验证魔术链接",
-    description = "校验魔术链接 Token 并完成免密登录",
-    params(
-        ("token" = String, Path, description = "魔术链接 Token")
-    ),
+    post,
+    path = "/api/v1/auth/otp/verify",
+    summary = "校验验证码并登录",
+    description = "校验 6 位数字验证码并返回登录凭证 JWT",
+    request_body = VerifyOtpRequest,
     responses(
         (status = 200, description = "验证登录成功", body = ApiResponse<LoginResource>),
-        (status = 401, description = "魔术链接无效或已过期", body = ApiError)
+        (status = 401, description = "验证码无效或已过期", body = ApiError)
     ),
     tag = TAG_AUTH
 )]
 #[debug_handler]
-pub async fn magic_link_verify(
-    Path(token): Path<String>,
+pub async fn verify_otp(
     State(ctx): State<AppContext>,
-) -> Result<Response> {
-    let Some(res) = AuthService::magic_link_verify(&ctx, &token).await? else {
-        return format_res::unauthorized("Unauthorized");
-    };
-    format_res::ok(res)
+    ValidJson(params): ValidJson<VerifyOtpRequest>,
+) -> AppResult<ApiResponse<LoginResource>> {
+    let res = AuthService::verify_otp(&ctx, &params.email, &params.code).await?;
+    Ok(ApiResponse::ok(res))
 }
 
 /// 重发邮箱验证邮件
@@ -208,9 +206,9 @@ pub async fn magic_link_verify(
 pub async fn resend_verification_email(
     State(ctx): State<AppContext>,
     ValidJson(params): ValidJson<ResendVerificationRequest>,
-) -> Result<Response> {
+) -> AppResult<ApiResponse<serde_json::Value>> {
     AuthService::resend_verification(&ctx, &params.email).await?;
-    format_res::empty_msg("验证邮件已发送")
+    Ok(ApiResponse::success_empty("验证邮件已发送"))
 }
 
 pub fn routes() -> Routes {
@@ -222,8 +220,8 @@ pub fn routes() -> Routes {
         .add("/forgot", post(forgot))
         .add("/reset", post(reset))
         .add("/current", get(current))
-        .add("/magic-link", post(magic_link))
-        .add("/magic-link/{token}", get(magic_link_verify))
+        .add("/otp/send", post(send_otp))
+        .add("/otp/verify", post(verify_otp))
         .add("/resend-verification-mail", post(resend_verification_email))
         .layer(crate::setup::middleware::rate_limit::auth_rate_limit_layer())
 }

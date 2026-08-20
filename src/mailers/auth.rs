@@ -8,7 +8,7 @@ use crate::{common::consts::app::APP_NAME, models::users};
 
 static welcome: Dir<'_> = include_dir!("src/mailers/auth/welcome");
 static forgot: Dir<'_> = include_dir!("src/mailers/auth/forgot");
-static magic_link: Dir<'_> = include_dir!("src/mailers/auth/magic_link");
+static otp: Dir<'_> = include_dir!("src/mailers/auth/otp");
 
 #[allow(clippy::module_name_repetitions)]
 pub struct AuthMailer {}
@@ -64,23 +64,22 @@ impl AuthMailer {
         Ok(())
     }
 
-    /// Sends a magic link authentication email to the user.
+    /// 发送 6 位数字 OTP 登录验证码邮件
     ///
     /// # Errors
     ///
-    /// When email sending is failed
-    pub async fn send_magic_link(ctx: &AppContext, user: &users::Model) -> Result<()> {
+    /// 当邮件渲染或投递失败时返回 `Result`
+    pub async fn send_otp(ctx: &AppContext, user: &users::Model, code: &str) -> Result<()> {
         Self::mail_template(
             ctx,
-            &magic_link,
+            &otp,
             mailer::Args {
                 to: user.email.clone(),
                 locals: json!({
                   "app_name": APP_NAME,
                   "name": user.name,
-                  "token": user.magic_link_token.clone().ok_or_else(|| Error::string(
-                            "the user model not contains magic link token",
-                    ))?,
+                  "code": code,
+                  "token": code,
                   "host": ctx.config.server.full_url()
                 }),
                 ..Default::default()

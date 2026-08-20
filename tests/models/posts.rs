@@ -40,11 +40,11 @@ async fn test_model() {
     assert_eq!(repo_fetched.id, inserted.id);
 
     // 分页查询测试
-    let (items, total_pages) = posts::Entity::find_all_paginated(&boot.app_context.db, 1, 10)
+    let (items, total_items) = posts::Entity::find_all_paginated(&boot.app_context.db, 1, 10)
         .await
         .expect("find_all_paginated should succeed");
     assert!(!items.is_empty(), "Should contain inserted post");
-    assert!(total_pages >= 1, "Total pages should be at least 1");
+    assert!(total_items >= 1, "Total items should be at least 1");
 
     // 模糊搜索查询测试
     let (search_items, _) = posts::Entity::search(&boot.app_context.db, "生成器", 1, 10)

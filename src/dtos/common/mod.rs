@@ -23,7 +23,9 @@ pub mod response;
 
 // 扁平化 re-export：对外公开常用类型
 pub use extract::{ValidJson, ValidQuery};
-pub use pagination::{Page, PageMeta, PaginatedData, PaginatedResource, PaginationRequest};
+pub use pagination::{
+    Page, PageMeta, PaginateExt, PaginatedData, PaginatedResource, PaginationRequest,
+};
 pub use rbac::{AdminUser, AuthenticatedUser};
 pub use response::{ApiError, ApiResponse};
 

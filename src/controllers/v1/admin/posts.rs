@@ -1,15 +1,16 @@
 use loco_rs::prelude::*;
 
 use crate::{
-    common::consts::{message::POST_NOT_FOUND, openapi::TAG_POSTS},
+    common::consts::openapi::TAG_POSTS,
     dtos::{
         common::{
             AdminUser, ApiError, ApiResponse, PaginatedResource, PaginationRequest, ValidJson,
-            format_res,
+            ValidQuery,
         },
         posts::{CreatePostRequest, PostResource, UpdatePostRequest},
     },
-    models::posts::{Entity as PostEntity, Model as PostModel},
+    errors::AppResult,
+    services::AdminPostsService,
 };
 
 /// 获取文章列表
@@ -31,12 +32,10 @@ use crate::{
 pub async fn list(
     _admin: AdminUser,
     State(ctx): State<AppContext>,
-    Query(params): Query<PaginationRequest>,
-) -> Result<Response> {
-    let (posts, total) =
-        PostEntity::find_all_paginated(&ctx.db, params.page(), params.per_page()).await?;
-    let dtos: Vec<PostResource> = posts.into_iter().map(PostResource::from).collect();
-    format_res::page(dtos, params.page(), params.per_page(), total)
+    ValidQuery(params): ValidQuery<PaginationRequest>,
+) -> AppResult<ApiResponse<PaginatedResource<PostResource>>> {
+    let paginated = AdminPostsService::list(&ctx, &params).await?;
+    Ok(ApiResponse::ok(paginated))
 }
 
 /// 获取指定文章
@@ -62,11 +61,9 @@ pub async fn get_one(
     _admin: AdminUser,
     State(ctx): State<AppContext>,
     Path(id): Path<i64>,
-) -> Result<Response> {
-    let Ok(post) = PostModel::find_by_id(&ctx.db, id).await else {
-        return format_res::not_found(POST_NOT_FOUND);
-    };
-    format_res::retrieved(PostResource::from(post))
+) -> AppResult<ApiResponse<PostResource>> {
+    let resource = AdminPostsService::get_by_id(&ctx, id).await?;
+    Ok(ApiResponse::ok_with_message(resource, "数据获取成功"))
 }
 
 /// 创建新文章
@@ -89,9 +86,9 @@ pub async fn create(
     _admin: AdminUser,
     State(ctx): State<AppContext>,
     ValidJson(params): ValidJson<CreatePostRequest>,
-) -> Result<Response> {
-    let post = PostModel::create(&ctx.db, params.title, params.content).await?;
-    format_res::created(PostResource::from(post))
+) -> AppResult<ApiResponse<PostResource>> {
+    let resource = AdminPostsService::create(&ctx, &params).await?;
+    Ok(ApiResponse::created(resource))
 }
 
 /// 更新文章
@@ -119,15 +116,9 @@ pub async fn update(
     State(ctx): State<AppContext>,
     Path(id): Path<i64>,
     ValidJson(params): ValidJson<UpdatePostRequest>,
-) -> Result<Response> {
-    let Ok(post) = PostModel::find_by_id(&ctx.db, id).await else {
-        return format_res::not_found(POST_NOT_FOUND);
-    };
-
-    let updated = post
-        .update_post(&ctx.db, params.title, params.content)
-        .await?;
-    format_res::updated(PostResource::from(updated))
+) -> AppResult<ApiResponse<PostResource>> {
+    let updated = AdminPostsService::update(&ctx, id, &params).await?;
+    Ok(ApiResponse::ok_with_message(updated, "数据更新成功"))
 }
 
 /// 删除文章
@@ -140,7 +131,7 @@ pub async fn update(
         ("id" = i64, Path, description = "文章 ID")
     ),
     responses(
-        (status = 200, description = "删除成功", body = ApiError),
+        (status = 200, description = "删除成功", body = ApiResponse<serde_json::Value>),
         (status = 404, description = "文章不存在", body = ApiError)
     ),
     security(
@@ -153,13 +144,9 @@ pub async fn remove(
     _admin: AdminUser,
     State(ctx): State<AppContext>,
     Path(id): Path<i64>,
-) -> Result<Response> {
-    let Ok(post) = PostModel::find_by_id(&ctx.db, id).await else {
-        return format_res::not_found(POST_NOT_FOUND);
-    };
-
-    post.delete(&ctx.db).await?;
-    format_res::deleted()
+) -> AppResult<ApiResponse<serde_json::Value>> {
+    AdminPostsService::delete(&ctx, id).await?;
+    Ok(ApiResponse::success_empty("数据删除成功"))
 }
 
 pub fn routes() -> Routes {

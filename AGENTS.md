@@ -25,8 +25,8 @@ AI Agent 在此项目中编写、重构代码或排查问题时，必须严格�
    - 生成器会自动完成新模块在 `src/app.rs` 中的模板代码绑定与注册。
 
 2. **业务逻辑下沉 Service 层与 Controller 薄层化**
-   - **Controller 保持薄层**：控制器仅负责请求解析 (Axum extractors)、调用 Service 层方法、以及统一 Response 响应格式化 (`dtos::common::format_res`)。
-   - **Service 层收拢业务**：所有跨模型事务、组合查询、外部服务调用统一放置在 `src/services/` (或管理后台专属 `src/services/admin/`) 中。
+   - **Controller 保持极薄层**：控制器仅负责请求解析 (Axum extractors)、调用 Service 层方法（通过 `?` 冒泡错误）、统一返回 `AppResult<ApiResponse<T>>` 或格式化响应 (`dtos::common::format_res`)。
+   - **Service 层收拢业务**：所有跨模型事务、组合查询、外部服务调用统一放置在 `src/services/` (或管理后台专属 `src/services/admin/`) 中，方法返回 `AppResult<T>`。
    - **关联函数模式**：Service 结构体统一声明为 `pub struct XxxService;`，采用静态关联函数模式（如 `XxxService::create(&ctx, params)`），无需实例化结构体。
 
 3. **全局常量统一管理 (`src/common/consts.rs`)**
@@ -181,7 +181,7 @@ mise run down     # 停止并销毁 Docker Compose 容器
 
 ### Handler 标准结构
 
-每个 Handler 函数保持**薄层**：提取入参 → 调用 Service → 格式化响应，禁止在函数体内编写业务逻辑。
+每个 Handler 函数保持**极薄层**：提取入参 → 调用 Service（通过 `?` 冒泡错误）→ 统一返回 `AppResult<ApiResponse<T>>`，`ApiResponse<T>` 与 `AppError` 均实现 `axum::response::IntoResponse`。
 
 ```rust
 /// 用户登录
@@ -197,23 +197,21 @@ mise run down     # 停止并销毁 Docker Compose 容器
 #[debug_handler]
 pub async fn login(
     State(ctx): State<AppContext>,
-    Json(params): Json<LoginRequest>,
-) -> Result<Response> {
-    match AuthService::login(&ctx, &params).await? {
-        Ok(res) => format_res::ok(res),
-        Err(msg) => format_res::unauthorized(msg),
-    }
+    ValidJson(params): ValidJson<LoginRequest>,
+) -> AppResult<ApiResponse<LoginResource>> {
+    let res = AuthService::login(&ctx, &params).await?;
+    Ok(format_res::ok(res))
 }
 ```
 
-### 统一响应格式化 (`format_res`)
+### 统一响应与异常处理 (`ApiResponse` & `AppError`)
 
 | 场景 | 调用方式 |
 |---|---|
 | 成功返回数据 | `format_res::ok(resource)` |
 | 成功但无数据 | `format_res::empty_msg("操作成功")` |
-| 401 未授权 | `format_res::unauthorized("msg")` |
-| 400 参数错误 | `format_res::bad_request("msg")` |
+| 业务异常直接返回 | `Err(AppError::unauthorized("msg"))` / `Err(AppError::not_found("msg"))` |
+| 错误冒泡 | 使用 `?` 自动转换 `ModelError` / `DbErr` / `AppError` |
 
 ### 路由注册规范
 

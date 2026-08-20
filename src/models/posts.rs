@@ -80,9 +80,6 @@ impl Model {
     }
 }
 
-// implement your write-oriented logic here
-impl ActiveModel {}
-
 // implement your custom finders, selectors oriented logic here
 impl Entity {
     /// 按创建时间倒序分页获取文章列表
@@ -95,14 +92,12 @@ impl Entity {
         page: u64,
         page_size: u64,
     ) -> ModelResult<(Vec<Model>, u64)> {
-        let paginator = Self::find()
+        use super::repository::QueryPaginationExt;
+
+        Self::find()
             .order_by_desc(super::_entities::posts::Column::CreatedAt)
-            .paginate(db, page_size);
-
-        let total = paginator.num_items().await?;
-        let posts = paginator.fetch_page(page.saturating_sub(1)).await?;
-
-        Ok((posts, total))
+            .paginate_with_total(db, page, page_size)
+            .await
     }
 
     /// 根据标题或内容关键字模糊搜索文章列表并支持分页
@@ -116,20 +111,18 @@ impl Entity {
         page: u64,
         page_size: u64,
     ) -> ModelResult<(Vec<Model>, u64)> {
-        let query = Self::find().filter(
-            Condition::any()
-                .add(super::_entities::posts::Column::Title.contains(keyword))
-                .add(super::_entities::posts::Column::Content.contains(keyword)),
-        );
+        use super::repository::QueryPaginationExt;
 
-        let paginator = query
+        let pattern = format!("%{keyword}%");
+        Self::find()
+            .filter(
+                Condition::any()
+                    .add(super::_entities::posts::Column::Title.like(&pattern))
+                    .add(super::_entities::posts::Column::Content.like(&pattern)),
+            )
             .order_by_desc(super::_entities::posts::Column::CreatedAt)
-            .paginate(db, page_size);
-
-        let total = paginator.num_items().await?;
-        let posts = paginator.fetch_page(page.saturating_sub(1)).await?;
-
-        Ok((posts, total))
+            .paginate_with_total(db, page, page_size)
+            .await
     }
 
     /// 根据 ID 列表批量删除文章记录

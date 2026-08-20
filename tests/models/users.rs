@@ -280,64 +280,6 @@ async fn can_reset_password() {
 
 #[tokio::test]
 #[serial]
-async fn magic_link() {
-    let boot = boot_test::<App>().await.unwrap();
-    seed::<App>(&boot.app_context).await.unwrap();
-
-    let user = Model::find_by_pid(&boot.app_context.db, "11111111-1111-1111-1111-111111111111")
-        .await
-        .unwrap();
-
-    let create_result = user
-        .into_active_model()
-        .create_magic_link(&boot.app_context.db)
-        .await;
-
-    assert!(
-        create_result.is_ok(),
-        "Failed to create magic link: {:?}",
-        create_result.unwrap_err()
-    );
-
-    let updated_user =
-        Model::find_by_pid(&boot.app_context.db, "11111111-1111-1111-1111-111111111111")
-            .await
-            .expect("Failed to refetch user after magic link creation");
-
-    assert!(
-        updated_user.magic_link_token.is_some(),
-        "Magic link token should be set after creation"
-    );
-
-    let magic_link_token = updated_user.magic_link_token.unwrap();
-    assert_eq!(
-        magic_link_token.len(),
-        users::MAGIC_LINK_LENGTH as usize,
-        "Magic link token length does not match expected length"
-    );
-
-    assert!(
-        updated_user.magic_link_expiration.is_some(),
-        "Magic link expiration should be set after creation"
-    );
-
-    let now = Local::now();
-    let should_expired_at = now + Duration::minutes(users::MAGIC_LINK_EXPIRATION_MIN.into());
-    let actual_expiration = updated_user.magic_link_expiration.unwrap();
-
-    assert!(
-        actual_expiration >= now,
-        "Magic link expiration should be in the future or now"
-    );
-
-    assert!(
-        actual_expiration <= should_expired_at,
-        "Magic link expiration exceeds expected maximum expiration time"
-    );
-}
-
-#[tokio::test]
-#[serial]
 async fn test_clean_expired_tokens_batch() {
     let boot = boot_test::<App>()
         .await
@@ -375,4 +317,112 @@ async fn test_clean_expired_tokens_batch() {
         refetched.reset_token.is_none(),
         "Expired reset token should be cleared"
     );
+}
+
+#[tokio::test]
+#[serial]
+async fn test_create_and_verify_otp() {
+    let boot = boot_test::<App>().await.unwrap();
+    seed::<App>(&boot.app_context).await.unwrap();
+
+    let user = Model::find_by_email(&boot.app_context.db, "user1@example.com")
+        .await
+        .unwrap();
+
+    let (updated_user, code) = user
+        .into_active_model()
+        .create_otp(&boot.app_context.db)
+        .await
+        .expect("create_otp should succeed");
+
+    assert_eq!(code.len(), 6, "OTP code should be 6 digits");
+    assert!(
+        code.chars().all(|c| c.is_ascii_digit()),
+        "OTP code should be numeric"
+    );
+
+    let found_user = Model::find_by_otp(&boot.app_context.db, "user1@example.com", &code)
+        .await
+        .expect("find_by_otp should succeed");
+    assert_eq!(found_user.id, updated_user.id);
+
+    let cleared_user = found_user
+        .into_active_model()
+        .clear_otp(&boot.app_context.db)
+        .await
+        .expect("clear_otp should succeed");
+    assert!(cleared_user.magic_link_token.is_none());
+    assert!(cleared_user.magic_link_expiration.is_none());
+}
+
+#[tokio::test]
+#[serial]
+async fn test_user_entity_paginated_and_batch_delete() {
+    let boot = boot_test::<App>().await.unwrap();
+    seed::<App>(&boot.app_context).await.unwrap();
+
+    let (users_list, total) = users::Entity::find_all_paginated(&boot.app_context.db, 1, 10)
+        .await
+        .expect("find_all_paginated should succeed");
+
+    assert!(total >= 1);
+    assert!(!users_list.is_empty());
+
+    // 测试空切片防护
+    let deleted_empty = users::Entity::delete_by_ids(&boot.app_context.db, &[])
+        .await
+        .expect("delete_by_ids with empty slice should succeed");
+    assert_eq!(deleted_empty, 0);
+}
+
+#[tokio::test]
+#[serial]
+async fn test_user_credentials_state_machine() {
+    use locos::models::credentials::UserCredentials;
+
+    let mut active = users::ActiveModel {
+        ..Default::default()
+    };
+
+    // 1. Issue OTP
+    let otp = UserCredentials::issue_otp(&mut active);
+    assert_eq!(otp.len(), 6);
+    assert!(active.magic_link_token.is_set());
+    assert!(active.magic_link_expiration.is_set());
+
+    // 2. Clear OTP
+    UserCredentials::clear_otp(&mut active);
+    assert_eq!(active.magic_link_token.as_ref(), &None);
+    assert_eq!(active.magic_link_expiration.as_ref(), &None);
+
+    // 3. Issue Email Verification
+    let verify_token = UserCredentials::issue_email_verification(&mut active);
+    assert!(!verify_token.is_empty());
+    assert!(active.email_verification_token.is_set());
+    assert!(active.email_verification_sent_at.is_set());
+
+    // 4. Mark Verified
+    UserCredentials::mark_email_verified(&mut active);
+    assert!(active.email_verified_at.is_set());
+    assert_eq!(active.email_verification_token.as_ref(), &None);
+
+    // 5. Issue Password Reset
+    let reset_token = UserCredentials::issue_password_reset(&mut active);
+    assert!(!reset_token.is_empty());
+    assert!(active.reset_token.is_set());
+    assert!(active.reset_sent_at.is_set());
+
+    // 6. Clear Password Reset
+    UserCredentials::clear_password_reset(&mut active);
+    assert_eq!(active.reset_token.as_ref(), &None);
+    assert_eq!(active.reset_sent_at.as_ref(), &None);
+
+    // 7. Test TokenKind issue_token dispatch
+    use locos::models::credentials::TokenKind;
+    let otp2 = UserCredentials::issue_token(TokenKind::Otp, &mut active);
+    assert_eq!(otp2.len(), 6);
+    let verify2 = UserCredentials::issue_token(TokenKind::EmailVerification, &mut active);
+    assert!(!verify2.is_empty());
+    let reset2 = UserCredentials::issue_token(TokenKind::PasswordReset, &mut active);
+    assert!(!reset2.is_empty());
 }

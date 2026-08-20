@@ -50,10 +50,16 @@ pub mod openapi {
 
 /// 用户认证与账号业务常量
 pub mod auth {
-    /// 允许接收魔术链接的邮箱域名正则 (匹配 @example.com 或 @gmail.com 结尾)
+    /// 允许接收验证码/魔术链接的邮箱域名正则 (匹配 @example.com 或 @gmail.com 结尾)
     pub const ALLOW_EMAIL_DOMAIN_PATTERN: &str = r"@example\.com$|@gmail\.com$";
     /// 管理员角色标识
     pub const ROLE_ADMIN: &str = "admin";
+    /// OTP 6 位数字验证码有效分钟数 (10 分钟)
+    pub const OTP_EXPIRATION_MIN: i64 = 10;
+    /// OTP 验证码字符长度 (6 位)
+    pub const OTP_CODE_LENGTH: usize = 6;
+    /// 密码重置 Token 有效分钟数 (30 分钟)
+    pub const RESET_TOKEN_EXPIRATION_MIN: i64 = 30;
 }
 
 /// 通用业务提示消息常量

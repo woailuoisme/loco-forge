@@ -16,7 +16,7 @@ use validator::Validate;
 /// 文章响应数据传输对象 [Response DTO]
 ///
 /// 用于将数据库 SeaORM 实体模型解耦并格式化为标准 JSON 响应。
-#[derive(serde::Serialize, serde::Deserialize, TS, ToSchema)]
+#[derive(serde::Serialize, TS, ToSchema)]
 pub struct PostResource {
     /// 文章 ID
     #[ts(type = "number")]
@@ -54,7 +54,7 @@ impl From<crate::models::_entities::posts::Model> for PostResource {
 /// 创建文章请求参数 [Request DTO]
 ///
 /// 用于接收和反序列化客户端创建文章时提交的 JSON Payload。
-#[derive(serde::Serialize, serde::Deserialize, Validate, TS, ToSchema)]
+#[derive(serde::Deserialize, Validate, TS, ToSchema)]
 pub struct CreatePostRequest {
     /// 文章标题
     #[validate(length(min = 1, message = "文章标题不能为空"))]
@@ -66,7 +66,7 @@ pub struct CreatePostRequest {
 /// 更新文章请求参数 [Request DTO]
 ///
 /// 用于接收和反序列化客户端更新文章时提交的 JSON Payload。
-#[derive(serde::Serialize, serde::Deserialize, Validate, TS, ToSchema)]
+#[derive(serde::Deserialize, Validate, TS, ToSchema)]
 pub struct UpdatePostRequest {
     /// 文章标题
     #[validate(length(min = 1, message = "文章标题不能为空"))]
