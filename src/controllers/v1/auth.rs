@@ -96,8 +96,7 @@ pub async fn reset(
     State(ctx): State<AppContext>,
     ValidJson(params): ValidJson<ResetPasswordRequest>,
 ) -> AppResult<ApiResponse<serde_json::Value>> {
-    use secrecy::ExposeSecret;
-    AuthService::reset(&ctx, &params.token, params.password.expose_secret()).await?;
+    AuthService::reset(&ctx, &params).await?;
     Ok(ApiResponse::success_empty("密码重置成功"))
 }
 

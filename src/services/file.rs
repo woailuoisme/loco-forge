@@ -1,10 +1,14 @@
+//! # 文件存储与管理服务 (File & Storage Service)
+
+use std::path::Path as StdPath;
+
 use axum::extract::Multipart;
 use loco_rs::prelude::*;
-use std::path::Path as StdPath;
 
 use crate::{
     common::utils::upload::{UploadConfig, UploadUtil},
     dtos::files::FileUploadResource,
+    errors::{AppError, AppResult},
 };
 
 /// 文件存储与管理服务
@@ -32,7 +36,10 @@ impl FileService {
     }
 
     /// 使用默认配置执行文件上传
-    pub async fn upload(ctx: &AppContext, multipart: Multipart) -> Result<Vec<FileUploadResource>> {
+    pub async fn upload(
+        ctx: &AppContext,
+        multipart: Multipart,
+    ) -> AppResult<Vec<FileUploadResource>> {
         Self::upload_with_config(ctx, multipart, &UploadConfig::default()).await
     }
 
@@ -41,7 +48,7 @@ impl FileService {
         ctx: &AppContext,
         mut multipart: Multipart,
         config: &UploadConfig,
-    ) -> Result<Vec<FileUploadResource>> {
+    ) -> AppResult<Vec<FileUploadResource>> {
         let mut uploaded_files = Vec::new();
         let mut total_uploaded_bytes: usize = 0;
 
@@ -55,11 +62,13 @@ impl FileService {
                 UploadUtil::validate_file(&filename_cow, content_type.as_deref(), config)
             {
                 tracing::warn!(filename = %filename_cow, error = %err, "Upload file validation failed");
-                return Err(err);
+                return Err(AppError::bad_request(err.to_string()));
             }
 
             // 2. 防 OOM 分块流式读取（受限于 config.max_file_size）
-            let bytes = UploadUtil::read_field_bounded(&mut field, config.max_file_size).await?;
+            let bytes = UploadUtil::read_field_bounded(&mut field, config.max_file_size)
+                .await
+                .map_err(|e| AppError::bad_request(e.to_string()))?;
             let file_size = bytes.len();
             if file_size == 0 {
                 tracing::debug!(filename = %filename_cow, "Skipping zero-byte file upload");
@@ -74,7 +83,7 @@ impl FileService {
                     max_total_size = config.max_total_size,
                     "Total multipart upload size exceeded"
                 );
-                return Err(Error::BadRequest(format!(
+                return Err(AppError::bad_request(format!(
                     "Total upload size exceeds limit of {} bytes",
                     config.max_total_size
                 )));
@@ -88,7 +97,9 @@ impl FileService {
             let content_bytes = bytes::Bytes::from(bytes);
             if let Err(err) = ctx.storage.upload(path, &content_bytes).await {
                 tracing::error!(key = %key, error = %err, "Failed to write file to storage provider");
-                return Err(Error::InternalServerError);
+                return Err(AppError::internal(
+                    "Failed to write file to storage provider",
+                ));
             }
 
             tracing::info!(key = %key, size = file_size, "File uploaded successfully");
@@ -102,23 +113,23 @@ impl FileService {
         }
 
         if uploaded_files.is_empty() {
-            return Err(Error::BadRequest("No valid files were uploaded".into()));
+            return Err(AppError::bad_request("No valid files were uploaded"));
         }
 
         Ok(uploaded_files)
     }
 
     /// 获取文件二进制数据及由 mime_guess 自动推导的 RFC Content-Type
-    pub async fn download(ctx: &AppContext, raw_key: &str) -> Result<(&'static str, Vec<u8>)> {
+    pub async fn download(ctx: &AppContext, raw_key: &str) -> AppResult<(&'static str, Vec<u8>)> {
         let key = Self::sanitize_key(raw_key).ok_or_else(|| {
             tracing::warn!(key = %raw_key, "Detected potential path traversal attempt in file download");
-            Error::BadRequest("Invalid file path key".into())
+            AppError::bad_request("Invalid file path key")
         })?;
 
         let path = StdPath::new(key);
         let bytes = ctx.storage.download(path).await.map_err(|err| {
             tracing::warn!(key = %key, error = %err, "File not found or unreadable from storage provider");
-            Error::NotFound
+            AppError::not_found("File not found")
         })?;
 
         let content_type = mime_guess::from_path(key)

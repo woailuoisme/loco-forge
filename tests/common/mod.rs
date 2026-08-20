@@ -1,3 +1,4 @@
+pub mod diagnostics_test;
 pub mod excel_test;
 pub mod media_test;
 pub mod notification_test;

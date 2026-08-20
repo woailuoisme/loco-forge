@@ -4,10 +4,7 @@
 
 use loco_rs::prelude::*;
 
-use crate::{
-    mailers::auth::AuthMailer,
-    models::{_entities::users, users::RegisterRequest},
-};
+use crate::{dtos::auth::RegisterRequest, mailers::auth::AuthMailer, models::_entities::users};
 
 /// 用户创建管理员任务
 pub struct UserCreate;

@@ -1,16 +1,16 @@
+//! # 文件上传与下载控制器 (Files Controller)
+
 use axum::{
     extract::{Multipart, Path, State},
     http::{HeaderMap, HeaderValue, StatusCode, header},
-    response::Response,
+    response::{IntoResponse, Response},
 };
 use loco_rs::prelude::*;
 
 use crate::{
     common::consts::openapi::TAG_FILES,
-    dtos::{
-        common::{ApiResponse, format_res},
-        files::FileUploadResource,
-    },
+    dtos::{common::ApiResponse, files::FileUploadResource},
+    errors::AppResult,
     services::FileService,
 };
 
@@ -35,9 +35,9 @@ pub async fn upload(
     _auth: auth::JWT,
     State(ctx): State<AppContext>,
     multipart: Multipart,
-) -> Result<Response> {
+) -> AppResult<ApiResponse<Vec<FileUploadResource>>> {
     let uploaded_files = FileService::upload(&ctx, multipart).await?;
-    format_res::ok(uploaded_files)
+    Ok(ApiResponse::ok(uploaded_files))
 }
 
 /// 获取文件内容/下载接口
@@ -57,7 +57,10 @@ pub async fn upload(
     tag = TAG_FILES
 )]
 #[debug_handler]
-pub async fn get_file(State(ctx): State<AppContext>, Path(key): Path<String>) -> Result<Response> {
+pub async fn get_file(
+    State(ctx): State<AppContext>,
+    Path(key): Path<String>,
+) -> AppResult<Response> {
     let (content_type, bytes) = FileService::download(&ctx, &key).await?;
 
     let mut headers = HeaderMap::new();

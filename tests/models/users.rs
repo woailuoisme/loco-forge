@@ -6,6 +6,7 @@ use locos::{
     models::users::{self, Model, RegisterRequest},
 };
 use sea_orm::{ActiveModelTrait, ActiveValue, IntoActiveModel};
+use secrecy::SecretString;
 use serial_test::serial;
 
 use crate::configure_insta;
@@ -378,51 +379,67 @@ async fn test_user_entity_paginated_and_batch_delete() {
 #[tokio::test]
 #[serial]
 async fn test_user_credentials_state_machine() {
-    use locos::models::credentials::UserCredentials;
+    let boot = boot_test::<App>().await.unwrap();
 
-    let mut active = users::ActiveModel {
-        ..Default::default()
+    let reg = RegisterRequest {
+        name: "State Machine User".to_string(),
+        email: "state_machine@example.com".to_string(),
+        password: SecretString::from("password123"),
     };
+    let user = users::Model::create_with_password(&boot.app_context.db, &reg)
+        .await
+        .expect("create user failed");
 
-    // 1. Issue OTP
-    let otp = UserCredentials::issue_otp(&mut active);
+    // 1. Create OTP
+    let (user_with_otp, otp) = user
+        .into_active_model()
+        .create_otp(&boot.app_context.db)
+        .await
+        .expect("create_otp failed");
     assert_eq!(otp.len(), 6);
-    assert!(active.magic_link_token.is_set());
-    assert!(active.magic_link_expiration.is_set());
+    assert_eq!(user_with_otp.magic_link_token, Some(otp.clone()));
 
     // 2. Clear OTP
-    UserCredentials::clear_otp(&mut active);
-    assert_eq!(active.magic_link_token.as_ref(), &None);
-    assert_eq!(active.magic_link_expiration.as_ref(), &None);
+    let user_cleared_otp = user_with_otp
+        .into_active_model()
+        .clear_otp(&boot.app_context.db)
+        .await
+        .expect("clear_otp failed");
+    assert_eq!(user_cleared_otp.magic_link_token, None);
 
-    // 3. Issue Email Verification
-    let verify_token = UserCredentials::issue_email_verification(&mut active);
-    assert!(!verify_token.is_empty());
-    assert!(active.email_verification_token.is_set());
-    assert!(active.email_verification_sent_at.is_set());
+    // 3. Set Email Verification Sent
+    let user_with_verify = user_cleared_otp
+        .into_active_model()
+        .set_email_verification_sent(&boot.app_context.db)
+        .await
+        .expect("set_email_verification_sent failed");
+    assert!(user_with_verify.email_verification_token.is_some());
+    assert!(user_with_verify.email_verification_sent_at.is_some());
 
     // 4. Mark Verified
-    UserCredentials::mark_email_verified(&mut active);
-    assert!(active.email_verified_at.is_set());
-    assert_eq!(active.email_verification_token.as_ref(), &None);
+    let user_verified = user_with_verify
+        .into_active_model()
+        .verified(&boot.app_context.db)
+        .await
+        .expect("verified failed");
+    assert!(user_verified.email_verified_at.is_some());
+    assert_eq!(user_verified.email_verification_token, None);
 
-    // 5. Issue Password Reset
-    let reset_token = UserCredentials::issue_password_reset(&mut active);
-    assert!(!reset_token.is_empty());
-    assert!(active.reset_token.is_set());
-    assert!(active.reset_sent_at.is_set());
+    // 5. Set Forgot Password Sent
+    let user_with_reset = user_verified
+        .into_active_model()
+        .set_forgot_password_sent(&boot.app_context.db)
+        .await
+        .expect("set_forgot_password_sent failed");
+    assert!(user_with_reset.reset_token.is_some());
+    assert!(user_with_reset.reset_sent_at.is_some());
 
-    // 6. Clear Password Reset
-    UserCredentials::clear_password_reset(&mut active);
-    assert_eq!(active.reset_token.as_ref(), &None);
-    assert_eq!(active.reset_sent_at.as_ref(), &None);
-
-    // 7. Test TokenKind issue_token dispatch
-    use locos::models::credentials::TokenKind;
-    let otp2 = UserCredentials::issue_token(TokenKind::Otp, &mut active);
-    assert_eq!(otp2.len(), 6);
-    let verify2 = UserCredentials::issue_token(TokenKind::EmailVerification, &mut active);
-    assert!(!verify2.is_empty());
-    let reset2 = UserCredentials::issue_token(TokenKind::PasswordReset, &mut active);
-    assert!(!reset2.is_empty());
+    // 6. Reset Password
+    let user_reset = user_with_reset
+        .into_active_model()
+        .reset_password(&boot.app_context.db, "new_password_123")
+        .await
+        .expect("reset_password failed");
+    assert_eq!(user_reset.reset_token, None);
+    assert!(user_reset.verify_password("new_password_123"));
 }

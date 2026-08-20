@@ -1,11 +1,10 @@
 use crate::{
     common::{consts::auth::ALLOW_EMAIL_DOMAIN_PATTERN, notifications::NotificationHub},
-    dtos::auth::{CurrentUserResource, LoginResource},
-    errors::{AppError, AppResult},
-    models::{
-        _entities::users,
-        users::{LoginRequest, RegisterRequest},
+    dtos::auth::{
+        CurrentUserResource, LoginRequest, LoginResource, RegisterRequest, ResetPasswordRequest,
     },
+    errors::{AppError, AppResult},
+    models::users,
 };
 use loco_rs::prelude::*;
 use regex::Regex;
@@ -93,14 +92,16 @@ impl AuthService {
     /// # Errors
     ///
     /// 当重置密码失败时返回 `AppResult`
-    pub async fn reset(ctx: &AppContext, token: &str, password: &str) -> AppResult<()> {
-        let Ok(user) = users::Model::find_by_reset_token(&ctx.db, token).await else {
+    pub async fn reset(ctx: &AppContext, params: &ResetPasswordRequest) -> AppResult<()> {
+        use secrecy::ExposeSecret;
+
+        let Ok(user) = users::Model::find_by_reset_token(&ctx.db, &params.token).await else {
             tracing::info!("reset token not found");
             return Ok(());
         };
 
         user.into_active_model()
-            .reset_password(&ctx.db, password)
+            .reset_password(&ctx.db, params.password.expose_secret())
             .await?;
         Ok(())
     }

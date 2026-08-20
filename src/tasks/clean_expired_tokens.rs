@@ -1,7 +1,7 @@
 //! # 清理过期 Token 命令行与定时任务
 //!
 //! 提供 `cargo loco task clean_expired_tokens` 任务，
-//! 用于清理数据库中已过期的密码重置 Token 与 Magic Link 登录 Token。
+//! 用于清理数据库中已过期的密码重置 Token 与 OTP 登录验证码。
 
 use crate::models::users;
 use loco_rs::prelude::*;
