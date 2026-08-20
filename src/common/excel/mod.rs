@@ -47,3 +47,25 @@ pub use import::{
     import_from_bytes, import_in_chunks_from_reader,
 };
 pub use response::ExcelResponse;
+
+/// Excel 统一门面引擎 (Excel Facade Engine)
+///
+/// 提供开箱即用的同步与流式 Excel 导入导出核心能力。
+pub struct Excel;
+
+impl Excel {
+    /// 内存全量导出为 Excel 二进制字节流
+    pub fn export<T: ExcelExport>(items: &[T]) -> loco_rs::Result<bytes::Bytes> {
+        export::export_to_bytes(items)
+    }
+
+    /// 内存全量解析 Excel 二进制字节流
+    pub fn import<T: ExcelImport>(bytes: impl AsRef<[u8]>) -> loco_rs::Result<ImportResult<T>> {
+        import::import_from_bytes(bytes)
+    }
+
+    /// 构造 Excel 文件下载 HTTP 响应
+    pub fn download(bytes: impl Into<bytes::Bytes>, filename: impl Into<String>) -> ExcelResponse {
+        ExcelResponse::download(bytes, filename)
+    }
+}

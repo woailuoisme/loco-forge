@@ -88,10 +88,61 @@ where
     }
 }
 
+/// 自动 Query 参数解析与格式校验 Extractor [`ValidQuery<T>`]
+///
+/// 提取客户端 URL Query 参数，并自动调用 `validator::Validate::validate` 进行校验。
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ValidQuery<T>(pub T);
+
+impl<T, S> axum::extract::FromRequestParts<S> for ValidQuery<T>
+where
+    T: DeserializeOwned + Validate + 'static,
+    S: Send + Sync,
+{
+    type Rejection = Response;
+
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        let axum::extract::Query(data) =
+            axum::extract::Query::<T>::from_request_parts(parts, state)
+                .await
+                .map_err(|err| {
+                    super::format_res::bad_request(format!("Invalid Query parameters: {err}"))
+                        .unwrap_or_else(|_| {
+                            (axum::http::StatusCode::BAD_REQUEST, "Invalid Query").into_response()
+                        })
+                })?;
+
+        if let Err(validation_errors) = data.validate() {
+            let details = serde_json::to_value(&validation_errors).ok();
+            return Err(super::format_res::validation_error_with_details(
+                "Invalid request query parameters",
+                details,
+            )
+            .unwrap_or_else(|_| {
+                (
+                    axum::http::StatusCode::UNPROCESSABLE_ENTITY,
+                    "Validation Error",
+                )
+                    .into_response()
+            }));
+        }
+
+        Ok(Self(data))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::{Router, body::Body, http::Request, routing::post};
+    use axum::{
+        Router,
+        body::Body,
+        http::Request,
+        routing::{get, post},
+    };
     use serde::{Deserialize, Serialize};
     use tower::ServiceExt;
 
@@ -102,6 +153,10 @@ mod tests {
     }
 
     async fn dummy_handler(ValidJson(payload): ValidJson<DummyPayload>) -> Response {
+        (axum::http::StatusCode::OK, payload.name).into_response()
+    }
+
+    async fn dummy_query_handler(ValidQuery(payload): ValidQuery<DummyPayload>) -> Response {
         (axum::http::StatusCode::OK, payload.name).into_response()
     }
 
@@ -129,6 +184,34 @@ mod tests {
             .uri("/test")
             .header("content-type", "application/json")
             .body(Body::from(r#"{"name": "ab"}"#))
+            .unwrap();
+
+        let res = app.oneshot(req).await.unwrap();
+        assert_eq!(res.status(), axum::http::StatusCode::UNPROCESSABLE_ENTITY);
+    }
+
+    #[tokio::test]
+    async fn test_valid_query_success() {
+        let app = Router::new().route("/query", get(dummy_query_handler));
+
+        let req = Request::builder()
+            .method("GET")
+            .uri("/query?name=Bob123")
+            .body(Body::empty())
+            .unwrap();
+
+        let res = app.oneshot(req).await.unwrap();
+        assert_eq!(res.status(), axum::http::StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_valid_query_validation_failure_422() {
+        let app = Router::new().route("/query", get(dummy_query_handler));
+
+        let req = Request::builder()
+            .method("GET")
+            .uri("/query?name=b")
+            .body(Body::empty())
             .unwrap();
 
         let res = app.oneshot(req).await.unwrap();

@@ -99,10 +99,10 @@ impl Entity {
             .order_by_desc(super::_entities::posts::Column::CreatedAt)
             .paginate(db, page_size);
 
-        let total_pages = paginator.num_pages().await?;
+        let total = paginator.num_items().await?;
         let posts = paginator.fetch_page(page.saturating_sub(1)).await?;
 
-        Ok((posts, total_pages))
+        Ok((posts, total))
     }
 
     /// 根据标题或内容关键字模糊搜索文章列表并支持分页
@@ -116,21 +116,20 @@ impl Entity {
         page: u64,
         page_size: u64,
     ) -> ModelResult<(Vec<Model>, u64)> {
-        let pattern = format!("%{keyword}%");
         let query = Self::find().filter(
             Condition::any()
-                .add(super::_entities::posts::Column::Title.contains(&pattern))
-                .add(super::_entities::posts::Column::Content.contains(&pattern)),
+                .add(super::_entities::posts::Column::Title.contains(keyword))
+                .add(super::_entities::posts::Column::Content.contains(keyword)),
         );
 
         let paginator = query
             .order_by_desc(super::_entities::posts::Column::CreatedAt)
             .paginate(db, page_size);
 
-        let total_pages = paginator.num_pages().await?;
+        let total = paginator.num_items().await?;
         let posts = paginator.fetch_page(page.saturating_sub(1)).await?;
 
-        Ok((posts, total_pages))
+        Ok((posts, total))
     }
 
     /// 根据 ID 列表批量删除文章记录

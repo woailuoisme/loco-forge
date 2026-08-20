@@ -184,3 +184,23 @@ fn test_excel_export_chunked_to_file_and_chunked_import() {
     // 清理临时测试文件
     let _ = std::fs::remove_file(file_path);
 }
+
+#[test]
+fn test_excel_facade_export_and_import() {
+    use locos::common::excel::Excel;
+
+    let users = vec![TestUserExport {
+        id: 101,
+        name: "FacadeUser".to_string(),
+        score: 99.5,
+        is_active: true,
+    }];
+
+    let bytes = Excel::export(&users).expect("Excel::export should succeed");
+    assert!(!bytes.is_empty());
+
+    let result = Excel::import::<TestUserImport>(&bytes).expect("Excel::import should succeed");
+    assert_eq!(result.valid_rows.len(), 1);
+    assert_eq!(result.valid_rows[0].name, "FacadeUser");
+    assert_eq!(result.valid_rows[0].score, 99.5);
+}

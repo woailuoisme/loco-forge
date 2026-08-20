@@ -5,6 +5,7 @@ use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Map;
 use uuid::Uuid;
+use validator::Validate;
 
 use secrecy::ExposeSecret;
 
@@ -270,7 +271,6 @@ impl Model {
     ///
     /// 当生成 JWT Claims 错误或签署签名失败时返回 `ModelError`
     pub fn generate_jwt(&self, secret: &str, expiration: u64) -> ModelResult<String> {
-        let _ = jsonwebtoken::crypto::rust_crypto::DEFAULT_PROVIDER.install_default();
         jwt::JWT::new(secret)
             .generate_token(expiration, self.pid.to_string(), Map::new())
             .map_err(ModelError::from)

@@ -14,5 +14,4 @@ pub mod models;
 pub mod services;
 pub mod setup;
 pub mod tasks;
-pub mod views;
 pub mod workers;

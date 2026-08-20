@@ -9,7 +9,7 @@ use crate::{
         },
         posts::{CreatePostRequest, PostResource, UpdatePostRequest},
     },
-    services::admin::PostService,
+    models::posts::{Entity as PostEntity, Model as PostModel},
 };
 
 /// 获取文章列表
@@ -29,12 +29,14 @@ use crate::{
 )]
 #[debug_handler]
 pub async fn list(
-    _auth: auth::JWT,
+    _admin: AdminUser,
     State(ctx): State<AppContext>,
     Query(params): Query<PaginationRequest>,
 ) -> Result<Response> {
-    let (dtos, page, per_page, total) = PostService::list(&ctx, &params).await?;
-    format_res::page(dtos, page, per_page, total)
+    let (posts, total) =
+        PostEntity::find_all_paginated(&ctx.db, params.page(), params.per_page()).await?;
+    let dtos: Vec<PostResource> = posts.into_iter().map(PostResource::from).collect();
+    format_res::page(dtos, params.page(), params.per_page(), total)
 }
 
 /// 获取指定文章
@@ -57,14 +59,14 @@ pub async fn list(
 )]
 #[debug_handler]
 pub async fn get_one(
-    _auth: auth::JWT,
+    _admin: AdminUser,
     State(ctx): State<AppContext>,
     Path(id): Path<i64>,
 ) -> Result<Response> {
-    let Some(dto) = PostService::get_one(&ctx, id).await? else {
+    let Ok(post) = PostModel::find_by_id(&ctx.db, id).await else {
         return format_res::not_found(POST_NOT_FOUND);
     };
-    format_res::retrieved(dto)
+    format_res::retrieved(PostResource::from(post))
 }
 
 /// 创建新文章
@@ -84,12 +86,12 @@ pub async fn get_one(
 )]
 #[debug_handler]
 pub async fn create(
-    _auth: auth::JWT,
+    _admin: AdminUser,
     State(ctx): State<AppContext>,
     ValidJson(params): ValidJson<CreatePostRequest>,
 ) -> Result<Response> {
-    let dto = PostService::create(&ctx, params).await?;
-    format_res::created(dto)
+    let post = PostModel::create(&ctx.db, params.title, params.content).await?;
+    format_res::created(PostResource::from(post))
 }
 
 /// 更新文章
@@ -113,16 +115,19 @@ pub async fn create(
 )]
 #[debug_handler]
 pub async fn update(
-    _auth: auth::JWT,
+    _admin: AdminUser,
     State(ctx): State<AppContext>,
     Path(id): Path<i64>,
     ValidJson(params): ValidJson<UpdatePostRequest>,
 ) -> Result<Response> {
-    let Some(dto) = PostService::update(&ctx, id, params).await? else {
+    let Ok(post) = PostModel::find_by_id(&ctx.db, id).await else {
         return format_res::not_found(POST_NOT_FOUND);
     };
 
-    format_res::updated(dto)
+    let updated = post
+        .update_post(&ctx.db, params.title, params.content)
+        .await?;
+    format_res::updated(PostResource::from(updated))
 }
 
 /// 删除文章
@@ -149,10 +154,11 @@ pub async fn remove(
     State(ctx): State<AppContext>,
     Path(id): Path<i64>,
 ) -> Result<Response> {
-    if !PostService::remove(&ctx, id).await? {
+    let Ok(post) = PostModel::find_by_id(&ctx.db, id).await else {
         return format_res::not_found(POST_NOT_FOUND);
-    }
+    };
 
+    post.delete(&ctx.db).await?;
     format_res::deleted()
 }
 

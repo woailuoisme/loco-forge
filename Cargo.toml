@@ -77,6 +77,8 @@ loco-rs = { workspace = true, features = [
   "storage_aws_s3",
   "cache_redis",
   "worker_redis",
+  "auth",
+  "with-db",
 ] }
 tokio = { version = "1.53", features = [
   "rt-multi-thread",
@@ -118,7 +120,11 @@ reqwest = { version = "0.13", default-features = false, features = [
   "stream",
   "multipart",
 ] } # 异步 HTTP 客户端 (使用 Rustls 纯 Rust TLS 实现，支持 JSON、流式 Stream 与 Multipart 表单)
-meilisearch-sdk = { version = "0.33" } # Meilisearch 全文搜索引擎 SDK
+meilisearch-sdk = { version = "0.33", default-features = false, features = [
+  "reqwest",
+  "tls",
+  "jwt_rust_crypto",
+] } # Meilisearch 全文搜索引擎 SDK (使用与 Loco 一致的 rust_crypto JWT 后端)
 mime_guess = { version = "2" } # 根据文件后缀或路径推导 RFC 标准 MIME/Content-Type 类型
 bytes = { version = "1", features = [
   "serde",
@@ -127,6 +133,7 @@ bytes = { version = "1", features = [
 # 4. 序列化、校验与扩展数据类型 (Serialization, Validation & Data Types)
 serde = { version = "1", features = ["derive"] } # 通用数据序列化与反序列化框架
 serde_json = { version = "1" } # JSON 数据格式化与解析工具
+validator = { version = "0.20", features = ["derive"] } # 请求与模型数据字段校验框架 (Loco 官方标准)
 thiserror = { version = "2" } # 自定义错误类型派生宏 (std::error::Error)
 color-eyre = { version = "0.6", features = [
   "tracing-error",
@@ -136,9 +143,6 @@ chrono = { version = "0.4", features = [
   "serde",
 ] } # 日期与时间跨时区处理库 (Loco/SeaORM/utoipa 全栈统一标准)
 uuid = { version = "1.24", features = ["v4", "serde"] } # 通用唯一标识符 (UUID v4) 生成器
-validator = { version = "0.20", features = [
-  "derive",
-] } # DTO 请求参数格式校验器 (锁定 0.20.x 需与 loco-rs 1.0 的 Validate Trait 保持一致)
 rust_decimal = { version = "1", features = [
   "macros",
   "maths",
@@ -163,11 +167,6 @@ geo = { version = "0.33", features = [
 indexmap = { version = "2", features = [
   "serde",
 ] } # 保持插入顺序的高性能 Hash Map/Set 集合 (utoipa/Loco/serde 原生兼容)
-
-# 5. 安全、身份认证与加密工具 (Security, Authentication & Cryptography)
-jsonwebtoken = { version = "10.4", features = [
-  "rust_crypto",
-] } # JWT Token 签发与校验
 secrecy = { version = "0.10.3", features = ["serde"] } # 敏感数据防泄漏内存包裹容器
 base64 = { version = "0.23" } # Base64 数据编解码工具
 rand = { version = "0.10", features = ["serde"] } # 加密安全伪随机数生成器 (开启 Serde 序列化)
@@ -261,13 +260,18 @@ debug = 0     # 剥离测试依赖包的调试符号，加速测试二进制文�
 # ── 4. 生产发布构建极致优化 (最大化优化等级、开启 ThinLTO、单代码生成单元、自动剥离调试符号)
 [profile.release]
 opt-level = 3     # 开启最高等级全量性能优化，最大化运行时吞吐与执行效率
-lto = "thin"      # 开启跨 Crate 的 Thin 链接时优化，消除无效代码并增强内联
+lto = true        # 开启跨 Crate 的 Thin 链接时优化，消除无效代码并增强内联
 codegen-units = 1 # 限制单代码生成单元，牺牲编译并行度换取 LLVM 全局极致优化
 strip = true      # 自动剥离二进制中的所有调试符号与文件名信息，削减 40%~60% 镜像体积
 panic = "abort"   # 生产环境禁用栈展开，削减二进制体积并提升指令分支预测效率
 
+[profile.profiling]
+inherits = "release"
+strip = false
+debug = "line-tables-only"
+
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
-tikv-jemallocator = { version = "0.6", features = [
+tikv-jemallocator = { version = "0.7", features = [
   "unprefixed_malloc_on_supported_platforms",
 ] }
 

@@ -75,9 +75,9 @@ loco-starter/
 
 ## 🏗️ 架构亮点 (Architecture Highlights)
 
-1. **Service 层业务解耦** (`src/services/`):
-   - HTTP Controller 仅负责请求解析与 Response 响应格式化，核心业务下沉至无状态的 `Service` 关联函数中 (如 `AuthService::login`, `PostService::list`)。
-   - `admin` 专属服务收拢在 `src/services/admin/` 下，保持模块化清爽。
+1. **Model 仓储深模块与 Service 业务编排** (`src/models/`, `src/services/`):
+   - 数据模型采用三段式 Data Repository 架构 (`impl Model` 读写, `impl ActiveModel` 钩子, `impl Entity` 集合查询/分页/批量操作)。
+   - 跨模型事务、邮件发送与异步任务编排下沉至 `Service` 关联函数 (如 `AuthService::register`, `AuthService::login`)，避免浅层透传。
 
 2. **统一全局常量与日志** (`src/common/`):
    - 全局 App 配置、默认分页大小、文件存储路径统一收拢于 `src/common/consts.rs`，消除字符串硬编码。

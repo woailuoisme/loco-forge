@@ -185,3 +185,22 @@ fn test_image_presets_and_filters() {
     assert_eq!(&webp_bytes[0..4], b"RIFF");
     assert_eq!(&webp_bytes[8..12], b"WEBP");
 }
+
+#[test]
+fn test_media_facade_image_and_qrcode() {
+    use locos::common::media::Media;
+
+    let input_bytes = create_test_image_bytes(200, 200, [50, 100, 150, 255]);
+    let img_bytes = Media::image(&input_bytes)
+        .expect("Media::image should initialize")
+        .resize(100, 100, locos::common::media::ResizeMode::FillCrop)
+        .to_bytes()
+        .expect("Should export processed image bytes");
+    assert!(!img_bytes.is_empty());
+
+    let qr_png = Media::qrcode("https://loco.rs")
+        .size(256)
+        .to_png_bytes()
+        .expect("Media::qrcode should generate png");
+    assert!(!qr_png.is_empty());
+}

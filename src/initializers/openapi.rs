@@ -13,7 +13,7 @@ use utoipa_scalar::{Scalar, Servable as ScalarServable};
 
 use crate::{
     common::consts::openapi::{TAG_AUTH, TAG_FILES, TAG_POSTS},
-    controllers, dtos, models, views,
+    controllers, dtos, models,
 };
 
 #[derive(OpenApi)]
@@ -46,8 +46,8 @@ use crate::{
             dtos::common::ApiResponse<dtos::posts::PostResource>,
             dtos::common::ApiResponse<dtos::common::PaginatedResource<dtos::posts::PostResource>>,
             // 认证接口具化响应
-            dtos::common::ApiResponse<views::auth::LoginResource>,
-            dtos::common::ApiResponse<views::auth::CurrentUserResource>,
+            dtos::common::ApiResponse<dtos::auth::LoginResource>,
+            dtos::common::ApiResponse<dtos::auth::CurrentUserResource>,
             // 文件上传具化响应
             dtos::common::ApiResponse<Vec<dtos::files::FileUploadResource>>,
             // 分页与通用类型
@@ -62,8 +62,8 @@ use crate::{
             dtos::auth::ResendVerificationRequest,
             models::users::LoginRequest,
             models::users::RegisterRequest,
-            views::auth::LoginResource,
-            views::auth::CurrentUserResource,
+            dtos::auth::LoginResource,
+            dtos::auth::CurrentUserResource,
         )
     ),
     modifiers(&SecurityAddon),

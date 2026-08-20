@@ -40,3 +40,20 @@ pub use error::{MediaError, MediaResult};
 pub use image::{ImagePreset, ImageProcessor, OutputFormat, ResizeMode, WatermarkPosition};
 pub use qrcode::{QrCodeBuilder, QrLogoConfig};
 pub use response::MediaResponse;
+
+/// 媒体处理统一门面 (Media Facade)
+///
+/// 提供图像处理、缩放裁剪与二维码生成的快捷入口。
+pub struct Media;
+
+impl Media {
+    /// 创建图像处理器构建器
+    pub fn image(bytes: &[u8]) -> MediaResult<ImageProcessor> {
+        ImageProcessor::from_bytes(bytes)
+    }
+
+    /// 创建二维码构建器
+    pub fn qrcode(content: impl Into<String>) -> QrCodeBuilder {
+        QrCodeBuilder::new(content)
+    }
+}

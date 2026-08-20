@@ -8,8 +8,8 @@ use super::prepare_data::{auth_header, init_admin_login, init_user_login};
 #[serial_test::serial]
 async fn can_list_posts_with_pagination() {
     request::<App, _, _>(|request, ctx| async move {
-        let user = init_user_login(&request, &ctx).await;
-        let (header_name, header_value) = auth_header(&user.token);
+        let admin = init_admin_login(&request, &ctx).await;
+        let (header_name, header_value) = auth_header(&admin.token);
 
         let res = request
             .get("/api/v1/admin/posts?page=1&per_page=5")
@@ -23,6 +23,23 @@ async fn can_list_posts_with_pagination() {
         let data = api_res.data.unwrap();
         assert_eq!(data["meta"]["current_page"], 1);
         assert_eq!(data["meta"]["per_page"], 5);
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial_test::serial]
+async fn non_admin_cannot_list_posts() {
+    request::<App, _, _>(|request, ctx| async move {
+        let user = init_user_login(&request, &ctx).await;
+        let (header_name, header_value) = auth_header(&user.token);
+
+        let res = request
+            .get("/api/v1/admin/posts?page=1&per_page=5")
+            .add_header(header_name, header_value)
+            .await;
+
+        res.assert_status(axum::http::StatusCode::FORBIDDEN);
     })
     .await;
 }

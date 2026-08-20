@@ -1,11 +1,11 @@
 use crate::{
     common::consts::auth::ALLOW_EMAIL_DOMAIN_PATTERN,
+    dtos::auth::{CurrentUserResource, LoginResource},
     mailers::auth::AuthMailer,
     models::{
         _entities::users,
         users::{LoginRequest, RegisterRequest},
     },
-    views::auth::{CurrentUserResource, LoginResource},
 };
 use loco_rs::prelude::*;
 use regex::Regex;
