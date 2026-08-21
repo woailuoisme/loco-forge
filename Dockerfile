@@ -5,6 +5,11 @@ FROM lukemathwalker/cargo-chef:latest-rust-${RUST_VERSION}-slim-trixie AS chef
 WORKDIR /app
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+# 安装 tikv-jemalloc-sys 与 C 扩展编译必需的 make 构建工具
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends make \
+    && rm -rf /var/lib/apt/lists/*
+
 # ── 阶段 2：Planner 依赖分析阶段（生成 recipe.json）───────────────────────────
 FROM chef AS planner
 COPY . .
