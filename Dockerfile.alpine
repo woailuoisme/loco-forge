@@ -6,8 +6,8 @@ FROM lukemathwalker/cargo-chef:latest-rust-${RUST_VERSION}-alpine${ALPINE_VERSIO
 WORKDIR /app
 SHELL ["/bin/sh", "-o", "pipefail", "-c"]
 
-# 安装 Musl 编译环境与 C 源码构建工具（tikv-jemalloc-sys 编译必需 make/gcc）
-RUN apk add --no-cache musl-dev build-base make
+# 安装基础构建套件（包含 gcc/make/musl-dev/binutils，供 tikv-jemalloc-sys 及 C 依赖构建）
+RUN apk add --no-cache build-base
 
 # ── 阶段 2：Planner 依赖分析阶段（生成 recipe.json）───────────────────────────
 FROM chef AS planner
