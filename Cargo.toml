@@ -34,6 +34,7 @@ explicit_auto_deref = "warn"                # 利用 Rust 自动解引用，消�
 cloned_instead_of_copied = "warn"           # 对 Copy 类型强制用 .copied() 替代 .cloned()
 needless_raw_strings = "warn"               # 清理无需转义的多余原生字符串 r"..."
 needless_raw_string_hashes = "warn"         # 清理原生字符串中多余的井号 (Rust 2024 规范)
+manual_c_str_literals = "warn"              # 倡导 Rust 2024 原生 c"hello" C 字符串字面量
 
 # --- 2. 异步并发安全与生产环境硬性防护 ---
 await_holding_lock = "warn"   # 严禁跨 .await 持有同步 Mutex 锁 (防 Tokio 死锁)
@@ -61,6 +62,7 @@ flat_map_option = "warn"                # 倡导 filter_map 替代 flat_map
 map_unwrap_or = "warn"                  # 倡导 map_or 替代 map().unwrap_or()
 zero_sized_map_values = "warn"          # 强制用 HashSet<K> 替代 HashMap<K, ()>
 linkedlist = "warn"                     # 倡导连续内存集合 Vec 替代 LinkedList
+needless_for_each = "warn"              # 倡导原生 for 循环替代无返回值的 .for_each(...)
 
 # --- 4. 字符串、语法与模式匹配优化 ---
 single_char_pattern = "warn"             # 字符串匹配统一使用单字符字面量 (零分配匹配)
@@ -87,6 +89,9 @@ unnecessary_join = "warn"              # 消除多余的 .join("")，倡导 .col
 unnecessary_self_imports = "warn"      # 清理 use foo::{self} 冗余导入
 useless_let_if_seq = "warn"            # 倡导 let x = if ... 替代先 let mut 后分支赋值
 semicolon_if_nothing_returned = "warn" # 语句无返回值时统一补全末尾分号
+semicolon_outside_block = "warn"       # 统一语句块外部末尾分号风格
+redundant_else = "warn"                # 提前 return/break/continue 后消除冗余 else 分支
+redundant_type_annotations = "warn"    # 清理编译器可推导的冗余显式类型标注
 
 # --- 6. 框架与第三方宏兼容放行 ---
 option_if_let_else = "allow" # 允许（防止 utoipa::ToSchema 派生宏误报）

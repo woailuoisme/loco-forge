@@ -15,17 +15,15 @@ pre-commit:
       glob: "*.rs"
       run: cargo fmt --all
       stage_fixed: true
-
-    # 2. 自动格式化 Markdown 文档 (并自动重新暂存)
+    # 2. 静态代码质量严格门禁 (全 Target、全 Features、零警告拦截)
+    - name: clippy
+      glob: "*.rs"
+      run: cargo clippy --all-targets --all-features -- -D warnings
+    # 3. 自动格式化 Markdown 文档 (并自动重新暂存)
     - name: rumdl
       glob: "*.md"
       run: rumdl fmt {staged_files}
       stage_fixed: true
-
-    # 3. 静态代码质量严格门禁 (全 Target、全 Features、零警告拦截)
-    - name: clippy
-      glob: "*.rs"
-      run: cargo clippy --all-targets --all-features -- -D warnings
 
 # 推送前质量验证 (按需开启：防止破坏性修改推送到远程分支)
 # pre-push:

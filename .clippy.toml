@@ -11,6 +11,22 @@ cognitive-complexity-threshold = 25
 # 超过 8 个参数会触发 clippy::too_many_arguments 警告 (适配 Axum/Loco 组合 Extractor)
 too-many-arguments-threshold = 8
 
+# 异步 Future 结构体体积上限 (单位: Byte)
+# 超过 16KB 会触发 clippy::large_futures 警告，防止 Tokio 异步任务状态机过大引发栈溢出
+future-size-threshold = 16384
+
+# 栈上静态数组分配体积上限 (单位: Byte)
+# 超过 500KB 会触发 clippy::large_stack_arrays 警告，提示使用 Box 或 Vec 分配堆内存
+array-size-threshold = 512000
+
+# 数值字面量下划线分隔阈值 (Literal Representation Threshold)
+# 超过 16384 的纯整数字面量建议添加下划线 (如 1_000_000)，提高代码可读性
+literal-representation-threshold = 16384
+
+# 函数按值传递类型体积上限 (单位: Byte)
+# 超过 256 字节的结构体建议传引用 (&T)，配合 trivially_copy_pass_by_ref 优化传参开销
+pass-by-value-size-limit = 256
+
 # 文档注释中允许包含的专有名词/大写缩写列表 (Doc Markdown Exemption)
 # 防止 clippy 检查将技术专有名词识别为缺少反引号包裹的格式警告
 doc-valid-idents = [
