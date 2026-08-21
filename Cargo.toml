@@ -8,7 +8,7 @@ resolver = "3"               # 依赖解析器版本 (可选值: "1" | "2" | "3"
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.97.1"
+rust-version = "1.98.0"
 publish = false
 
 [workspace.dependencies]
@@ -21,7 +21,7 @@ unsafe_code = "forbid"   # 绝对禁止 unsafe 代码，保持纯安全 Rust
 unreachable_pub = "warn" # 清理不可达的 pub 导出，保持接口可见性严谨
 
 [workspace.lints.clippy]
-# --- Rust 2024 现代编码范式与语法 ---
+# --- 1. Rust 2024 现代编码范式与语法 ---
 manual_let_else = "warn"                    # 强制使用 let-else 减少嵌套解包
 implicit_clone = "warn"                     # 避免隐式 Clone（如对 &String 调 to_string）
 redundant_closure_for_method_calls = "warn" # 优先使用函数指针（如 ToString::to_string）
@@ -32,18 +32,48 @@ double_must_use = "deny"                    # 禁止重复标注 #[must_use]
 macro_use_imports = "warn"                  # 淘汰遗留的 #[macro_use]，倡导显式 use
 explicit_auto_deref = "warn"                # 利用 Rust 自动解引用，消除冗余 &*s / &(*x)
 cloned_instead_of_copied = "warn"           # 对 Copy 类型强制用 .copied() 替代 .cloned()
+needless_raw_strings = "warn"               # 清理无需转义的多余原生字符串 r"..."
+needless_raw_string_hashes = "warn"         # 清理原生字符串中多余的井号 (Rust 2024 规范)
 
-# --- 异步并发安全与生产环境硬性防护 ---
-await_holding_lock = "warn" # 严禁跨 .await 持有同步 Mutex 锁 (防 Tokio 死锁)
-if_let_mutex = "warn"       # 严禁在 if let 语句块中隐式持有 Mutex 锁
-large_futures = "warn"      # 提示过大的 async 状态机 Future (防 Tokio 任务栈溢出)
-large_stack_arrays = "warn" # 提示栈上分配过大数组 (防线程调用栈溢出)
-dbg_macro = "warn"          # 严禁遗留 dbg! 调试宏 (统一使用 tracing)
-exit = "warn"               # 严禁在业务逻辑中直接调用 std::process::exit
-todo = "warn"               # 提示遗留的 todo! 未完成存根
-unimplemented = "warn"      # 提示遗留的 unimplemented! 未实现分支
+# --- 2. 异步并发安全与生产环境硬性防护 ---
+await_holding_lock = "warn"   # 严禁跨 .await 持有同步 Mutex 锁 (防 Tokio 死锁)
+if_let_mutex = "warn"         # 严禁在 if let 语句块中隐式持有 Mutex 锁
+large_futures = "warn"        # 提示过大的 async 状态机 Future (防 Tokio 任务栈溢出)
+large_stack_arrays = "warn"   # 提示栈上分配过大数组 (防线程调用栈溢出)
+mutex_atomic = "warn"         # 倡导原子类型 AtomicBool/AtomicUsize 替代单值 Mutex
+mutex_integer = "warn"        # 倡导原子整数 AtomicI64 替代 Mutex<i64>
+match_wild_err_arm = "warn"   # 防范 Err(_) 通配符吞没下层具体错误
+dbg_macro = "warn"            # 严禁遗留 dbg! 调试宏 (统一使用 tracing)
+exit = "warn"                 # 严禁在业务逻辑中直接调用 std::process::exit
+unimplemented = "warn"        # 提示遗留的 unimplemented! 未实现分支
 
-# --- 类型设计、模式匹配与性能微调 ---
+# --- 3. 现代函数式、迭代器与零堆分配优化 ---
+manual_is_variant_and = "warn"          # 强制用 .is_some_and() / .is_ok_and() 替代 .map_or(false, ...)
+manual_string_new = "warn"              # 倡导 String::new() 替代 "".to_string() / "".to_owned()
+filter_map_next = "warn"                # 倡导 .find_map(...) 替代 .filter_map(...).next()
+manual_filter_map = "warn"              # 倡导单遍 .filter_map() 替代 .filter().map()
+manual_find_map = "warn"                # 倡导短路求值 .find_map() 替代组合查找
+manual_unwrap_or_default = "warn"       # 倡导 .unwrap_or_default() 替代 .unwrap_or(Default::default())
+iter_filter_is_some = "warn"            # 倡导 .flatten() 替代 .filter(Option::is_some)
+iter_filter_is_ok = "warn"              # 倡导 .flatten() 替代 .filter(Result::is_ok)
+option_as_ref_cloned = "warn"           # 倡导 .cloned() 替代 .as_ref().cloned()
+flat_map_option = "warn"                # 倡导 filter_map 替代 flat_map
+map_unwrap_or = "warn"                  # 倡导 map_or 替代 map().unwrap_or()
+zero_sized_map_values = "warn"          # 强制用 HashSet<K> 替代 HashMap<K, ()>
+linkedlist = "warn"                     # 倡导连续内存集合 Vec 替代 LinkedList
+
+# --- 4. 字符串、语法与模式匹配优化 ---
+single_char_pattern = "warn"             # 字符串匹配统一使用单字符字面量 (零分配匹配)
+manual_pattern_char_comparison = "warn"  # 单字符比较倡导字面量匹配替代闭包开销
+redundant_as_str = "warn"                # 清理冗余的 .as_str()
+manual_instant_elapsed = "warn"          # 倡导 instant.elapsed() 替代 Instant::now() - instant
+manual_clamp = "warn"                    # 倡导 .clamp(min, max) 替代手动三元/条件分支
+manual_assert = "warn"                   # 倡导 assert!(cond) 替代 if !cond { panic!() }
+range_plus_one = "warn"                  # 倡导 a..=b 包含区间替代 a..(b + 1)
+unnested_or_patterns = "warn"            # 模式匹配折叠：Some(A | B) 替代 Some(A) | Some(B)
+match_same_arms = "warn"                 # 提示 match 中重复逻辑分支
+
+# --- 5. 控制流、类型设计与代码整洁 ---
 fn_params_excessive_bools = "warn"     # 超过 3 个 bool 参数提示重构（防 API 误用）
 option_option = "warn"                 # 禁止低效且语义模糊的 Option<Option<T>>
 ref_option = "warn"                    # 倡导 Option<&T> 替代 &Option<T>
@@ -51,13 +81,14 @@ needless_pass_by_value = "warn"        # 避免不需要转移所有权时的无
 trivially_copy_pass_by_ref = "warn"    # 小 Copy 类型传值优先于传引用 (&i32 -> i32)
 cast_lossless = "warn"                 # 无损数值转换倡导 From::from 替代 as 强转
 redundant_clone = "warn"               # 自动剔除无谓的堆内存 clone
-linkedlist = "warn"                    # 倡导连续内存集合 Vec 替代 LinkedList
-flat_map_option = "warn"               # 倡导 filter_map 替代 flat_map
-map_unwrap_or = "warn"                 # 倡导 map_or 替代 map().unwrap_or()
-match_same_arms = "warn"               # 提示 match 中重复逻辑分支
+needless_continue = "warn"             # 消除循环体末尾多余的 continue
+bool_to_int_with_if = "warn"           # 倡导 From::from(b) 替代 if b { 1 } else { 0 }
+unnecessary_join = "warn"              # 消除多余的 .join("")，倡导 .collect::<String>()
+unnecessary_self_imports = "warn"      # 清理 use foo::{self} 冗余导入
+useless_let_if_seq = "warn"            # 倡导 let x = if ... 替代先 let mut 后分支赋值
 semicolon_if_nothing_returned = "warn" # 语句无返回值时统一补全末尾分号
 
-# --- 框架与第三方宏兼容放行 ---
+# --- 6. 框架与第三方宏兼容放行 ---
 option_if_let_else = "allow" # 允许（防止 utoipa::ToSchema 派生宏误报）
 
 [package]

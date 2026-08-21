@@ -1,15 +1,4 @@
-# ==============================================================================
-# 文件作用：Alpine (Musl) + cargo-chef 纯静态极致轻量容器镜像构建规范
-# 生效时机：执行 `docker build -f Dockerfile.alpine .` 或生产 CI/CD 流水线时执行
-# 核心职责：
-#   1. 基于 lukemathwalker/cargo-chef 预热并缓存依赖层，实现秒级增量编译
-#   2. 使用 musl 静态编译出完全零动态依赖的独立 Rust 二进制程序
-#   3. 采用 Alpine Linux 最小运行底包，最终容器镜像体积仅 ~30MB
-#   4. 配置非 Root 最小权限运行用户 (UID 10001) 与时区
-# ==============================================================================
-
-# ── 全局构建参数 ─────────────────────────────────────────────────────────────
-ARG RUST_VERSION=1.97.1
+ARG RUST_VERSION=1.98.0
 ARG ALPINE_VERSION=3.24
 
 # ── 阶段 1：Chef 基础阶段（直接使用官方 cargo-chef Alpine 预装镜像）───────────────
@@ -64,7 +53,7 @@ EXPOSE 5150
 
 # 生产健康检查 (通过 /api/health 接口感知实例活性)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:5150/api/health || exit 1
+    CMD curl -f http://localhost:5150/api/health || exit 1
 
 ENTRYPOINT ["/app/locos"]
 CMD ["start"]

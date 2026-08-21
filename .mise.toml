@@ -1,17 +1,20 @@
 [tools]
-rust-analyzer = "latest"            # Rust 官方 IDE 语言服务器
-sccache = "latest"                  # Rust 编译缓存加速工具
-just = "latest"                     # 现代化 command runner 任务命令工具
-"cargo:cargo-watch" = "latest"      # 监听代码变更并触发增量热重载
-"cargo:cargo-outdated" = "latest"   # 检查 Cargo.toml 依赖包的最新可用版本
-"cargo:cargo-edit" = "latest"       # 提供 cargo upgrade 命令直接修改 Cargo.toml
-"cargo:cargo-nextest" = "latest"    # 现代化极速 Rust 并行测试运行器
+rust = "stable"
+rust-analyzer = "latest" # Rust 官方 IDE 语言服务器
+sccache = "latest" # Rust 编译缓存加速工具
+just = "latest" # 现代化 command runner 任务命令工具
+"cargo:cargo-watch" = "latest" # 监听代码变更并触发增量热重载
+"cargo:cargo-outdated" = "latest" # 检查 Cargo.toml 依赖包的最新可用版本
+"cargo:cargo-edit" = "latest" # 提供 cargo upgrade 命令直接修改 Cargo.toml
+"cargo:cargo-nextest" = "latest" # 现代化极速 Rust 并行测试运行器
 "cargo:cargo-tarpaulin" = "latest"
-"cargo:cargo-audit" = "latest"      # 扫描依赖包中的 RustSec 已知安全漏洞
-"cargo:cargo-llvm-cov" = "latest"   # 代码测试覆盖率统计工具
-"cargo:sea-orm-cli" = "latest"      # Sea-ORM 数据库实体与迁移 CLI 工具
-"cargo:rust-i18n-cli" = "latest"    # 国际化 (i18n) 文案提取与词条校验 CLI 工具
-"cargo:https://github.com/cksac/fake-rs.git" = { features = ["cli"], version = "latest" } # 伪造 Mock 数据生成 CLI 工具
+"cargo:cargo-audit" = "latest" # 扫描依赖包中的 RustSec 已知安全漏洞
+"cargo:cargo-llvm-cov" = "latest" # 代码测试覆盖率统计工具
+"cargo:sea-orm-cli" = "latest" # Sea-ORM 数据库实体与迁移 CLI 工具
+"cargo:rust-i18n-cli" = "latest" # 国际化 (i18n) 文案提取与词条校验 CLI 工具
+"cargo:https://github.com/cksac/fake-rs.git" = { features = [
+  "cli",
+], version = "latest" } # 伪造 Mock 数据生成 CLI 工具
 
 [tasks]
 dev = { run = "cargo watch -w src -w config -s 'cargo run -- start'", description = "启动开发环境热重载服务 (自动监听 src/ 与 config/)" }

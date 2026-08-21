@@ -1,17 +1,7 @@
-# ==============================================================================
-# 文件作用：Debian (Glibc) + cargo-chef 多阶段缓存加速容器镜像构建规范
-# 生效时机：执行 `docker build -f Dockerfile .` 或生产 CI/CD 流水线时执行
-# 核心职责：
-#   1. 利用 cargo-chef 深度预热并缓存 Cargo 依赖层，实现秒级增量编译
-#   2. 采用 Debian Slim 作为极简 Runtime，兼顾 Glibc 极致性能与基础环境兼容性
-#   3. 配置非 Root 最小权限运行用户 (UID 10001) 与时区
-# ==============================================================================
-
-# ── 全局构建参数 ─────────────────────────────────────────────────────────────
-ARG RUST_VERSION=1.97.1
+ARG RUST_VERSION=1.98.0
 
 # ── 阶段 1：Chef 基础阶段（直接使用官方 cargo-chef 预装镜像）────────────────────
-FROM lukemathwalker/cargo-chef:latest-rust-${RUST_VERSION} AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-${RUST_VERSION}-slim-trixie AS chef
 WORKDIR /app
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -62,7 +52,7 @@ EXPOSE 5150
 
 # 生产健康检查 (通过 /api/health 接口感知实例活性)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:5150/api/health || exit 1
+    CMD curl -f http://localhost:5150/api/health || exit 1
 
 ENTRYPOINT ["/app/locos"]
 CMD ["start"]

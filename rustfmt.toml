@@ -8,25 +8,25 @@
 # ==============================================================================
 
 # 1. 基础规范与版次 (Base & Editions)
-edition = "2024"                  # 明确 Rust 2024 Edition 解析规范
-style_edition = "2024"            # 采用 Rust 2024 官方最新代码风格指南 (RFC 3338)
-newline_style = "Unix"            # 强制 Unix (LF) 换行符 (防止跨平台 CRLF 污染)
-max_width = 100                   # 单行最大字符限制 (Rust 官方推荐标准 100)
-hard_tabs = false                 # 使用空格缩进 (遵循 Rust 官方标准)
-tab_spaces = 4                    # 缩进使用 4 个空格
-use_small_heuristics = "Default"  # 采用官方平衡的智能折行启发式策略
+edition = "2024"                 # 明确 Rust 2024 Edition 解析规范
+style_edition = "2024"           # 采用 Rust 2024 官方最新代码风格指南 (RFC 3338)
+newline_style = "Unix"           # 强制 Unix (LF) 换行符 (防止跨平台 CRLF 污染)
+max_width = 100                  # 单行最大字符限制 (Rust 官方推荐标准 100)
+hard_tabs = false                # 使用空格缩进 (遵循 Rust 官方标准)
+tab_spaces = 4                   # 缩进使用 4 个空格
+use_small_heuristics = "Default" # 采用官方平衡的智能折行启发式策略
 
 # 2. 现代语法与代码美化 (Idiomatic Rust & Cleanup)
-use_field_init_shorthand = true   # 强制结构体字段简写 (Point { x } 替代 Point { x: x })
-use_try_shorthand = true          # 强制使用 ? 运算符替代 try! 宏
-merge_derives = true              # 自动将分散的 derive 属性合并为单一声明
-remove_nested_parens = true       # 自动清理冗余的嵌套多层括号 ((expr))
-force_explicit_abi = true         # 强制 extern 块显式指定 ABI (如 extern "C")
+use_field_init_shorthand = true # 强制结构体字段简写 (Point { x } 替代 Point { x: x })
+use_try_shorthand = true        # 强制使用 ? 运算符替代 try! 宏
+merge_derives = true            # 自动将分散的 derive 属性合并为单一声明
+remove_nested_parens = true     # 自动清理冗余的嵌套多层括号 ((expr))
+force_explicit_abi = true       # 强制 extern 块显式指定 ABI (如 extern "C")
 
 # 3. 函数与模式匹配排版 (Layout & Formatting)
 fn_params_layout = "Tall"         # Axum 控制器多参数时单行一个参数垂直排版，提升可读性
 match_block_trailing_comma = true # match 代码块分支末尾强制加逗号 (减少分支修改时的 Diff 行数)
 
 # 4. 导入与模块排序 (Ordering)
-reorder_imports = true            # 自动按字母升序排序 use 导入语句
-reorder_modules = true            # 自动按字母升序排序 mod 声明语句
+reorder_imports = true # 自动按字母升序排序 use 导入语句
+reorder_modules = true # 自动按字母升序排序 mod 声明语句

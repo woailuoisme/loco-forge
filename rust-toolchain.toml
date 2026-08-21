@@ -8,14 +8,10 @@
 # ==============================================================================
 
 [toolchain]
-# 1. 编译器渠道：锁定 1.97.1 稳定版本 (配合 Cargo.toml 的 rust-version="1.97.1" 与 edition="2024")
-channel = "1.97.1"
-
+channel = "stable"
 # 2. 安装预设：minimal 避免在 CI / Docker / 本地自动下载冗余的文档与示例 (体积与安装速度优化)
 profile = "minimal"
-
 # 3. 核心组件：格式化 (rustfmt)、静态分析 (clippy)
 components = ["rustfmt", "clippy"]
-
 # 4. 交叉编译目标：Linux x86_64 与 ARM64 生产部署标准库 (供本地交叉编译与 Docker 多架构构建)
 targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
