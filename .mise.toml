@@ -1,29 +1,29 @@
+# ==============================================================================
+# Mise 开发环境与工具链管理配置 (.mise.toml)
+# 作用：自动锁定与按需安装项目所需编译器、LSP、CLI 辅助工具与测试套件
+# ==============================================================================
+
 [tools]
-rust = "stable"
-rust-analyzer = "latest" # Rust 官方 IDE 语言服务器
-sccache = "latest" # Rust 编译缓存加速工具
-just = "latest" # 现代化 command runner 任务命令工具
-"cargo:cargo-watch" = "latest" # 监听代码变更并触发增量热重载
-"cargo:cargo-outdated" = "latest" # 检查 Cargo.toml 依赖包的最新可用版本
-"cargo:cargo-edit" = "latest" # 提供 cargo upgrade 命令直接修改 Cargo.toml
-"cargo:cargo-nextest" = "latest" # 现代化极速 Rust 并行测试运行器
-"cargo:cargo-tarpaulin" = "latest"
-"cargo:cargo-audit" = "latest" # 扫描依赖包中的 RustSec 已知安全漏洞
-"cargo:cargo-llvm-cov" = "latest" # 代码测试覆盖率统计工具
-"cargo:sea-orm-cli" = "latest" # Sea-ORM 数据库实体与迁移 CLI 工具
-"cargo:rust-i18n-cli" = "latest" # 国际化 (i18n) 文案提取与词条校验 CLI 工具
+# ── 1. 基础编译器与核心工具链 (Core Rust Toolchain & Cache) ─────────────────────
+rust = "stable"                     # Rust 官方稳定版编译器工具链 (rustc, cargo, rustfmt, clippy)
+rust-analyzer = "latest"            # Rust 官方 LSP 语言服务器 (提供 IDE 智能补全、类型推导、宏展开与语法高亮)
+sccache = "latest"                  # 编译器缓存包装工具 (跨分支/项目缓存 C/C++/Rust 编译产物，大幅加速重复构建)
+just = "latest"                     # 现代化通用任务命令运行器 (管理工程级快捷指令与代码质量门禁)
+
+# ── 2. 开发、热重载与依赖管理 (Dev, Hot-Reload & Dependency Management) ──────
+"cargo:cargo-watch" = "latest"      # 文件监听工具 (监听 src/ 与 config/ 变更，实现服务自动增量热重载)
+"cargo:cargo-outdated" = "latest"   # 依赖版本检查工具 (快速扫描 Cargo.toml 中依赖的最新可用升级版本)
+"cargo:cargo-edit" = "latest"       # Cargo 依赖扩展套件 (提供 cargo add/rm/upgrade 等便捷命令)
+
+# ── 3. 测试运行器与覆盖率审计 (Testing & Coverage Tooling) ───────────────────
+"cargo:cargo-nextest" = "latest"    # 现代化极速测试运行器 (多线程并发执行单元测试与集成测试，比原生快 3~5 倍)
+"cargo:cargo-llvm-cov" = "latest"   # 基于 LLVM Source-Based 机制的代码覆盖率收集工具 (生成精准的 HTML 覆盖率报告)
+"cargo:cargo-tarpaulin" = "latest"  # 纯 Rust 原生代码覆盖率分析工具 (可作为覆盖率收集与 CI 报告的补充方案)
+"cargo:cargo-audit" = "latest"      # 依赖安全漏洞审计工具 (基于 RustSec 咨询数据库扫描已知供应链安全漏洞)
+
+# ── 4. 领域框架与数据生态工具 (Framework, Database & Ecosystem CLI) ───────────
+"cargo:sea-orm-cli" = "latest"      # Sea-ORM 数据库 CLI (用于数据库模型逆向生成、迁移管理与 SQL 校验)
+"cargo:rust-i18n-cli" = "latest"    # 多语言国际化 (i18n) 工具 (自动提取代码中的 t! 文案并同步 locales/ 翻译字典)
 "cargo:https://github.com/cksac/fake-rs.git" = { features = [
   "cli",
-], version = "latest" } # 伪造 Mock 数据生成 CLI 工具
-
-[tasks]
-dev = { run = "cargo watch -w src -w config -s 'cargo run -- start'", description = "启动开发环境热重载服务 (自动监听 src/ 与 config/)" }
-prod = { run = "cargo run --release -- start", description = "以 Release 高性能优化模式启动 Web 服务" }
-test = { run = "cargo nextest run", description = "使用 cargo nextest 极速运行全量单元与集成测试" }
-lint = { run = "just lint", description = "运行 Rust Clippy 静态检查与格式校验" }
-fix = { run = "cargo clippy --fix --allow-dirty --allow-staged && cargo fmt --all", description = "自动修复代码格式与 Clippy 警告" }
-migrate = { run = "cargo loco db migrate", description = "执行数据库迁移" }
-routes = { run = "cargo loco routes", description = "查看当前所有已注册的路由表" }
-doctor = { run = "cargo loco doctor", description = "检查开发环境配置与依赖健康状态" }
-i18n = { run = "cargo i18n", description = "抽取代码中的 t! 国际化文案并更新 locales/ 字典" }
-seed = { run = "cargo loco task seed_data", description = "填充开发与演示环境种子数据 (src/fixtures)" }
+], version = "latest" }             # 假数据生成工具 (CLI 端快速生成合法的 Mock 测试数据、UUID、订单号与用户种子数据)

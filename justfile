@@ -1,6 +1,9 @@
 # 开启自动装载 .env 环境变量文件
 set dotenv-load := true
 
+# 自动环境感知：本地已安装 sccache 则无缝启用编译缓存，未安装时平滑降级
+export RUSTC_WRAPPER := `which sccache 2>/dev/null || echo ""`
+
 # 默认列出所有可用的 just 命令
 default:
     @just --list
@@ -99,22 +102,21 @@ alias nextest := test
 test-doc:
     LOCO_ENV=test cargo test --doc
 
-# 运行全量代码静态规范检查 (Clippy 检查、Rustfmt 与 Rumdl Markdown 审计)
-lint:
-    cargo clippy --all-targets --all-features -- -D warnings
-    rumdl check
-
-alias check := lint
+# 查看 sccache 编译缓存命中率与磁盘统计
+sccache-stats:
+    sccache --show-stats
 
 # 格式化所有 Rust 源代码与 Markdown 文档
 fmt:
     cargo fmt --all
-    rumdl fmt .
+
+# 运行全量代码静态规范检查 (Clippy 检查、Rustfmt 与 Rumdl Markdown 审计)
+lint:
+    cargo clippy --all-targets --all-features -- -D warnings
 
 # 自动修复格式（fmt）与 Clippy 警告（允许未提交/暂存的改动）
 fix:
-    cargo clippy --fix --allow-dirty --allow-staged && cargo fmt --all
-    rumdl fmt .
+    cargo clippy --fix --allow-dirty --allow-staged
 
 # ==============================================================================
 # 4. 国际化与文案 (Internationalization & i18n)

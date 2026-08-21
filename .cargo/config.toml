@@ -1,10 +1,11 @@
 # ==============================================================================
-# 文件作用：Cargo 构建系统项目级配置文件 (Cargo Build Configuration)
+# 文件作用：Cargo 构建系统项目级配置文件 (.cargo/config.toml)
 # 生效时机：执行任何 `cargo <command>` 时自动分层加载与合并
 # 核心职责：
 #   1. 定义项目专有 CLI 快捷别名 ([alias])，无缝对接 Loco 原生脚手架与开发工作流
-#   2. 定制跨平台构建与极速链接器 ([target.<triple>])，本地开发提速 2x~5x (rust-lld)
-#   3. 针对不同操作系统适配优化编译与链接参数 (rustflags)
+#   2. 启用 sccache 编译器包装缓存 ([build])，实现跨分支秒级增量编译
+#   3. 定制跨平台构建与调试优化 ([target.<triple>])，本地开发提速 2x~5x
+#   4. 针对不同操作系统适配优化编译与链接参数 (rustflags)
 # ==============================================================================
 
 [alias]
@@ -26,19 +27,13 @@ routes = "run -- routes"
 dev = ["watch", "-w", "src", "-w", "config", "-s", "cargo run -- start"]
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 跨平台极速链接器配置 (rust-lld / lld)
-# 在本地开发迭代调试时大幅加速 Rust 二进制文件的链接阶段 (提速 2x - 5x)
+# 跨平台构建与调试优化配置 (rustflags)
 # ─────────────────────────────────────────────────────────────────────────────
 
-# macOS (Apple Silicon: M1/M2/M3/M4)
+# macOS (Apple Silicon: M1/M2/M3/M4/M5)
+# 开启 unpacked 调试信息，跳过 macOS 最耗时的 dsymutil 打包步骤
 [target.aarch64-apple-darwin]
-linker = "rust-lld"
-rustflags = ["-C", "link-arg=-w"]
-
-# macOS (Intel x86_64)
-[target.x86_64-apple-darwin]
-linker = "rust-lld"
-rustflags = ["-C", "link-arg=-w"]
+rustflags = ["-C", "split-debuginfo=unpacked"]
 
 # Windows (MSVC)
 [target.x86_64-pc-windows-msvc]
