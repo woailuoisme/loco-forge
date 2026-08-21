@@ -1,5 +1,5 @@
 ARG RUST_VERSION=1.98.0
-ARG ALPINE_VERSION=3.24
+ARG ALPINE_VERSION=3.21
 
 # ── 阶段 1：Chef 基础阶段（直接使用官方 cargo-chef Alpine 预装镜像）───────────────
 FROM lukemathwalker/cargo-chef:latest-rust-${RUST_VERSION}-alpine${ALPINE_VERSION} AS chef
@@ -31,9 +31,10 @@ FROM alpine:${ALPINE_VERSION} AS runtime
 ENV LOCO_ENV=production \
     PORT=5150 \
     BINDING=0.0.0.0 \
-    TZ=Asia/Shanghai
+    TZ=Asia/Shanghai \
+    SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
-RUN apk add --no-cache ca-certificates tzdata curl \
+RUN apk add --no-cache ca-certificates tzdata \
     && cp /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && addgroup -S -g 10001 app \
     && adduser -S -u 10001 -G app --no-create-home app
@@ -41,19 +42,15 @@ RUN apk add --no-cache ca-certificates tzdata curl \
 WORKDIR /app
 
 # 从 Builder 阶段复制静态二进制、配置文件与国际化资源
-COPY --from=builder /app/target/release/locos /app/locos
-COPY config/ /app/config/
-COPY locales/ /app/locales/
+COPY --from=builder --chown=app:app /app/target/release/locos /app/locos
+COPY --chown=app:app config/ /app/config/
+COPY --chown=app:app locales/ /app/locales/
 
 # 预建运行时可写目录并授权给非 root 用户
-RUN mkdir -p storages/logs storages/uploads storages/tmp && chown -R app:app /app
+RUN mkdir -p storages/logs storages/uploads storages/tmp && chown -R app:app /app/storages
 
 USER 10001:10001
 EXPOSE 5150
-
-# 生产健康检查 (通过 /api/health 接口感知实例活性)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5150/api/health || exit 1
 
 ENTRYPOINT ["/app/locos"]
 CMD ["start"]

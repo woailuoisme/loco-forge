@@ -31,7 +31,7 @@ ENV LOCO_ENV=production \
     SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates tzdata curl \
+    && apt-get install -y --no-install-recommends ca-certificates tzdata \
     && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd -g 10001 app \
@@ -40,19 +40,15 @@ RUN apt-get update \
 WORKDIR /app
 
 # 从 Builder 阶段复制可执行文件、运行时配置文件与国际化资源
-COPY --from=builder /app/target/release/locos /app/locos
-COPY config/ /app/config/
-COPY locales/ /app/locales/
+COPY --from=builder --chown=app:app /app/target/release/locos /app/locos
+COPY --chown=app:app config/ /app/config/
+COPY --chown=app:app locales/ /app/locales/
 
 # 预建运行时所需的可写存储目录并授权给非 root 用户
-RUN mkdir -p storages/logs storages/uploads storages/tmp && chown -R app:app /app
+RUN mkdir -p storages/logs storages/uploads storages/tmp && chown -R app:app /app/storages
 
 USER 10001:10001
 EXPOSE 5150
-
-# 生产健康检查 (通过 /api/health 接口感知实例活性)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5150/api/health || exit 1
 
 ENTRYPOINT ["/app/locos"]
 CMD ["start"]
