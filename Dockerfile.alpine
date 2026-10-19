@@ -6,8 +6,9 @@ FROM lukemathwalker/cargo-chef:latest-rust-${RUST_VERSION}-alpine${ALPINE_VERSIO
 WORKDIR /app
 SHELL ["/bin/sh", "-o", "pipefail", "-c"]
 
-# 安装基础构建套件（包含 gcc/make/musl-dev/binutils，供 tikv-jemalloc-sys 及 C 依赖构建）
-RUN apk add --no-cache build-base
+# 安装基础构建套件（gcc/make/musl-dev/binutils，供 tikv-jemalloc-sys 构建）；
+# webauthn-rs-core -> openssl-sys 需要 pkgconfig + openssl 静态库（musl 静态链接）
+RUN apk add --no-cache build-base pkgconfig openssl-dev openssl-libs-static
 
 # ── 阶段 2：Planner 依赖分析阶段（生成 recipe.json）───────────────────────────
 FROM chef AS planner
