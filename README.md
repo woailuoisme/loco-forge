@@ -8,7 +8,7 @@ Rust Web & API 全栈应用脚手架，基于 [Loco.rs](https://loco.rs) 现代 
 
 ### 环境依赖
 
-- **Rust**: 1.75+
+- **Rust**: 1.99.1 (workspace MSRV，详见 `Cargo.toml` / `rust-toolchain.toml`)
 - **Database**: PostgreSQL / SQLite (由 `config/*.yaml` 配置)
 - **Tooling**: [Mise](https://mise.jdx.dev) 任务管理器 (可选但强烈推荐)
 
@@ -56,14 +56,14 @@ loco-starter/
 │   ├── common/              # 全局通用基础设施 (常量定义 consts.rs, 日志系统 logger/)
 │   ├── controllers/         # HTTP 控制器 (路由 handler 与接口契约)
 │   │   ├── health.rs        # 健康检查接口
-│   │   └── v1/              # API v1 路由 (auth.rs, files.rs, admin/)
-│   ├── dtos/                # 请求/响应数据传输对象 (common/, posts.rs)
+│   │   └── v1/              # API v1 路由 (auth/ 十二子域, files, admin/)
+│   ├── dtos/                # 请求/响应数据传输对象 (common/, auth/, admin/, files.rs)
 │   ├── errors.rs            # 全局统一 Error 类型定义
-│   ├── initializers/        # 框架启动初始化器 (logger, config_validator)
+│   ├── initializers/        # 框架启动初始化器 (openapi, config_validator)
 │   ├── mailers/             # 邮件模板与发送逻辑
 │   ├── models/              # 业务模型与 Sea-ORM 交互方法
 │   │   └── _entities/       # Sea-ORM 自动生成的实体 (禁止手动编辑)
-│   ├── services/            # 核心业务逻辑层 (auth.rs, admin/posts.rs)
+│   ├── services/            # 核心业务逻辑层 (auth/ 十二子域, admin/)
 │   ├── setup/               # 基础设施与中间件 (middleware/ i18n, logger, rate_limit)
 │   ├── tasks/               # CLI / 管理员 Task (clean_expired_tokens.rs)
 │   └── workers/             # 异步后台 Job/Task 队列
@@ -96,6 +96,9 @@ loco-starter/
 ```sh
 docker compose up -d    # 启动应用与依赖容器
 ```
+
+生产镜像仅提供 Debian Trixie 构建（`Dockerfile`，cargo-chef 分层缓存），
+多架构发布通过 CI（GitHub Actions / CNB）执行，详见对应工作流配置。
 
 ---
 
