@@ -5,16 +5,8 @@ branch:
   - buttons:
       - name: Trixie 极速构建 (仅 AMD64)
         description: 构建 Debian Trixie linux/amd64 架构镜像 (耗时最短)
-        event: web_trigger_amd64
+        event: web_trigger_trixie
 
       - name: Trixie 全架构构建 (AMD64 + ARM64)
         description: 构建并推送 Debian Trixie linux/amd64 与 linux/arm64 双架构镜像
         event: web_trigger_multi
-
-      - name: Alpine 极速构建 (仅 AMD64)
-        description: 构建 Alpine Musl 纯静态 linux/amd64 架构镜像 (耗时最短)
-        event: web_trigger_alpine_amd64
-
-      - name: Alpine 全架构构建 (AMD64 + ARM64)
-        description: 构建并推送 Alpine Musl 纯静态 linux/amd64 与 linux/arm64 双架构镜像
-        event: web_trigger_alpine_multi
