@@ -1,4 +1,5 @@
 [profile.default]
-# SQLite 数据库集成测试采用单线程串行执行，杜绝并发文件锁争抢与状态污染
+# Postgres 集成测试单二进制内串行执行，杜绝状态污染；
+# threads-required 保证跨测试二进制同样串行，避免 truncate 清库踩掉并行二进制的测试
 test-threads = 1
-
+threads-required = "num-cpus"

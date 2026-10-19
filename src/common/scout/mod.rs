@@ -8,14 +8,14 @@
 //! use locos::common::scout::{Searchable, ScoutBuilder};
 //! use serde_json::json;
 //!
-//! pub struct Post {
+//! pub struct Article {
 //!     pub id: i64,
 //!     pub title: String,
 //! }
-
-//! impl Searchable for Post {
+//!
+//! impl Searchable for Article {
 //!     fn searchable_as(&self) -> String {
-//!         "posts".to_string()
+//!         "articles".to_string()
 //!     }
 //!     fn get_searchable_key(&self) -> String {
 //!         self.id.to_string()
@@ -26,13 +26,13 @@
 //! }
 //!
 //! // 1. 同步更新索引
-//! post.searchable(&ctx).await?;
+//! article.searchable(&ctx).await?;
 //!
 //! // 2. Fluent 全文检索与 ORM 还原
-//! let posts = ScoutBuilder::new(&ctx, "posts")
+//! let articles = ScoutBuilder::new(&ctx, "articles")
 //!     .query("Rust")
 //!     .filter("status = 'published'")
-//!     .get_models::<PostEntity>(&ctx, &db)
+//!     .get_models::<ArticleEntity>(&ctx, &db)
 //!     .await?;
 //! ```
 

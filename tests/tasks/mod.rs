@@ -1,6 +1,5 @@
-pub mod user_create;
-
-pub mod health_check;
-pub mod jwt_secret;
-pub mod route_list;
-pub mod seed_data;
+mod health_check;
+mod jwt_secret;
+mod route_list;
+mod seed_data;
+mod user_create;

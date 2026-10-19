@@ -4,7 +4,7 @@
 
 use loco_rs::prelude::*;
 
-use crate::{dtos::auth::RegisterRequest, mailers::auth::AuthMailer, models::_entities::users};
+use crate::{dtos::auth::SignUpEmailRequest, services::auth::SessionService};
 
 /// 用户创建管理员任务
 pub struct UserCreate;
@@ -15,7 +15,7 @@ impl Task for UserCreate {
     fn task(&self) -> TaskInfo {
         TaskInfo {
             name: "user:create".to_string(),
-            detail: "通过命令行创建新用户，写入密码哈希，并自动发送欢迎/邮箱验证邮件。\n用法:\ncargo run task user:create email:user@example.com name:\"John Doe\" password:\"securepassword\"".to_string(),
+            detail: "通过命令行创建新用户，写入密码哈弃与账户记录。\n用法:\ncargo run task user:create email:user@example.com name:\"John Doe\" password:\"securepassword\"".to_string(),
         }
     }
 
@@ -61,76 +61,35 @@ impl Task for UserCreate {
                 .map_err(|e| Error::string(&format!("取消或输入失败: {e}")))?,
         };
 
-        let register_params = RegisterRequest {
-            email,
+        let sign_up_req = SignUpEmailRequest {
+            email: email.clone(),
             password: secrecy::SecretString::from(password),
             name,
+            image: None,
+            username: None,
         };
 
-        // 步骤 2: 调用 User Model 的 create_with_password 进行密码哈希与记录插入
-        let res = users::Model::create_with_password(&app_context.db, &register_params).await;
+        // 步骤 2: 调用 SessionService 进行用户与账户创建
+        let res = SessionService::sign_up_email(&app_context.db, &sign_up_req, None, None).await;
 
-        let user = match res {
-            Ok(user) => {
+        match res {
+            Ok(resource) => {
                 tracing::info!(
-                    message = "User created successfully",
-                    user_email = &register_params.email,
-                    user_pid = user.pid.to_string(),
-                    "通过 Task 成功创建用户"
+                    user_id = %resource.user.id,
+                    email = %resource.user.email,
+                    name = %resource.user.name,
+                    "✅ 用户创建成功！"
                 );
-                user
+                Ok(())
             },
             Err(err) => {
                 tracing::error!(
-                    message = err.to_string(),
-                    user_email = &register_params.email,
+                    message = %err,
+                    user_email = %email,
                     "通过 Task 创建用户失败"
                 );
-                return Err(Error::string(&format!("创建用户失败: {err}")));
+                Err(Error::string(&format!("创建用户失败: {err}")))
             },
-        };
-
-        // 步骤 3: 生成邮箱验证 Token 并标记验证邮件发送状态
-        let user = user
-            .into_active_model()
-            .set_email_verification_sent(&app_context.db)
-            .await
-            .map_err(|err| {
-                tracing::error!(
-                    message = err.to_string(),
-                    user_email = &register_params.email,
-                    "设置邮箱验证标记失败"
-                );
-                Error::string("设置邮箱验证失败")
-            })?;
-
-        // 步骤 4: 发送注册欢迎与验证邮件
-        AuthMailer::send_welcome(app_context, &user)
-            .await
-            .map_err(|err| {
-                tracing::error!(
-                    message = err.to_string(),
-                    user_email = &register_params.email,
-                    "发送欢迎邮件失败"
-                );
-                Error::string("发送欢迎邮件失败")
-            })?;
-
-        tracing::info!(
-            message = "User creation task completed successfully",
-            user_email = &register_params.email,
-            user_pid = user.pid.to_string(),
-            "用户创建 Task 执行完毕"
-        );
-
-        // 步骤 5: 终端控制台记录创建成功明细
-        tracing::info!(
-            email = %user.email,
-            name = %user.name,
-            pid = %user.pid,
-            "✅ 用户创建成功！"
-        );
-
-        Ok(())
+        }
     }
 }

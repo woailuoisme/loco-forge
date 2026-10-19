@@ -18,13 +18,6 @@ use loco_rs::{
     },
 };
 
-/// 从环境变量按优先级读取配置
-fn get_env(primary: &str, fallback: &str) -> Option<String> {
-    std::env::var(primary)
-        .or_else(|_| std::env::var(fallback))
-        .ok()
-}
-
 /// 从环境变量列表按顺序读取首个有效的配置值
 fn get_env_first(keys: &[&str]) -> Option<String> {
     keys.iter().find_map(|key| std::env::var(key).ok())
@@ -40,15 +33,13 @@ pub async fn init(mut ctx: AppContext) -> Result<AppContext> {
         },
         // 2. 开发与生产环境：从环境变量动态读取 S3 凭据与 Endpoint
         _ => {
-            let bucket = get_env("STORAGE_S3_BUCKET", "AWS_S3_BUCKET")
-                .unwrap_or_else(|| "default".to_string());
+            let bucket = std::env::var("AWS_BUCKET").unwrap_or_else(|_| "default".to_string());
             let region =
-                get_env("STORAGE_S3_REGION", "AWS_REGION").unwrap_or_else(|| "garage".to_string());
+                std::env::var("AWS_DEFAULT_REGION").unwrap_or_else(|_| "garage".to_string());
 
-            let key_id = get_env("STORAGE_S3_ACCESS_KEY", "AWS_ACCESS_KEY_ID");
-            let secret_key = get_env("STORAGE_S3_SECRET_KEY", "AWS_SECRET_ACCESS_KEY");
-            let endpoint =
-                get_env_first(&["STORAGE_S3_ENDPOINT", "AWS_ENDPOINT_URL_S3", "AWS_ENDPOINT"]);
+            let key_id = std::env::var("AWS_ACCESS_KEY_ID").ok();
+            let secret_key = std::env::var("AWS_SECRET_ACCESS_KEY").ok();
+            let endpoint = get_env_first(&["AWS_ENDPOINT", "AWS_ENDPOINT_URL_S3"]);
 
             let cred = key_id
                 .zip(secret_key)

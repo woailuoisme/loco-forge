@@ -64,7 +64,7 @@ impl Initializer for ConfigValidatorInitializer {
         let db_uri = ctx.config.database.uri.trim();
         if db_uri.is_empty() {
             return Err(Error::string(
-                "Config validation failed: database.uri (DATABASE_URL) must not be empty",
+                "Config validation failed: database.uri (DB_URL) must not be empty",
             ));
         }
 

@@ -14,6 +14,15 @@ pub mod app {
     pub const ENV_TEST: &str = "test";
 }
 
+/// HTTP API 版本化路径常量
+pub mod api {
+    /// 当前 API 主版本前缀 (`"/v1"`)
+    ///
+    /// 所有业务资源路由统一挂载于该前缀之下 (如 `/v1/auth/*`、`/v1/files/*`)。
+    /// 基础设施入口 (`/`、`/livez`、`/readyz`、`/docs` 等) 不纳入版本管理。
+    pub const API_PREFIX: &str = "/v1";
+}
+
 /// 存储与文件路径常量
 pub mod storage {
     /// 默认存储根目录 (`"./storages"`)
@@ -35,17 +44,24 @@ pub mod pagination {
 }
 
 /// OpenAPI 与 Scalar 交互式文档 Tag 标签常量
+///
+/// 分组边界对齐 Better-Auth 插件体系：主认证流程 / 附加登录方式 /
+/// 二次验证与凭证 / 多租户组织 / 后台治理 / 文件存储 各自独立成组。
 pub mod openapi {
-    /// 用户认证与账号管理接口 Tag ("用户认证")
-    pub const TAG_AUTH: &str = "用户认证";
-    /// 文章管理接口 Tag ("文章管理")
-    pub const TAG_POSTS: &str = "文章管理";
+    /// 认证会话 Tag ("认证会话")：注册、登录、会话查询与吊销
+    pub const TAG_SESSION: &str = "认证会话";
+    /// 登录方式 Tag ("登录方式")：验证码、魔法链接、第三方与设备授权
+    pub const TAG_SIGNIN: &str = "登录方式";
+    /// 多因素与密钥 Tag ("多因素与密钥")：两步验证、通行密钥与 API 密钥
+    pub const TAG_CREDENTIALS: &str = "多因素与密钥";
+    /// 组织与成员 Tag ("组织与成员")：多租户组织与成员邀请
+    pub const TAG_ORG: &str = "组织与成员";
+    /// 系统管理 Tag ("系统管理")：管理员用户治理操作
+    pub const TAG_ADMIN: &str = "系统管理";
     /// 文件存储与下载服务接口 Tag ("文件存储")
     pub const TAG_FILES: &str = "文件存储";
-    /// 健康检查探针接口 Tag ("health")
-    pub const TAG_HEALTH: &str = "health";
-    /// 根路由信息与 API 导航接口 Tag ("home")
-    pub const TAG_HOME: &str = "home";
+    /// 根路由信息与 API 导航接口 Tag ("服务信息")
+    pub const TAG_HOME: &str = "服务信息";
 }
 
 /// 用户认证与账号业务常量
@@ -54,18 +70,34 @@ pub mod auth {
     pub const ALLOW_EMAIL_DOMAIN_PATTERN: &str = r"@example\.com$|@gmail\.com$";
     /// 管理员角色标识
     pub const ROLE_ADMIN: &str = "admin";
+    /// 组织所有者角色标识
+    pub const ROLE_OWNER: &str = "owner";
+    /// JWT 访问令牌有效期 (24 小时)
+    pub const JWT_EXPIRATION_SECS: usize = 60 * 60 * 24;
+    /// 组织邀请有效期 (7 天)
+    pub const INVITATION_EXPIRES_SECS: i64 = 7 * 24 * 3600;
     /// OTP 6 位数字验证码有效分钟数 (10 分钟)
     pub const OTP_EXPIRATION_MIN: i64 = 10;
+    /// 验证码记录有效期秒数 (10 分钟)
+    pub const OTP_TTL_SECS: i64 = 600;
+    /// 邮箱验证 / 密码重置 Token 有效期秒数 (5 分钟)
+    pub const VERIFICATION_TTL_SECS: i64 = 300;
+    /// 设备授权码有效期秒数 (10 分钟)
+    pub const DEVICE_CODE_TTL_SECS: i64 = 600;
     /// OTP 验证码字符长度 (6 位)
     pub const OTP_CODE_LENGTH: usize = 6;
     /// 密码重置 Token 有效分钟数 (30 分钟)
     pub const RESET_TOKEN_EXPIRATION_MIN: i64 = 30;
-}
-
-/// 通用业务提示消息常量
-pub mod message {
-    /// 文章不存在提示消息
-    pub const POST_NOT_FOUND: &str = "post not found";
+    /// Passkey 默认 Relying Party ID (可被 config settings.auth.passkey.rp_id 覆盖)
+    pub const PASSKEY_RP_ID: &str = "localhost";
+    /// Passkey 默认 Origin (可被 config settings.auth.passkey.origin 覆盖)
+    pub const PASSKEY_ORIGIN: &str = "http://localhost:5150";
+    /// Passkey Relying Party 展示名称
+    pub const PASSKEY_RP_NAME: &str = "Locos App";
+    /// OTP 校验最大连续失败次数，超过即锁定
+    pub const OTP_MAX_ATTEMPTS: i32 = 5;
+    /// OTP 锁定时长秒数 (15 分钟)
+    pub const OTP_LOCKOUT_SECS: i64 = 900;
 }
 
 /// Excel 导入导出处理常量
@@ -133,4 +165,41 @@ pub mod biz_code {
     pub const INVALID_STATE: u32 = 604;
     /// 频次超限 / 操作受限 (605)
     pub const OPERATION_RESTRICTED: u32 = 605;
+}
+
+// 编译期不变量：TTL 必须为正且顺序合理（避免运行期断言被 clippy 判为常量断言）
+const _: () = assert!(auth::VERIFICATION_TTL_SECS > 0);
+const _: () = assert!(auth::OTP_TTL_SECS > 0);
+const _: () = assert!(auth::DEVICE_CODE_TTL_SECS > 0);
+const _: () = assert!(auth::VERIFICATION_TTL_SECS <= auth::OTP_TTL_SECS);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_biz_codes_within_documented_range() {
+        for code in [
+            biz_code::PARAM_INVALID,
+            biz_code::USER_FROZEN,
+            biz_code::INSUFFICIENT_BALANCE,
+            biz_code::CAPTCHA_INVALID,
+            biz_code::INVALID_STATE,
+            biz_code::OPERATION_RESTRICTED,
+        ] {
+            assert!(
+                (biz_code::MIN_BIZ_CODE..=biz_code::MAX_BIZ_CODE).contains(&code),
+                "业务错误码 {code} 超出 600~999 区间"
+            );
+        }
+    }
+
+    #[test]
+    fn test_auth_roles_are_lowercase_tokens() {
+        // api.md §2.1：枚举值全小写，多词用下划线
+        for role in [auth::ROLE_ADMIN, auth::ROLE_OWNER] {
+            assert_eq!(role, role.to_lowercase());
+            assert!(!role.contains(char::is_whitespace));
+        }
+    }
 }

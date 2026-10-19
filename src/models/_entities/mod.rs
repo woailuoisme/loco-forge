@@ -2,5 +2,18 @@
 
 pub mod prelude;
 
-pub mod posts;
-pub mod users;
+pub mod account;
+pub mod apikey;
+pub mod device_code;
+pub mod invitation;
+pub mod jwks;
+pub mod media;
+pub mod member;
+pub mod notifications;
+pub mod organization;
+pub mod passkey;
+pub mod session;
+pub mod sso_provider;
+pub mod two_factor;
+pub mod user;
+pub mod verification;

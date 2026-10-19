@@ -63,10 +63,19 @@ where
         let axum::Json(data) = axum::Json::<T>::from_request(req, state)
             .await
             .map_err(|err| {
-                super::format_res::bad_request(format!("Invalid JSON payload: {err}"))
-                    .unwrap_or_else(|_| {
-                        (axum::http::StatusCode::BAD_REQUEST, "Invalid JSON").into_response()
-                    })
+                use axum::extract::rejection::JsonRejection;
+                // api.md §2.4：字段语义/结构不合法返回 422；纯语法错误或 Content-Type 缺失返回 400
+                match err {
+                    JsonRejection::JsonDataError(e) => super::response::ApiError::validation(
+                        format!("Invalid request payload: {e}"),
+                        None,
+                    )
+                    .into_response(),
+                    other => super::response::ApiError::bad_request(format!(
+                        "Invalid JSON payload: {other}"
+                    ))
+                    .into_response(),
+                }
             })?;
 
         if let Err(validation_errors) = data.validate() {
@@ -101,10 +110,10 @@ where
             axum::extract::Query::<T>::from_request_parts(parts, state)
                 .await
                 .map_err(|err| {
-                    super::format_res::bad_request(format!("Invalid Query parameters: {err}"))
-                        .unwrap_or_else(|_| {
-                            (axum::http::StatusCode::BAD_REQUEST, "Invalid Query").into_response()
-                        })
+                    super::response::ApiError::bad_request(format!(
+                        "Invalid Query parameters: {err}"
+                    ))
+                    .into_response()
                 })?;
 
         if let Err(validation_errors) = data.validate() {
@@ -118,15 +127,26 @@ where
     }
 }
 
+/// 把 validator 的结构化错误压平成 api.md §5.2 要求的 `{字段: ["文案"]}` 形状
 fn format_validation_rejection(msg: &str, errors: &validator::ValidationErrors) -> Response {
-    let details = serde_json::to_value(errors).ok();
-    super::format_res::validation_error_with_details(msg, details).unwrap_or_else(|_| {
-        (
-            axum::http::StatusCode::UNPROCESSABLE_ENTITY,
-            "Validation Error",
-        )
-            .into_response()
-    })
+    let mut map = serde_json::Map::new();
+    for (field, field_errors) in errors.field_errors() {
+        let messages: Vec<serde_json::Value> = field_errors
+            .iter()
+            .filter_map(|e| e.message.as_ref())
+            .map(|m| serde_json::Value::String(m.to_string()))
+            .collect();
+        if !messages.is_empty() {
+            map.insert(field.to_string(), serde_json::Value::Array(messages));
+        }
+    }
+
+    let details = if map.is_empty() {
+        None
+    } else {
+        Some(serde_json::Value::Object(map))
+    };
+    super::response::ApiError::validation(msg, details).into_response()
 }
 
 #[cfg(test)]

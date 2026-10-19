@@ -13,12 +13,14 @@ pub fn routes(_ctx: &AppContext) -> AppRoutes {
     AppRoutes::with_default_routes()
         // 步骤 2: 挂载首页 (Home) 控制器路由
         .add_route(controllers::home::routes())
-        // 步骤 3: 挂载文章 (Posts v1 Admin) CRUD 控制器路由
-        .add_route(controllers::v1::admin::posts::routes())
-        // 步骤 4: 挂载身份认证 (Auth v1) 控制器路由 (注册、登录、魔术链接等)
+        // 步骤 3: 挂载身份认证 (Auth v1) 控制器路由 (注册、登录、魔术链接等)
         .add_route(controllers::v1::auth::routes())
-        // 步骤 5: 挂载健康检查 (Health) 控制器路由 (liveness, readiness)
+        // 步骤 4: 挂载健康检查 (Health) 控制器路由 (liveness, readiness)
         .add_route(controllers::health::routes())
-        // 步骤 6: 挂载文件上传下载 (Files v1) 控制器路由
+        // 步骤 5: 挂载文件上传下载 (Files v1) 控制器路由
         .add_route(controllers::v1::files::routes())
+        // 步骤 6: 挂载管理后台登录路由 (带专用严格限流)
+        .add_route(controllers::v1::admin::login_routes())
+        // 步骤 7: 挂载管理后台其余路由 (认证辅助 + 用户管理)
+        .add_route(controllers::v1::admin::routes())
 }

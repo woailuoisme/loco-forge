@@ -9,7 +9,7 @@ use super::{
     notifiable::Notifiable,
     notification::{Notification, NotificationManager},
 };
-use crate::{mailers::auth::AuthMailer, models::users};
+use crate::{mailers::auth::AuthMailer, models::user};
 
 /// 全局统一通知总线门面
 pub struct NotificationHub;
@@ -46,8 +46,12 @@ impl NotificationHub {
     /// # Errors
     ///
     /// 当邮件发送失败时返回 `Result`
-    pub async fn send_welcome(ctx: &AppContext, user: &users::Model) -> Result<()> {
-        AuthMailer::send_welcome(ctx, user).await
+    pub async fn send_welcome(
+        ctx: &AppContext,
+        user: &user::Model,
+        verify_token: Option<&str>,
+    ) -> Result<()> {
+        AuthMailer::send_welcome(ctx, user, verify_token).await
     }
 
     /// 发送忘记密码重置邮件
@@ -55,8 +59,12 @@ impl NotificationHub {
     /// # Errors
     ///
     /// 当邮件发送失败时返回 `Result`
-    pub async fn send_forgot_password(ctx: &AppContext, user: &users::Model) -> Result<()> {
-        AuthMailer::forgot_password(ctx, user).await
+    pub async fn send_forgot_password(
+        ctx: &AppContext,
+        user: &user::Model,
+        reset_token: &str,
+    ) -> Result<()> {
+        AuthMailer::forgot_password(ctx, user, reset_token).await
     }
 
     /// 发送 6 位数字 OTP 登录验证码邮件
@@ -64,7 +72,7 @@ impl NotificationHub {
     /// # Errors
     ///
     /// 当邮件发送失败时返回 `Result`
-    pub async fn send_otp(ctx: &AppContext, user: &users::Model, code: &str) -> Result<()> {
+    pub async fn send_otp(ctx: &AppContext, user: &user::Model, code: &str) -> Result<()> {
         AuthMailer::send_otp(ctx, user, code).await
     }
 }

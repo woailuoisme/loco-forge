@@ -5,87 +5,112 @@
 #   CNB_DOCKER_REGISTRY      — 镜像仓库地址，如 docker.cnb.cool
 #   CNB_REPO_SLUG_LOWERCASE  — 仓库路径小写，如 my-org/my-repo
 #
+# 触发方式:
+#   main 分支 push        → 与 web_trigger_amd64 完全相同的构建（trixie / trixie-amd64）
+#   页面手动触发          → web_trigger_* 按钮
+#   v* tag push           → 版本发布构建
+#
 
+# ── 流水线定义（`.` 前缀键不会被当作分支名）─────────────────────────────
+# 同一份定义被 `main.push` 与 `$.web_trigger_amd64` 复用，避免脚本两处走样。
+.amd64_pipeline: &amd64_pipeline
+  - services:
+      - docker
+    stages:
+      - name: Build and push Trixie (amd64 only)
+        script: |
+          set -euo pipefail
+          REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
+
+          docker buildx build \
+            --platform linux/amd64 \
+            --tag "${REGISTRY}:trixie" \
+            --tag "${REGISTRY}:trixie-amd64" \
+            --file ./Dockerfile \
+            --cache-from "type=registry,ref=${REGISTRY}:cache-amd64" \
+            --cache-to "type=registry,ref=${REGISTRY}:cache-amd64,mode=max,image-manifest=true,oci-mediatypes=true" \
+            --push \
+            .
+
+.multi_pipeline: &multi_pipeline
+  - services:
+      - docker
+    stages:
+      - name: Build and push Trixie multi-arch (amd64 + arm64)
+        script: |
+          set -euo pipefail
+          REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
+
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --tag "${REGISTRY}:trixie" \
+            --tag "${REGISTRY}:trixie-multi" \
+            --file ./Dockerfile \
+            --cache-from "type=registry,ref=${REGISTRY}:cache-multi" \
+            --cache-to "type=registry,ref=${REGISTRY}:cache-multi,mode=max,image-manifest=true,oci-mediatypes=true" \
+            --push \
+            .
+
+.alpine_amd64_pipeline: &alpine_amd64_pipeline
+  - services:
+      - docker
+    stages:
+      - name: Build and push Alpine (amd64 only)
+        script: |
+          set -euo pipefail
+          REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
+
+          docker buildx build \
+            --platform linux/amd64 \
+            --tag "${REGISTRY}:alpine" \
+            --tag "${REGISTRY}:alpine-amd64" \
+            --file ./Dockerfile.alpine \
+            --cache-from "type=registry,ref=${REGISTRY}:cache-alpine-amd64" \
+            --cache-to "type=registry,ref=${REGISTRY}:cache-alpine-amd64,mode=max,image-manifest=true,oci-mediatypes=true" \
+            --push \
+            .
+
+.alpine_multi_pipeline: &alpine_multi_pipeline
+  - services:
+      - docker
+    stages:
+      - name: Build and push Alpine multi-arch (amd64 + arm64)
+        script: |
+          set -euo pipefail
+          REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
+
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --tag "${REGISTRY}:alpine" \
+            --tag "${REGISTRY}:alpine-multi" \
+            --file ./Dockerfile.alpine \
+            --cache-from "type=registry,ref=${REGISTRY}:cache-alpine-multi" \
+            --cache-to "type=registry,ref=${REGISTRY}:cache-alpine-multi,mode=max,image-manifest=true,oci-mediatypes=true" \
+            --push \
+            .
+
+# ── main 分支：push 即构建，与手动 amd64 按钮完全一致 ──────────────────
+main:
+  push: *amd64_pipeline
+  # 手动按钮在 main 分支页面上仍需可见，故同步挂载同一份定义
+  web_trigger_amd64: *amd64_pipeline
+  web_trigger_multi: *multi_pipeline
+  web_trigger_alpine_amd64: *alpine_amd64_pipeline
+  web_trigger_alpine_multi: *alpine_multi_pipeline
+
+# ── 兜底：其余分支的手动构建与 tag 事件 ───────────────────────────────
 $:
-  # ── 1. 手动触发：Trixie 极速构建 (仅 linux/amd64) ─────────────────────────
-  web_trigger_amd64:
-    - services:
-        - docker
-      stages:
-        - name: Build and push Trixie (amd64 only)
-          script: |
-            set -euo pipefail
-            REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
+  # ── 1. 手动触发：Trixie 极速构建 (仅 linux/amd64) ─────────────────────
+  web_trigger_amd64: *amd64_pipeline
 
-            docker buildx build \
-              --platform linux/amd64 \
-              --tag "${REGISTRY}:trixie" \
-              --tag "${REGISTRY}:trixie-amd64" \
-              --file ./Dockerfile \
-              --cache-from "type=registry,ref=${REGISTRY}:cache-amd64" \
-              --cache-to "type=registry,ref=${REGISTRY}:cache-amd64,mode=max,image-manifest=true,oci-mediatypes=true" \
-              --push \
-              .
+  # ── 2. 手动触发：Trixie 全架构构建 (linux/amd64 + linux/arm64) ────────
+  web_trigger_multi: *multi_pipeline
 
-  # ── 2. 手动触发：Trixie 全架构构建 (linux/amd64 + linux/arm64) ────────────
-  web_trigger_multi:
-    - services:
-        - docker
-      stages:
-        - name: Build and push Trixie multi-arch (amd64 + arm64)
-          script: |
-            set -euo pipefail
-            REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
+  # ── 3. 手动触发：Alpine 极速构建 (仅 linux/amd64) ─────────────────────
+  web_trigger_alpine_amd64: *alpine_amd64_pipeline
 
-            docker buildx build \
-              --platform linux/amd64,linux/arm64 \
-              --tag "${REGISTRY}:trixie" \
-              --tag "${REGISTRY}:trixie-multi" \
-              --file ./Dockerfile \
-              --cache-from "type=registry,ref=${REGISTRY}:cache-multi" \
-              --cache-to "type=registry,ref=${REGISTRY}:cache-multi,mode=max,image-manifest=true,oci-mediatypes=true" \
-              --push \
-              .
-
-  # ── 3. 手动触发：Alpine 极速构建 (仅 linux/amd64) ─────────────────────────
-  web_trigger_alpine_amd64:
-    - services:
-        - docker
-      stages:
-        - name: Build and push Alpine (amd64 only)
-          script: |
-            set -euo pipefail
-            REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
-
-            docker buildx build \
-              --platform linux/amd64 \
-              --tag "${REGISTRY}:alpine" \
-              --tag "${REGISTRY}:alpine-amd64" \
-              --file ./Dockerfile.alpine \
-              --cache-from "type=registry,ref=${REGISTRY}:cache-alpine-amd64" \
-              --cache-to "type=registry,ref=${REGISTRY}:cache-alpine-amd64,mode=max,image-manifest=true,oci-mediatypes=true" \
-              --push \
-              .
-
-  # ── 4. 手动触发：Alpine 全架构构建 (linux/amd64 + linux/arm64) ───────────
-  web_trigger_alpine_multi:
-    - services:
-        - docker
-      stages:
-        - name: Build and push Alpine multi-arch (amd64 + arm64)
-          script: |
-            set -euo pipefail
-            REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
-
-            docker buildx build \
-              --platform linux/amd64,linux/arm64 \
-              --tag "${REGISTRY}:alpine" \
-              --tag "${REGISTRY}:alpine-multi" \
-              --file ./Dockerfile.alpine \
-              --cache-from "type=registry,ref=${REGISTRY}:cache-alpine-multi" \
-              --cache-to "type=registry,ref=${REGISTRY}:cache-alpine-multi,mode=max,image-manifest=true,oci-mediatypes=true" \
-              --push \
-              .
+  # ── 4. 手动触发：Alpine 全架构构建 (linux/amd64 + linux/arm64) ───────
+  web_trigger_alpine_multi: *alpine_multi_pipeline
 
   # ── 5. v* tag push：版本发布自动构建双架构镜像 ─────────────────────────
   tag_push:

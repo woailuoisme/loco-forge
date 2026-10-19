@@ -11,7 +11,7 @@ use loco_rs::{
     boot::{BootResult, StartMode, create_app},
     config::Config,
     controller::AppRoutes,
-    db::{self, truncate_table},
+    db::truncate_table,
     environment::Environment,
     task::Tasks,
 };
@@ -19,7 +19,7 @@ use migration::Migrator;
 use std::path::Path;
 
 use crate::{
-    models::_entities::{posts, users},
+    models::_entities::{account, session, user},
     setup,
 };
 
@@ -88,17 +88,14 @@ impl Hooks for App {
 
     /// 清空数据库数据 (主要用于测试数据重置)
     async fn truncate(ctx: &AppContext) -> Result<()> {
-        // 步骤 1: 截断/清空数据库关联表
-        truncate_table(&ctx.db, users::Entity).await?;
-        truncate_table(&ctx.db, posts::Entity).await?;
+        truncate_table(&ctx.db, session::Entity).await?;
+        truncate_table(&ctx.db, account::Entity).await?;
+        truncate_table(&ctx.db, user::Entity).await?;
         Ok(())
     }
 
     /// 执行基础 Seed 种子数据注入
-    async fn seed(ctx: &AppContext, base: &Path) -> Result<()> {
-        // 步骤 1: 读取 users.yaml 并注入初始用户记录
-        db::seed::<users::ActiveModel>(&ctx.db, &base.join("users.yaml").display().to_string())
-            .await?;
+    async fn seed(_ctx: &AppContext, _base: &Path) -> Result<()> {
         Ok(())
     }
 }

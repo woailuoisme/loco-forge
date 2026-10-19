@@ -3,7 +3,7 @@
 //! 提供 `cargo loco task clean_expired_tokens` 任务，
 //! 用于清理数据库中已过期的密码重置 Token 与 OTP 登录验证码。
 
-use crate::models::users;
+use crate::models::session::Session;
 use loco_rs::prelude::*;
 
 /// 清理过期 Token 任务
@@ -15,13 +15,13 @@ impl Task for CleanExpiredTokens {
     fn task(&self) -> TaskInfo {
         TaskInfo {
             name: "clean_expired_tokens".to_string(),
-            detail: "定期清理数据库中已过期的重置密码与验证 Token".to_string(),
+            detail: "定期清理数据库中已过期的会话与验证 Token".to_string(),
         }
     }
 
     /// 执行清理逻辑
     async fn run(&self, app_context: &AppContext, _vars: &task::Vars) -> Result<()> {
-        let cleaned_count = users::Model::clean_expired_tokens(&app_context.db).await?;
+        let cleaned_count = Session::delete_expired(&app_context.db).await?;
         tracing::info!(
             cleaned_count,
             "Successfully executed clean_expired_tokens task"

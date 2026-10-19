@@ -55,7 +55,7 @@ Thumbs.db
 .mise.local.toml
 
 # ── 5. AI 编程助手与私有记忆库 (AI Agents & Private Contexts) ─────────────────
-.agents/
+.agents/skills
 .claude/
 .gemini/
 .codex/

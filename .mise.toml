@@ -2,6 +2,8 @@
 # Mise 开发环境与工具链管理配置 (.mise.toml)
 # 作用：自动锁定与按需安装项目所需编译器、LSP、CLI 辅助工具与测试套件
 # ==============================================================================
+[settings]
+cargo.binstall = true
 
 [tools]
 # ── 1. 基础编译器与核心工具链 (Core Rust Toolchain & Cache) ─────────────────────
@@ -10,20 +12,19 @@ rust-analyzer = "latest"            # Rust 官方 LSP 语言服务器 (提供 ID
 sccache = "latest"                  # 编译器缓存包装工具 (跨分支/项目缓存 C/C++/Rust 编译产物，大幅加速重复构建)
 just = "latest"                     # 现代化通用任务命令运行器 (管理工程级快捷指令与代码质量门禁)
 
-# ── 2. 开发、热重载与依赖管理 (Dev, Hot-Reload & Dependency Management) ──────
-"cargo:cargo-watch" = "latest"      # 文件监听工具 (监听 src/ 与 config/ 变更，实现服务自动增量热重载)
-"cargo:cargo-outdated" = "latest"   # 依赖版本检查工具 (快速扫描 Cargo.toml 中依赖的最新可用升级版本)
-"cargo:cargo-edit" = "latest"       # Cargo 依赖扩展套件 (提供 cargo add/rm/upgrade 等便捷命令)
-
 # ── 3. 测试运行器与覆盖率审计 (Testing & Coverage Tooling) ───────────────────
 "cargo:cargo-nextest" = "latest"    # 现代化极速测试运行器 (多线程并发执行单元测试与集成测试，比原生快 3~5 倍)
+"cargo:cargo-insta" = "latest"      # insta 快照测试辅助 CLI (交互式审查 / 接受 / 拒绝快照差异)
 "cargo:cargo-llvm-cov" = "latest"   # 基于 LLVM Source-Based 机制的代码覆盖率收集工具 (生成精准的 HTML 覆盖率报告)
-"cargo:cargo-tarpaulin" = "latest"  # 纯 Rust 原生代码覆盖率分析工具 (可作为覆盖率收集与 CI 报告的补充方案)
 "cargo:cargo-audit" = "latest"      # 依赖安全漏洞审计工具 (基于 RustSec 咨询数据库扫描已知供应链安全漏洞)
+"cargo:cargo-deny" = "latest"       # 依赖策略与许可证合规检查 (覆盖面广于 cargo-audit，可检测重复依赖与来源策略)
 
-# ── 4. 领域框架与数据生态工具 (Framework, Database & Ecosystem CLI) ───────────
+# ── 4. 依赖卫生与代码分析 (Dependency Hygiene & Code Analysis) ────────────────
+"cargo:cargo-machete" = "latest"    # 检测 Cargo.toml 中未被引用的依赖 (stable 可用，替代需 nightly 的 cargo-udeps)
+
+# ── 5. 领域框架与数据生态工具 (Framework, Database & Ecosystem CLI) ───────────
 "cargo:sea-orm-cli" = "latest"      # Sea-ORM 数据库 CLI (用于数据库模型逆向生成、迁移管理与 SQL 校验)
 "cargo:rust-i18n-cli" = "latest"    # 多语言国际化 (i18n) 工具 (自动提取代码中的 t! 文案并同步 locales/ 翻译字典)
-"cargo:https://github.com/cksac/fake-rs.git" = { features = [
-  "cli",
-], version = "latest" }             # 假数据生成工具 (CLI 端快速生成合法的 Mock 测试数据、UUID、订单号与用户种子数据)
+
+# ── 6. 构建产物与缓存治理 (Build Artifact & Cache Governance) ─────────────────
+"cargo:cargo-sweep" = "latest"      # 按体积上限淘汰 target 中最旧的构建产物 (配合 just clean 使用)

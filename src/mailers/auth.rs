@@ -4,7 +4,7 @@
 use loco_rs::prelude::*;
 use serde_json::json;
 
-use crate::{common::consts::app::APP_NAME, models::users};
+use crate::{common::consts::app::APP_NAME, models::user};
 
 static welcome: Dir<'_> = include_dir!("src/mailers/auth/welcome");
 static forgot: Dir<'_> = include_dir!("src/mailers/auth/forgot");
@@ -19,7 +19,11 @@ impl AuthMailer {
     /// # Errors
     ///
     /// When email sending is failed
-    pub async fn send_welcome(ctx: &AppContext, user: &users::Model) -> Result<()> {
+    pub async fn send_welcome(
+        ctx: &AppContext,
+        user: &user::Model,
+        verify_token: Option<&str>,
+    ) -> Result<()> {
         Self::mail_template(
             ctx,
             &welcome,
@@ -28,7 +32,7 @@ impl AuthMailer {
                 locals: json!({
                   "app_name": APP_NAME,
                   "name": user.name,
-                  "verifyToken": user.email_verification_token,
+                  "verifyToken": verify_token.unwrap_or_default(),
                   "host": ctx.config.server.full_url()
                 }),
                 ..Default::default()
@@ -44,7 +48,11 @@ impl AuthMailer {
     /// # Errors
     ///
     /// When email sending is failed
-    pub async fn forgot_password(ctx: &AppContext, user: &users::Model) -> Result<()> {
+    pub async fn forgot_password(
+        ctx: &AppContext,
+        user: &user::Model,
+        reset_token: &str,
+    ) -> Result<()> {
         Self::mail_template(
             ctx,
             &forgot,
@@ -53,7 +61,7 @@ impl AuthMailer {
                 locals: json!({
                   "app_name": APP_NAME,
                   "name": user.name,
-                  "resetToken": user.reset_token,
+                  "resetToken": reset_token,
                   "host": ctx.config.server.full_url()
                 }),
                 ..Default::default()
@@ -69,7 +77,7 @@ impl AuthMailer {
     /// # Errors
     ///
     /// 当邮件渲染或投递失败时返回 `Result`
-    pub async fn send_otp(ctx: &AppContext, user: &users::Model, code: &str) -> Result<()> {
+    pub async fn send_otp(ctx: &AppContext, user: &user::Model, code: &str) -> Result<()> {
         Self::mail_template(
             ctx,
             &otp,

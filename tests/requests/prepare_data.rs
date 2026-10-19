@@ -1,20 +1,29 @@
 use axum::http::{HeaderName, HeaderValue};
 use loco_rs::{TestServer, app::AppContext};
-use locos::{dtos::auth::LoginResource, models::users};
+use locos::{dtos::auth::AuthSessionResource, models::user};
 
+#[allow(dead_code)]
 const USER_EMAIL: &str = "test@loco.com";
-const USER_PASSWORD: &str = "1234";
+const USER_PASSWORD: &str = "123456";
 
-pub struct LoggedInUser {
-    pub user: users::Model,
+pub(crate) struct LoggedInUser {
+    pub user: user::Model,
     pub token: String,
 }
 
-pub async fn init_user_login(request: &TestServer, ctx: &AppContext) -> LoggedInUser {
+#[allow(dead_code)]
+pub(crate) async fn init_user_login(request: &TestServer, ctx: &AppContext) -> LoggedInUser {
     init_user_login_with_email(request, ctx, USER_EMAIL).await
 }
 
-pub async fn init_user_login_with_email(
+/// 以唯一随机邮箱注册并登录（持久化 DB 下可重复运行，不依赖 truncate）
+#[allow(dead_code)]
+pub(crate) async fn init_user_login_unique(request: &TestServer, ctx: &AppContext) -> LoggedInUser {
+    let email = format!("test_{}@loco.com", uuid::Uuid::new_v4().simple());
+    init_user_login_with_email(request, ctx, &email).await
+}
+
+pub(crate) async fn init_user_login_with_email(
     request: &TestServer,
     ctx: &AppContext,
     email: &str,
@@ -25,36 +34,21 @@ pub async fn init_user_login_with_email(
         "password": USER_PASSWORD
     });
 
-    //Creating a new user
-    request
-        .post("/api/v1/auth/register")
-        .json(&register_payload)
-        .await;
-    let user = users::Model::find_by_email(&ctx.db, email).await.unwrap();
+    let response = request.post("/v1/users").json(&register_payload).await;
 
-    if let Some(token) = &user.email_verification_token {
-        request.get(&format!("/api/v1/auth/verify/{token}")).await;
-    }
-
-    let response = request
-        .post("/api/v1/auth/login")
-        .json(&serde_json::json!({
-            "email": email,
-            "password": USER_PASSWORD
-        }))
-        .await;
-
-    let api_res: locos::dtos::common::ApiResponse<LoginResource> =
-        serde_json::from_str(&response.text()).unwrap();
-    let login_response = api_res.data.expect("Login response data expected");
+    let res: AuthSessionResource = serde_json::from_str(&response.text()).unwrap();
 
     LoggedInUser {
-        user: users::Model::find_by_email(&ctx.db, email).await.unwrap(),
-        token: login_response.token,
+        user: user::User::find_by_email(&ctx.db, email)
+            .await
+            .unwrap()
+            .unwrap(),
+        token: res.token,
     }
 }
 
-pub async fn init_admin_login(request: &TestServer, ctx: &AppContext) -> LoggedInUser {
+#[allow(dead_code)]
+pub(crate) async fn init_admin_login(request: &TestServer, ctx: &AppContext) -> LoggedInUser {
     use sea_orm::{ActiveModelTrait, IntoActiveModel};
     let logged = init_user_login_with_email(request, ctx, "admin@loco.com").await;
     let mut active = logged.user.into_active_model();
@@ -66,7 +60,8 @@ pub async fn init_admin_login(request: &TestServer, ctx: &AppContext) -> LoggedI
     }
 }
 
-pub fn auth_header(token: &str) -> (HeaderName, HeaderValue) {
+#[allow(dead_code)]
+pub(crate) fn auth_header(token: &str) -> (HeaderName, HeaderValue) {
     let auth_header_value = HeaderValue::from_str(&format!("Bearer {token}")).unwrap();
 
     (HeaderName::from_static("authorization"), auth_header_value)

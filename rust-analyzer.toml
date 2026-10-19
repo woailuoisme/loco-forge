@@ -1,36 +1,24 @@
-# ==============================================================================
-# 文件作用：rust-analyzer (LSP) 项目级智能语言服务器配置
-# 生效时机：VS Code、RustRover、Zed、Neovim 等 IDE 启动 Rust 语言服务时自动加载
-# 核心职责：
-#   1. 规范代码自动导入路径与分组策略 (imports)，强制 crate:: 绝对路径风格
-#   2. 深度展开 Axum / SeaORM / utoipa 等过程宏与属性宏，杜绝 IDE 假红与推导丢失
-#   3. 保存时联动 Clippy 进行全 Target / 全 Feature 实时语法与代码规范检查
-# ==============================================================================
+# rust-analyzer 项目级配置 (IDE 启动 Rust 语言服务时自动加载)
 
-# 1. 自动导入与路径规范 (Imports & Path Style)
 [imports]
-granularity = { enforce = true, group = "crate" } # 按 Crate 聚合 use 导入项
-prefix = "crate"                                  # 内部模块统一强制使用 crate:: 绝对路径
-preferNoStd = false                               # 明确使用 std 标准库
-preferPrelude = true                              # 优先自动补全 Prelude 命名空间中的常用符号
+granularity = { enforce = true, group = "crate" } # use 导入按 crate 分组
+prefix = "crate"                                  # 内部模块统一使用 crate:: 绝对路径
+preferNoStd = false                               # 使用 std
+preferPrelude = true                              # 优先补全 Prelude 符号
 
-# 2. 保存时实时静态检查 (Check-on-Save via Clippy)
 [check]
-command = "clippy"    # 保存时调用 clippy 检查，即时在编辑器中高亮 Lint 警告
-allTargets = true     # 全面检查 src/、tests/、benches/ 等所有构建目标
-allFeatures = true    # 检查所有开启的 features (包括 dev-dependencies 测试特性)
+command = "clippy" # 保存时运行 clippy
+allTargets = true  # 覆盖 src/ tests/ benches/
+features = "all"   # 等价于 cargo --all-features
 
-# 3. Cargo 项目解析与全量推断 (Cargo Workspace & Features)
 [cargo]
-allTargets = true     # 对全量 Targets (二进制、库、集成测试) 提供精准语义分析
-allFeatures = true    # 激活全量 Features，确保测试与可选模块的符号正常跳转与补全
-autoreload = true     # Cargo.toml 或 .cargo/config.toml 变更时自动刷新项目元数据
+allTargets = true
+features = "all"
+autoreload = true  # Cargo.toml 变更时自动刷新元数据
 
 [cargo.buildScripts]
-enable = true         # 运行 build.rs 提取编译期环境变量与代码生成内容
-rebuildOnSave = true  # 保存时按需增量重跑 build.rs
+enable = true        # 运行 build.rs，提取编译期环境变量
+rebuildOnSave = true # 保存时增量重跑 build.rs
 
-# 4. 过程宏深度展开 (Proc Macro Expansion - Loco/Axum/SeaORM 核心保障)
-[procMacro]
-enable = true         # 开启过程宏解析
-attributes = { enable = true } # 深度展开属性宏 (如 #[utoipa::path], #[debug_handler])
+# 注：procMacro.enable 与 procMacro.attributes.enable 已被新版移除 (默认即为 true)，
+#     继续书写旧字段会触发 "unexpected field" 配置告警，故此处不再声明。

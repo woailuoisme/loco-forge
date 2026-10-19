@@ -1,267 +1,214 @@
-//! 统一 API 响应结构体 (Unified API Response)
+//! 统一 API 错误响应结构体 (Unified API Error Response)
 //!
-//! 提供所有控制器返回的标准 JSON 外层响应载荷 [`ApiResponse`] 与
-//! 其无数据变体的类型别名 [`ApiError`]。
+//! 遵循 `api.md` 第 5 章响应契约：
+//!
+//! - **分页列表**：`{"items": [...], "meta": {...}}` (见 [`super::pagination`])
+//! - **其余成功响应**：直接返回裸 JSON 对象，**不包** `success` / `code` / `message` 外壳
+//! - **所有错误**：统一收敛于扁平的 `{"code", "message", "errors"?}`
+//!
+//! [`ApiError`] 的 `code` 取值与 `api.md` §5.2 错误码清单一一对应，
+//! 客户端据 `code` 分支处理，`message` 仅供展示。
 
+use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
 use utoipa::ToSchema;
 
-use super::pagination::PageMeta;
-use super::pagination::PaginatedData;
-
-/// 统一 API JSON 响应载荷规范结构 (用于 2xx 成功响应 OpenAPI 规范)
+/// 统一 API JSON 错误响应结构体 (遵循 api.md 5.2 节)
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct ApiResponse<T = serde_json::Value> {
-    /// 请求是否成功标识
-    #[schema(example = true)]
-    pub success: bool,
-    /// HTTP 状态码或业务自定义错误码
-    #[schema(example = 200)]
-    pub code: u32,
-    /// 结果或错误的人类可读描述
-    #[schema(example = "Success")]
-    pub message: String,
-    /// 响应数据载荷 (仅 Controller 显式传递载荷时序列化返回，可选)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub data: Option<T>,
-    /// 忽略在 2xx 成功响应 Schema 中的 errors 字段
-    #[schema(ignore)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub errors: Option<serde_json::Value>,
-    /// 忽略在 2xx 成功响应 Schema 中的 trace 字段
-    #[schema(ignore)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub trace: Option<Vec<String>>,
-}
-
-/// 统一 API JSON 错误/异常响应结构体 (用于 4xx/5xx/6xx 错误响应 OpenAPI 规范)
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[schema(example = json!({
-    "success": false,
-    "code": 400,
-    "message": "请求处理失败描述"
-}))]
 pub struct ApiError {
-    /// 请求是否成功标识 (固定为 false)
-    #[schema(example = false)]
-    pub success: bool,
-    /// HTTP 状态码或业务自定义错误码
-    #[schema(example = 400)]
-    pub code: u32,
-    /// 错误的人类可读描述消息
-    #[schema(example = "请求处理失败描述")]
+    /// 机器可读错误代码 (如 `AUTH_TOKEN_INVALID`、`VALIDATION_FAILED`)
+    #[schema(example = "AUTH_TOKEN_INVALID")]
+    pub code: String,
+    /// 人类可读的错误描述
+    #[schema(example = "访问令牌无效")]
     pub message: String,
-    /// 数据校验或详细错误描述信息 (仅 422 Validation Error 等包含 details 时序列化返回，可选)
+    /// 字段级校验失败归集表 (仅 422 `VALIDATION_FAILED` 出现)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub errors: Option<serde_json::Value>,
-    /// 忽略在错误响应 Schema 中的 trace 字段 (调试堆栈信息)
-    #[schema(ignore)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub trace: Option<Vec<String>>,
 }
 
-impl<T: Serialize> ApiResponse<T> {
-    /// 创建标准 200 成功响应 (自定义消息与数据载荷)
-    pub fn ok_with_message(data: T, message: impl Into<String>) -> Self {
-        Self {
-            success: true,
-            code: 200,
-            message: message.into(),
-            data: Some(data),
-            errors: None,
-            trace: None,
-        }
-    }
-
-    /// 创建标准 200 成功响应 (默认消息 "操作成功完成")
-    pub fn ok(data: T) -> Self {
-        Self::ok_with_message(data, "操作成功完成")
-    }
-
-    /// 创建 201 资源创建成功响应 (自定义消息与数据载荷)
-    pub fn created_with_message(data: T, message: impl Into<String>) -> Self {
-        Self {
-            success: true,
-            code: 201,
-            message: message.into(),
-            data: Some(data),
-            errors: None,
-            trace: None,
-        }
-    }
-
-    /// 创建 201 资源创建成功响应 (默认消息 "创建成功")
-    pub fn created(data: T) -> Self {
-        Self::created_with_message(data, "创建成功")
-    }
-
-    /// 创建分页成功响应
-    pub fn page_response(
-        items: Vec<T>,
-        current_page: u64,
-        per_page: u64,
-        total: u64,
-    ) -> ApiResponse<PaginatedData<T>>
-    where
-        T: TS,
-    {
-        let paginated = PaginatedData {
-            items,
-            meta: PageMeta::new(current_page, per_page, total),
-            extras: None,
-        };
-        ApiResponse::ok_with_message(paginated, "success")
-    }
-
-    /// 创建带额外扩展数据的分页成功响应
-    pub fn page_with_extras_response<E: Serialize>(
-        items: Vec<T>,
-        current_page: u64,
-        per_page: u64,
-        total: u64,
-        extras: E,
-    ) -> ApiResponse<PaginatedData<T>>
-    where
-        T: TS,
-    {
-        let extras_json = serde_json::to_value(extras).ok();
-        let paginated = PaginatedData {
-            items,
-            meta: PageMeta::new(current_page, per_page, total),
-            extras: extras_json,
-        };
-        ApiResponse::ok_with_message(paginated, "success")
+/// 将 HTTP 状态码映射为默认的机器可读错误代码。
+///
+/// 仅用于没有更具体语义的兜底场景；能确定语义的调用点应直接使用
+/// [`ApiError`] 的具名构造函数。
+#[must_use]
+pub fn error_code_for(status: StatusCode) -> &'static str {
+    match status {
+        StatusCode::BAD_REQUEST => "BAD_REQUEST",
+        StatusCode::UNAUTHORIZED => "AUTH_TOKEN_INVALID",
+        StatusCode::FORBIDDEN => "FORBIDDEN",
+        StatusCode::NOT_FOUND => "NOT_FOUND",
+        StatusCode::METHOD_NOT_ALLOWED => "METHOD_NOT_ALLOWED",
+        StatusCode::CONFLICT => "CONFLICT",
+        StatusCode::PAYLOAD_TOO_LARGE => "REQUEST_TOO_LARGE",
+        StatusCode::UNPROCESSABLE_ENTITY => "VALIDATION_FAILED",
+        StatusCode::TOO_MANY_REQUESTS => "RATE_LIMITED",
+        StatusCode::INTERNAL_SERVER_ERROR => "INTERNAL_SERVER_ERROR",
+        StatusCode::SERVICE_UNAVAILABLE => "SERVICE_UNAVAILABLE",
+        StatusCode::GATEWAY_TIMEOUT => "GATEWAY_TIMEOUT",
+        _ => "UNKNOWN_ERROR",
     }
 }
 
-impl ApiResponse<serde_json::Value> {
-    /// 创建简单无载荷成功响应 (默认 200)
-    pub fn success_empty(message: impl Into<String>) -> Self {
-        Self::success_empty_with_code(200, message)
-    }
-
-    /// 创建指定 HTTP Code 的无载荷成功响应 (如 200, 202)
-    pub fn success_empty_with_code(code: u32, message: impl Into<String>) -> Self {
-        Self {
-            success: true,
-            code,
-            message: message.into(),
-            data: None,
-            errors: None,
-            trace: None,
-        }
-    }
-
-    /// 创建简单失败响应 (不带详细 errors 与 trace)
-    pub fn error_simple(code: u32, message: impl Into<String>) -> Self {
-        Self::error(code, message, None)
-    }
-
-    /// 创建失败/异常响应
-    pub fn error(code: u32, message: impl Into<String>, errors: Option<serde_json::Value>) -> Self {
-        Self::error_with_trace(code, message, errors, None)
-    }
-
-    /// 创建带调试堆栈跟踪信息的失败/异常响应 (如 500 内部错误)
-    pub fn error_with_trace(
-        code: u32,
-        message: impl Into<String>,
-        errors: Option<serde_json::Value>,
-        trace: Option<Vec<String>>,
-    ) -> Self {
-        Self {
-            success: false,
-            code,
-            message: message.into(),
-            data: None,
-            errors,
-            trace,
-        }
+/// 将错误代码反查为 HTTP 状态码（与 [`error_code_for`] 双向一致）。
+#[must_use]
+pub fn status_for_code(code: &str) -> StatusCode {
+    match code {
+        "BAD_REQUEST" | "IDEMPOTENCY_REQUIRED" | "EXCEL_OPEN_ERROR" | "EXCEL_READ_ERROR" => {
+            StatusCode::BAD_REQUEST
+        },
+        "AUTH_TOKEN_INVALID"
+        | "AUTH_TOKEN_EXPIRED"
+        | "AUTH_TOKEN_REVOKED"
+        | "AUTH_INVALID_CREDENTIALS" => StatusCode::UNAUTHORIZED,
+        "FORBIDDEN" | "AUTH_ACCOUNT_BANNED" | "AUTH_EMAIL_NOT_VERIFIED" => StatusCode::FORBIDDEN,
+        "NOT_FOUND" => StatusCode::NOT_FOUND,
+        "METHOD_NOT_ALLOWED" => StatusCode::METHOD_NOT_ALLOWED,
+        "CONFLICT"
+        | "AUTH_EMAIL_ALREADY_EXISTS"
+        | "AUTH_USERNAME_TAKEN"
+        | "AUTH_PHONE_NUMBER_TAKEN"
+        | "IDEMPOTENCY_CONFLICT" => StatusCode::CONFLICT,
+        "REQUEST_TOO_LARGE" | "EXCEL_FILE_TOO_LARGE" => StatusCode::PAYLOAD_TOO_LARGE,
+        "VALIDATION_FAILED"
+        | "AUTH_OTP_INVALID"
+        | "AUTH_OTP_EXPIRED"
+        | "AUTH_PASSWORD_MISMATCH"
+        | "AUTH_PASSWORD_TOO_WEAK"
+        | "IDEMPOTENCY_MISMATCH"
+        | "EXCEL_MAP_ERROR"
+        | "EXCEL_ROWS_ERROR" => StatusCode::UNPROCESSABLE_ENTITY,
+        "RATE_LIMITED" | "AUTH_OTP_TOO_MANY_ATTEMPTS" | "AUTH_OTP_RATE_LIMITED" => {
+            StatusCode::TOO_MANY_REQUESTS
+        },
+        "INTERNAL_SERVER_ERROR" => StatusCode::INTERNAL_SERVER_ERROR,
+        "SERVICE_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
+        "GATEWAY_TIMEOUT" => StatusCode::GATEWAY_TIMEOUT,
+        // 600~999 业务错误码统一以 HTTP 400 下发
+        c if c.starts_with("BIZ_") => StatusCode::BAD_REQUEST,
+        _ => StatusCode::BAD_REQUEST,
     }
 }
 
 impl ApiError {
-    /// 创建简单失败响应 (不带详细 errors 与 trace)
-    pub fn error_simple(code: u32, message: impl Into<String>) -> Self {
-        Self::error(code, message, None)
+    /// 创建标准错误响应体
+    pub fn new(code: impl Into<String>, message: impl Into<String>) -> Self {
+        Self {
+            code: code.into(),
+            message: message.into(),
+            errors: None,
+        }
     }
 
-    /// 创建失败/异常响应
-    pub fn error(code: u32, message: impl Into<String>, errors: Option<serde_json::Value>) -> Self {
-        Self::error_with_trace(code, message, errors, None)
-    }
-
-    /// 创建带调试堆栈跟踪信息的失败/异常响应 (如 500 内部错误)
-    pub fn error_with_trace(
-        code: u32,
+    /// 创建带字段错误归集的 422 响应体
+    pub fn with_errors(
+        code: impl Into<String>,
         message: impl Into<String>,
         errors: Option<serde_json::Value>,
-        trace: Option<Vec<String>>,
     ) -> Self {
         Self {
-            success: false,
-            code,
+            code: code.into(),
             message: message.into(),
             errors,
-            trace,
         }
     }
-}
 
-impl From<ApiError> for ApiResponse<serde_json::Value> {
-    fn from(err: ApiError) -> Self {
-        Self {
-            code: err.code,
-            success: err.success,
-            message: err.message,
-            data: None,
-            errors: err.errors,
-            trace: err.trace,
-        }
+    /// 401 令牌无效
+    pub fn unauthorized(message: impl Into<String>) -> Self {
+        Self::new("AUTH_TOKEN_INVALID", message)
     }
-}
 
-impl From<ApiResponse<serde_json::Value>> for ApiError {
-    fn from(res: ApiResponse<serde_json::Value>) -> Self {
-        Self {
-            code: res.code,
-            success: res.success,
-            message: res.message,
-            errors: res.errors,
-            trace: res.trace,
-        }
+    /// 401 邮箱/用户名或口令不正确（防枚举，账号不存在返回同一码）
+    pub fn invalid_credentials(message: impl Into<String>) -> Self {
+        Self::new("AUTH_INVALID_CREDENTIALS", message)
     }
-}
 
-impl<T: Serialize> axum::response::IntoResponse for ApiResponse<T> {
-    fn into_response(self) -> axum::response::Response {
-        let status = match self.code {
-            201 => axum::http::StatusCode::CREATED,
-            202 => axum::http::StatusCode::ACCEPTED,
-            204 => axum::http::StatusCode::NO_CONTENT,
-            400 => axum::http::StatusCode::BAD_REQUEST,
-            401 => axum::http::StatusCode::UNAUTHORIZED,
-            403 => axum::http::StatusCode::FORBIDDEN,
-            404 => axum::http::StatusCode::NOT_FOUND,
-            422 => axum::http::StatusCode::UNPROCESSABLE_ENTITY,
-            500..=599 => axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            _ => axum::http::StatusCode::OK,
-        };
-        (status, axum::Json(self)).into_response()
+    /// 400 请求非法
+    pub fn bad_request(message: impl Into<String>) -> Self {
+        Self::new("BAD_REQUEST", message)
+    }
+
+    /// 404 资源不存在
+    pub fn not_found(message: impl Into<String>) -> Self {
+        Self::new("NOT_FOUND", message)
+    }
+
+    /// 403 无权限
+    pub fn forbidden(message: impl Into<String>) -> Self {
+        Self::new("FORBIDDEN", message)
+    }
+
+    /// 409 资源冲突
+    pub fn conflict(message: impl Into<String>) -> Self {
+        Self::new("CONFLICT", message)
+    }
+
+    /// 422 字段校验失败
+    pub fn validation(message: impl Into<String>, errors: Option<serde_json::Value>) -> Self {
+        Self::with_errors("VALIDATION_FAILED", message, errors)
+    }
+
+    /// 429 触发限流
+    pub fn rate_limited(message: impl Into<String>) -> Self {
+        Self::new("RATE_LIMITED", message)
+    }
+
+    /// 500 内部故障
+    pub fn internal(message: impl Into<String>) -> Self {
+        Self::new("INTERNAL_SERVER_ERROR", message)
     }
 }
 
 impl axum::response::IntoResponse for ApiError {
     fn into_response(self) -> axum::response::Response {
-        let status = match self.code {
-            401 => axum::http::StatusCode::UNAUTHORIZED,
-            403 => axum::http::StatusCode::FORBIDDEN,
-            404 => axum::http::StatusCode::NOT_FOUND,
-            422 => axum::http::StatusCode::UNPROCESSABLE_ENTITY,
-            500..=599 => axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            _ => axum::http::StatusCode::BAD_REQUEST,
-        };
+        let status = status_for_code(&self.code);
         (status, axum::Json(self)).into_response()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_code_status_roundtrip() {
+        for status in [
+            StatusCode::BAD_REQUEST,
+            StatusCode::UNAUTHORIZED,
+            StatusCode::FORBIDDEN,
+            StatusCode::NOT_FOUND,
+            StatusCode::CONFLICT,
+            StatusCode::PAYLOAD_TOO_LARGE,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            StatusCode::TOO_MANY_REQUESTS,
+            StatusCode::INTERNAL_SERVER_ERROR,
+            StatusCode::SERVICE_UNAVAILABLE,
+            StatusCode::GATEWAY_TIMEOUT,
+        ] {
+            let code = error_code_for(status);
+            assert_eq!(
+                status_for_code(code),
+                status,
+                "code {code} 反查状态码不一致"
+            );
+        }
+    }
+
+    #[test]
+    fn test_error_body_is_flat() {
+        let body = serde_json::to_value(ApiError::validation("Validation failed", None)).unwrap();
+        assert_eq!(body["code"], "VALIDATION_FAILED");
+        assert_eq!(body["message"], "Validation failed");
+        assert!(body.get("error").is_none(), "错误体不应再包 error 外壳");
+        assert!(body.get("errors").is_none(), "无字段错误时应省略 errors");
+    }
+
+    #[test]
+    fn test_biz_code_maps_to_bad_request() {
+        assert_eq!(status_for_code("BIZ_601"), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            status_for_code("AUTH_OTP_EXPIRED"),
+            StatusCode::UNPROCESSABLE_ENTITY
+        );
     }
 }

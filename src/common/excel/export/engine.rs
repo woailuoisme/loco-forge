@@ -77,7 +77,10 @@ pub fn init_worksheet<'a>(
     header_format: &Format,
     column_widths: Option<&[f64]>,
 ) -> Result<&'a mut Worksheet, Error> {
-    let worksheet = wb.add_worksheet_with_constant_memory();
+    let worksheet = wb.add_worksheet_with_constant_memory().map_err(|e| {
+        tracing::error!("创建 Excel 工作表失败: {:?}", e);
+        Error::InternalServerError
+    })?;
 
     let name = if sheet_no == 1 {
         base_sheet_name.to_string()

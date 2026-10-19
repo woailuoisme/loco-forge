@@ -1,6 +1,7 @@
 //! # 文件上传与下载控制器 (Files Controller)
 
 use axum::{
+    Json,
     extract::{Multipart, Path, State},
     http::{HeaderMap, HeaderValue, StatusCode, header},
     response::{IntoResponse, Response},
@@ -8,8 +9,8 @@ use axum::{
 use loco_rs::prelude::*;
 
 use crate::{
-    common::consts::openapi::TAG_FILES,
-    dtos::{common::ApiResponse, files::FileUploadResource},
+    common::consts::{api::API_PREFIX, openapi::TAG_FILES},
+    dtos::files::FileUploadResource,
     errors::AppResult,
     services::FileService,
 };
@@ -17,11 +18,11 @@ use crate::{
 /// 单文件/多文件上传接口
 #[utoipa::path(
     post,
-    path = "/api/v1/files/upload",
+    path = "/v1/files",
     summary = "上传文件",
-    description = "通过 multipart/form-data 格式上传单文件或多文件到存储服务",
+    description = "上传单个或多个文件",
     responses(
-        (status = 200, description = "上传成功", body = ApiResponse<Vec<FileUploadResource>>),
+        (status = 200, description = "上传成功", body = Vec<FileUploadResource>),
         (status = 400, description = "请求参数或文件格式错误"),
         (status = 401, description = "未授权")
     ),
@@ -35,15 +36,15 @@ pub async fn upload(
     _auth: auth::JWT,
     State(ctx): State<AppContext>,
     multipart: Multipart,
-) -> AppResult<ApiResponse<Vec<FileUploadResource>>> {
+) -> AppResult<Json<Vec<FileUploadResource>>> {
     let uploaded_files = FileService::upload(&ctx, multipart).await?;
-    Ok(ApiResponse::ok(uploaded_files))
+    Ok(Json(uploaded_files))
 }
 
 /// 获取文件内容/下载接口
 #[utoipa::path(
     get,
-    path = "/api/v1/files/{*key}",
+    path = "/v1/files/{*key}",
     summary = "获取/下载文件",
     description = "根据文件 Key 获取文件内容",
     params(
@@ -71,7 +72,7 @@ pub async fn get_file(
 
 pub fn routes() -> Routes {
     Routes::new()
-        .prefix("/api/v1/files")
-        .add("/upload", post(upload))
+        .prefix(&format!("{API_PREFIX}/files"))
+        .add("", post(upload))
         .add("/{*key}", get(get_file))
 }

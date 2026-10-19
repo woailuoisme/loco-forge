@@ -1,4 +1,4 @@
-ARG RUST_VERSION=1.98.0
+ARG RUST_VERSION=1.99.1
 
 # ── 阶段 1：Chef 基础阶段（直接使用官方 cargo-chef 预装镜像）────────────────────
 FROM lukemathwalker/cargo-chef:latest-rust-${RUST_VERSION}-slim-trixie AS chef
@@ -30,8 +30,8 @@ RUN cargo build --release --bin locos
 FROM debian:trixie-slim AS runtime
 
 ENV LOCO_ENV=production \
-    PORT=5150 \
-    BINDING=0.0.0.0 \
+    APP_PORT=5150 \
+    APP_BINDING=0.0.0.0 \
     TZ=Asia/Shanghai \
     SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 

@@ -1,30 +1,41 @@
+# Loco 应用 —— API / Worker / Scheduler 三进程形态
+# 共享配置抽成 x-app 锚点，各服务用 <<: *app 合并后覆盖 command / container_name / ports
+# 注意：容器内应用写入目录是 /app/storages（复数），宿主侧挂载为 ./storage
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: loco:local
+  pull_policy: build
+  restart: unless-stopped
+  env_file:
+    - path: .env.production
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  networks:
+    - backend
+  volumes:
+    - ./storage:/app/storages
+
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: loco_app
-    command: start
+  api:
+    <<: *app
+    container_name: loco-api
+    command: ["start"]
     ports:
       - "5150:5150"
-    env_file:
-      - .env.production
-    # volumes:
-    #   - ./config:/app/config
-    #   - ./locales:/app/locales
-    # 允许容器通过 host.docker.internal 访问宿主机服务：
-    # - Postgres: postgres://user:pass@host.docker.internal:5432/db_name
-    # - Redis:    redis://host.docker.internal:6379
-    # - Mailer:   host: host.docker.internal / port: 1025
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - backend
-    restart: unless-stopped
+
+  worker:
+    <<: *app
+    container_name: loco-worker
+    command: ["start", "--worker"]
+
+  scheduler:
+    <<: *app
+    container_name: loco-scheduler
+    command: ["start", "--scheduler"]
 
 networks:
   backend:
     external: true
-
-
-

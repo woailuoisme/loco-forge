@@ -13,64 +13,36 @@ use loco_rs::prelude::*;
 pub use crate::common::diagnostics::{
     ComponentHealth, DiagnosticsHub, HealthChecks, ReadinessData,
 };
-use crate::{common::consts::openapi::TAG_HEALTH, dtos::common::ApiResponse, errors::AppResult};
 
 /// Liveness 存活探针
-#[utoipa::path(
-    get,
-    path = "/health",
-    summary = "Liveness 存活探针",
-    description = "用于 Kubernetes livenessProbe 检查服务进程是否处于存活状态",
-    responses(
-        (status = 200, description = "服务存活", body = ApiResponse<serde_json::Value>)
-    ),
-    tag = TAG_HEALTH
-)]
+///
+/// 基础设施探针，不纳入 OpenAPI 对外文档。
+/// 直接返回静态文本 `ok`：零序列化、零堆分配。
 #[debug_handler]
-pub async fn liveness() -> AppResult<ApiResponse<serde_json::Value>> {
-    Ok(ApiResponse::success_empty("ok"))
+pub async fn liveness() -> &'static str {
+    "ok"
 }
 
 /// Readiness 就绪探针
-#[utoipa::path(
-    get,
-    path = "/health/ready",
-    summary = "Readiness 就绪探针",
-    description = "用于 Kubernetes readinessProbe 检测数据库、缓存、存储等基础设施就绪状态",
-    responses(
-        (status = 200, description = "服务就绪", body = ApiResponse<ReadinessData>),
-        (status = 503, description = "服务不可用", body = ApiResponse<ReadinessData>)
-    ),
-    tag = TAG_HEALTH
-)]
+///
+/// 基础设施探针，不纳入 OpenAPI 对外文档。
+/// 无论就绪与否均返回同一 [`ReadinessData`] 根结构，仅以 HTTP 状态码区分
+/// (`200` 就绪 / `503` 不可用)，符合 `api.md`「根结构可预测」要求。
 #[debug_handler]
-pub async fn readiness(State(ctx): State<AppContext>) -> AppResult<Response> {
+pub async fn readiness(State(ctx): State<AppContext>) -> Response {
     let data = DiagnosticsHub::check_readiness(&ctx).await;
 
-    if data.is_all_up() {
-        Ok((
-            StatusCode::OK,
-            Json(ApiResponse::ok_with_message(data, "ok")),
-        )
-            .into_response())
+    let status = if data.is_all_up() {
+        StatusCode::OK
     } else {
-        Ok((
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(ApiResponse {
-                success: false,
-                code: 503,
-                message: "service unavailable: one or more health probes failed".to_string(),
-                data: Some(data),
-                errors: None,
-                trace: None,
-            }),
-        )
-            .into_response())
-    }
+        StatusCode::SERVICE_UNAVAILABLE
+    };
+
+    (status, Json(data)).into_response()
 }
 
 pub fn routes() -> Routes {
     Routes::new()
-        .add("/health", get(liveness))
-        .add("/health/ready", get(readiness))
+        .add("/livez", get(liveness))
+        .add("/readyz", get(readiness))
 }

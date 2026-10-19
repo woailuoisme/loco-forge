@@ -1,17 +1,5 @@
-# ==============================================================================
-# 文件作用：Rustup 工具链环境声明文件 (Rust Toolchain Specification)
-# 生效时机：Rustup 与 Cargo 在进入项目目录时自动解析并应用
-# 核心职责：
-#   1. 锁定编译器精确版本 (channel)，保障团队全员、CI/CD 与生产构建环境绝对一致
-#   2. 预装核心组件 (components)，确保 IDE 语言服务、代码格式化与 Clippy 静态检查就绪
-#   3. 预下载目标平台标准库 (targets)，支持开箱即用的 Linux 交叉编译与 Docker 容器构建
-# ==============================================================================
-
 [toolchain]
-channel = "stable"
-# 2. 安装预设：minimal 避免在 CI / Docker / 本地自动下载冗余的文档与示例 (体积与安装速度优化)
-profile = "minimal"
-# 3. 核心组件：格式化 (rustfmt)、静态分析 (clippy)
-components = ["rustfmt", "clippy"]
-# 4. 交叉编译目标：Linux x86_64 与 ARM64 生产部署标准库 (供本地交叉编译与 Docker 多架构构建)
-targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
+channel = "stable"                 # 锁定编译器版本，保证本地 / CI / 生产一致
+profile = "minimal"                # 不下载文档与示例，减小体积、加快安装
+components = ["rustfmt", "clippy"] # 格式化与静态检查组件
+# 不声明 targets：交叉编译由 Docker 内工具链完成，本地声明只会额外占用磁盘

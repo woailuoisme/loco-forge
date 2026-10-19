@@ -1,40 +1,8 @@
-# ==============================================================================
-# 文件作用：Cargo 构建系统项目级配置文件 (.cargo/config.toml)
-# 生效时机：执行任何 `cargo <command>` 时自动分层加载与合并
-# 核心职责：
-#   1. 定义项目专有 CLI 快捷别名 ([alias])，无缝对接 Loco 原生脚手架与开发工作流
-#   2. 启用 sccache 编译器包装缓存 ([build])，实现跨分支秒级增量编译
-#   3. 定制跨平台构建与调试优化 ([target.<triple>])，本地开发提速 2x~5x
-#   4. 针对不同操作系统适配优化编译与链接参数 (rustflags)
-# ==============================================================================
-
 [alias]
-# ── 核心 Loco 框架快捷命令 ───────────────────────────────────────────────────
-# 支持 `cargo loco <subcommand>` 语法（如: cargo loco start, cargo loco routes）
+# Loco 脚手架入口 (其余别名统一由 justfile 提供)
 loco = "run --"
 
-# 后台与管理任务快捷命令（如: cargo task 列出任务，或 cargo task seed_data 运行种子数据填充）
-task = "run -- task"
-
-# 数据库迁移快捷命令（如: cargo migrate 执行迁移）
-migrate = "run -- db migrate"
-
-# 路由表查看快捷命令（执行: cargo routes）
-routes = "run -- routes"
-
-# ── 本地开发热重载命令 ───────────────────────────────────────────────────────
-# 使用 cargo-watch 监听 src/ 与 config/ 目录，文件变更时自动增量编译并运行 Web 服务
-dev = ["watch", "-w", "src", "-w", "config", "-s", "cargo run -- start"]
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 跨平台构建与调试优化配置 (rustflags)
-# ─────────────────────────────────────────────────────────────────────────────
-
-# macOS (Apple Silicon: M1/M2/M3/M4/M5)
-# 开启 unpacked 调试信息，跳过 macOS 最耗时的 dsymutil 打包步骤
+# macOS (Apple Silicon)：unpacked 跳过 dsymutil 打包，显著加快本地构建；
+# 该设置覆盖 dev / test / ci 全部 profile，是 split-debuginfo 的唯一声明处。
 [target.aarch64-apple-darwin]
 rustflags = ["-C", "split-debuginfo=unpacked"]
-
-# Windows (MSVC)
-[target.x86_64-pc-windows-msvc]
-linker = "rust-lld"

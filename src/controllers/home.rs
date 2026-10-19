@@ -12,15 +12,13 @@ pub struct DocsLocation {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
-pub struct HomeResponse {
+pub struct HomeResource {
     /// 应用名称
     pub name: String,
     /// 应用版本号
     pub version: String,
     /// 服务运行状态
     pub status: String,
-    /// 文档地址说明
-    pub docs: DocsLocation,
 }
 
 /// 根路由信息与 API 导航入口
@@ -28,22 +26,18 @@ pub struct HomeResponse {
     get,
     path = "/",
     summary = "获取根路由信息",
-    description = "返回应用基本信息、运行状态及交互式 API 文档入口",
+    description = "应用信息与文档入口",
     responses(
-        (status = 200, description = "获取成功", body = crate::dtos::common::ApiResponse<HomeResponse>)
+        (status = 200, description = "获取成功", body = HomeResource)
     ),
     tag = TAG_HOME
 )]
 #[debug_handler]
 pub async fn index() -> Result<Response> {
-    crate::dtos::common::format_res::ok(HomeResponse {
+    crate::dtos::common::format_res::ok(HomeResource {
         name: env!("CARGO_CRATE_NAME").to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
         status: "ok".to_string(),
-        docs: DocsLocation {
-            docs: "/docs".to_string(),
-            openapi: "/api-docs/openapi.json".to_string(),
-        },
     })
 }
 

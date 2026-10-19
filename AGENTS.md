@@ -72,9 +72,14 @@ AI Agent 在此项目中编写、重构代码或排查问题时，必须严格�
    - **严禁**在 Loco 已提供内置支持的情况下重复造轮子或盲目引入冗余的第三方替代依赖。
 
 8. **DTO 命名与后缀规范 (DTO Naming Conventions)**
-   - **请求 DTO (Request DTO)**：所有客户端提交的 Payload / Query / Path 参数结构体，统一以 **`Request`** 为后缀（例如 `CreatePostRequest`, `UpdatePostRequest`, `LoginRequest`, `PaginationRequest`）。
-   - **响应 DTO (Response DTO)**：所有返回给前端或客户端展示的 Resource / Data 结构体，统一以 **`Resource`** 为后缀（例如 `PostResource`, `LoginResource`, `CurrentUserResource`, `PaginatedResource`）。
-   - **严禁**使用 `Params`, `Dto`, `Response` 等非标或杂乱后缀作为 DTO 结构体名称。
+   - **请求体 DTO (Body)**：request body Payload 结构体统一以 **`Request`** 为后缀（例如 `CreatePostRequest`, `LoginRequest`, `PaginationRequest`）。
+   - **查询参数 DTO (Query)**：URL query 参数结构体统一以 **`Query`** 为后缀（例如 `AdminListUsersQuery`, `GetFullOrganizationQuery`）。
+   - **Path 参数**：禁止为单一 path 参数建立 DTO，handler 直接以 `Path(id): Path<String>` 提取并传参。
+   - **动词在前 + 域前缀**：CRUD 动词置于名词之前（`CreateXxx` / `UpdateXxx` / `DeleteXxx`）；管理域以 `Admin` 前缀置于最前作为域信号（如 `AdminCreateUserRequest`）。
+   - **响应 DTO (Response DTO)**：所有返回给前端或客户端展示的 Resource / Data 结构体，统一以 **`Resource`** 为后缀（例如 `PostResource`, `LoginResource`, `CurrentUserResource`, `PaginatedResource`）。`SignInResponse` 为历史遗留命名，不得新增同类。
+   - **分页列表响应**：分页列表一律使用 `PaginatedResource<T>`（`{items, meta}` 信封），limit/offset 入参需换算为页码信封；仅非分页批量返回才允许 `XxxListResource`。
+   - **豁免条款**：`UserImportRow` / `UserImportSummary` / `UserImportError` 等非 HTTP 传输的内部结构（Excel 行解析、汇总、错误）不受上述后缀约束。
+   - **严禁**使用 `Params`, `Dto`, `Body` 等非标或杂乱后缀作为 HTTP DTO 结构体名称。
 
 9. **Rust 2024 现代编码范式 (Rust 2024 Modern Idioms)**
    - **`let-else` 提前返回**：复杂条件解包与模式匹配防护子句（Guard Clauses）优先使用 `let ... else { return ...; }`，消除深层嵌套的 `if let` / `match`。
@@ -109,9 +114,9 @@ AI Agent 在此项目中编写、重构代码或排查问题时，必须严格�
 
 - `src/app.rs`：App 钩子实现与全局路由/Worker/Task 注册中心（全局枢纽）。
 - `src/common/`：全局通用基础设施 (常量定义 `consts.rs`，工具函数 `utils/`)。
-- `src/controllers/`：HTTP 控制器与路由定义 (`v1/auth.rs`, `v1/admin/posts.rs`, `health.rs`)。
-- `src/dtos/`：请求与响应的数据传输对象 (`common/`, `posts.rs`)。
-- `src/services/`：核心业务逻辑服务 (`auth.rs`, `admin/posts.rs`)。
+- `src/controllers/`：HTTP 控制器与路由定义 (`v1/auth/`, `v1/files.rs`, `health.rs`)。
+- `src/dtos/`：请求与响应的数据传输对象 (`common/`, `auth/`, `files.rs`)。
+- `src/services/`：核心业务逻辑服务 (`auth/`, `admin/`, `file.rs`)。
 - `src/models/_entities/`：自动生成的 Sea-ORM 实体（**禁止手写修改**）。
 - `src/models/`：业务模型与数据库扩展逻辑。
 - `src/setup/middleware/`：HTTP 中间件 (`rate_limit.rs`, `logger.rs`, `i18n.rs`)。
@@ -122,6 +127,40 @@ AI Agent 在此项目中编写、重构代码或排查问题时，必须严格�
 - `locales/`：i18n 多语言国际化翻译字典目录 (`en/`, `zh-CN/` 内含 `app.yml`, `auth.yml`, `errors.yml`, `validation.yml`)。
 - `config/*.yaml`：环境配置文件（支持 Tera `get_env` 获取环境变量）。
 - `tests/`：单元测试与 HTTP API 集成测试。
+
+### auth 领域的分层组织 (Auth Domain Layout)
+
+认证领域体量大，`controllers` / `dtos` / `services` / `tests` **四层采用同一套子领域划分**，
+改一个功能时四处的文件名一致，便于跨层导航：
+
+| 子领域 | 覆盖内容 |
+|---|---|
+| `session` | 注册 / 登录 / 会话管理 |
+| `otp` | 邮箱与手机验证码、邮箱验证、密码重置 |
+| `magic_link` | Magic Link 登录 |
+| `two_factor` | TOTP / 备份码 |
+| `passkey` | Passkey 注册与认证 |
+| `device_code` | OAuth 设备授权流 |
+| `oauth2` | OAuth2 / SSO / OneTap |
+| `jwt` | JWT 签发与 JWKS |
+| `organization` | 组织 CRUD |
+| `member` | 成员与邀请 |
+| `admin` | 管理员操作 |
+| `api_key` | API Key 管理 |
+
+三条必须遵守的组织约定：
+
+1. **Service 单一类型、跨文件 impl** —— `services/auth/mod.rs` 只定义 `pub struct AuthService;`，
+   各子模块通过 `impl AuthService { ... }` 扩展同一类型，因此对外 API（`AuthService::sign_up_email`）
+   与拆分前完全一致。新增子领域时按同一模式建文件即可。
+2. **Controller / DTO 用再导出保持外部路径** —— 两层的 `mod.rs` 通过 `pub use xxx::*;` 再导出，
+   外部引用路径（如 `openapi.rs` 里的 `controllers::v1::auth::sign_up_email`）无需改动。
+   ⚠️ `mod.rs` **不得**保留 `use crate::models::{...}` 之类的导入，否则会与 `mod session;`
+   等子模块声明产生名称冲突（E0255）。
+3. **共享代码集中在 `shared.rs`** —— `controllers/v1/auth/shared.rs` 存放跨子领域工具
+   （cookie/token 辅助函数、`AuthSession` 提取器）；`dtos/auth/shared.rs` 存放跨子领域核心类型
+   （`UserResource` / `SessionResource` / `AuthResource` / `SessionContextResource` /
+   `StatusResource` / `SignInResponse`）。
 
 ---
 
@@ -146,6 +185,11 @@ mise run routes   # 查看当前所有已注册的路由表 (cargo loco routes)
 mise run doctor   # 检查开发环境健康状态 (cargo loco doctor)
 mise run up       # 使用 Docker Compose 启动容器
 mise run down     # 停止并销毁 Docker Compose 容器
+
+# 构建产物治理 (以下任务定义于 justfile，用于控制 target 目录膨胀)
+just clean          # 安全清理：删增量缓存 + 清自身 crate 产物 + 把 target 压回 5GB 硬上限
+just clean-deep     # 彻底清空全部构建产物（含依赖，下次构建全量重编）
+just clean-registry # 清理 cargo 全局缓存（registry 中未被引用的 crate）
 ```
 
 > **AI 命令与工具调用规范**：
@@ -170,10 +214,21 @@ mise run down     # 停止并销毁 Docker Compose 容器
   依赖全局 AppContext / 数据库事务的测试需标注
   `#[serial_test::serial]` 隔离。
 - **限流测试保护**：测试用例中连续调用认证接口时，需注意 `auth_rate_limit_layer` 突发阈值限制。
-- 新增 API 或模型功能时，必须遵守 **TDD** 流程，
-  在 `tests/` 中编写或更新测试。
+- 新增 API 或模型功能时，必须遵守 **TDD** 流程。
 - HTTP 集成测试模式：
   `request::<App, _, _>(|request, ctx| async move { ... }).await;`
+
+### 测试放置判定标准 (Where a Test Lives)
+
+| 判据 | 处置 |
+|---|---|
+| 只需 `#[test]` + 纯函数调用，不碰 `AppContext` / DB / HTTP | **内联**到源码文件末尾 `#[cfg(test)] mod tests` |
+| 需要 `boot_test::<App>()` 建立真实 PG 夹具 | 留在 `tests/`（集成测试） |
+| 需要 `request::<App, _, _>` 走完整 HTTP 栈 | 留在 `tests/`（集成测试） |
+
+- 同一用例**不得**同时存在于 `src/` 与 `tests/`，避免重复执行与断言漂移。
+- `tests/` 下文件名用主题命名（如 `session.rs`），禁止 `*_test.rs` 后缀。
+- 内联模块统一 `use super::*;`，置于文件末尾；跨子模块的用例放在其父模块（如 `common/media/mod.rs`）。
 
 ---
 
@@ -181,46 +236,54 @@ mise run down     # 停止并销毁 Docker Compose 容器
 
 ### Handler 标准结构
 
-每个 Handler 函数保持**极薄层**：提取入参 → 调用 Service（通过 `?` 冒泡错误）→ 统一返回 `AppResult<ApiResponse<T>>`，`ApiResponse<T>` 与 `AppError` 均实现 `axum::response::IntoResponse`。
+每个 Handler 函数保持**极薄层**：提取入参 → 调用 Service（通过 `?` 冒泡错误）→ 返回裸 Resource JSON（或 `format_res` 辅助响应）。`AppError` 实现 `axum::response::IntoResponse`，统一渲染为扁平 `{"code", "message", "errors"?}`。
 
 ```rust
 /// 用户登录
 #[utoipa::path(
-    post, path = "/api/v1/auth/login",
+    post, path = "/v1/auth/login",
     request_body = LoginRequest,
     responses(
-        (status = 200, body = ApiResponse<LoginResource>),
+        (status = 200, body = LoginResource),
         (status = 401, body = ApiError)
     ),
-    tag = TAG_AUTH
+    tag = TAG_SESSION
 )]
 #[debug_handler]
 pub async fn login(
     State(ctx): State<AppContext>,
     ValidJson(params): ValidJson<LoginRequest>,
-) -> AppResult<ApiResponse<LoginResource>> {
+) -> AppResult<Json<LoginResource>> {
     let res = AuthService::login(&ctx, &params).await?;
-    Ok(format_res::ok(res))
+    Ok(Json(res))
 }
 ```
 
-### 统一响应与异常处理 (`ApiResponse` & `AppError`)
+### 统一响应与异常处理 (`format_res` & `AppError`)
+
+遵循 `api.md` §5：**成功响应返回裸 JSON**（仅分页列表用 `{items, meta}` 信封），
+**所有错误统一收敛于**扁平 `{"code", "message", "errors"?}`（`errors` 仅在 422 字段校验失败时出现）。
 
 | 场景 | 调用方式 |
 |---|---|
-| 成功返回数据 | `format_res::ok(resource)` |
-| 成功但无数据 | `format_res::empty_msg("操作成功")` |
+| 成功返回数据 | `format_res::ok(resource)` / 直接 `Json(resource)` |
+| 创建成功 | `format_res::created(resource)` |
+| 分页列表 | `format_res::page(items, page, page_size, total)` |
+| 无返回数据 (204) | `format_res::no_content()` |
 | 业务异常直接返回 | `Err(AppError::unauthorized("msg"))` / `Err(AppError::not_found("msg"))` |
 | 错误冒泡 | 使用 `?` 自动转换 `ModelError` / `DbErr` / `AppError` |
 
 ### 路由注册规范
 
-路由统一在 `routes()` 关联函数中注册，中间件按需挂载到 Routes 层：
+路由统一在 `routes()` 关联函数中注册，业务路由挂载于 `/v1` 版本前缀之下
+（`API_PREFIX` 常量），中间件按需挂载到 Routes 层：
 
 ```rust
+use crate::common::consts::api::API_PREFIX;
+
 pub fn routes() -> Routes {
     Routes::new()
-        .prefix("/api/v1/auth")
+        .prefix(&format!("{API_PREFIX}/auth"))
         .add("/login", post(login))
         .add("/current", get(current))
         .layer(auth_rate_limit_layer())   // 按需挂载限流层
