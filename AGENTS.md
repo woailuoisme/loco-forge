@@ -85,7 +85,7 @@ AI Agent 在此项目中编写、重构代码或排查问题时，必须严格�
    - **`let-else` 提前返回**：复杂条件解包与模式匹配防护子句（Guard Clauses）优先使用 `let ... else { return ...; }`，消除深层嵌套的 `if let` / `match`。
    - **零堆内存分配链式处理**：在 Iterator、Option 与 Result 的转换中，优先使用 `find_map`、`and_then`、`or_else`、`then_some` 等函数式组合算子。
    - **Precise Capturing 与生命周期省略**：遵循 Rust 2024 原生 Trait 异步与生命周期省略规范，禁止书写冗余的 `'a` 生命周期标注（符合 `clippy::needless_lifetimes`）。
-   - **Workspace 依赖解析器**：项目统一配置 `edition = "2024"` 与 `resolver = "3"` (MSRV-aware 依赖解析器)。
+   - **Workspace 依赖解析器**：项目统一配置 `edition = "2024"`、`resolver = "3"` (MSRV-aware 依赖解析器) 与 `rust-version = "1.99.1"`（workspace MSRV，所有成员 crate 经 `rust-version.workspace = true` 继承）。
    - **零 Clippy 警告门禁**：所有新增与重构代码必须通过 `cargo clippy --all-targets -- -D warnings` 零警告检查。
 
 10. **代码质量门禁 (Code Quality Gate)**
