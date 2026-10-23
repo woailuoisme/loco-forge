@@ -1,14 +1,11 @@
 ARG RUST_VERSION=1.99.1
 
 # ── Chef 基础阶段 ─────────────────────────────────────────────────────────────
-FROM lukemathwalker/cargo-chef:latest-rust-${RUST_VERSION}-slim-trixie AS chef
+# 非 slim 变体基于 buildpack-deps，自带 gcc / make / perl；openssl 走 vendored
+# 源码编译，故无需额外安装任何包
+FROM lukemathwalker/cargo-chef:latest-rust-${RUST_VERSION} AS chef
 WORKDIR /app
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-
-# make: tikv-jemalloc-sys；pkg-config + libssl-dev: webauthn-rs-core → openssl-sys
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends make pkg-config libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
 
 # ── Planner：生成依赖清单 recipe.json ──────────────────────────────────────────
 FROM chef AS planner

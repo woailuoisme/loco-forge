@@ -6,8 +6,8 @@ FROM lukemathwalker/cargo-chef:latest-rust-${RUST_VERSION}-alpine${ALPINE_VERSIO
 WORKDIR /app
 SHELL ["/bin/sh", "-o", "pipefail", "-c"]
 
-# build-base: tikv-jemalloc-sys；pkgconfig + openssl-dev: openssl-sys；libs-static: musl 静态链接
-RUN apk add --no-cache build-base pkgconfig openssl-dev openssl-libs-static
+# gcc + musl-dev + make: tikv-jemalloc-sys；perl: openssl vendored 源码构建所需的 Configure
+RUN apk add --no-cache gcc musl-dev make perl
 
 # ── Planner：生成依赖清单 recipe.json ──────────────────────────────────────────
 FROM chef AS planner

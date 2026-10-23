@@ -180,6 +180,9 @@ rand = { version = "0.10", features = ["serde"] }
 rust-i18n = { version = "4.2.2" }
 sha2 = { version = "0.11" }
 dotenvy = { version = "0.15" }
+# 非直接调用：仅为开启 vendored，令 webauthn-attestation-ca 的 openssl-sys
+# 从源码编译（免 pkg-config / 系统 libssl，并静态链接进二进制）
+openssl = { version = "0.10", features = ["vendored"] }
 
 # 5. CLI
 inquire = { version = "0.9", features = ["date", "editor", "macros"] }
@@ -218,9 +221,9 @@ name = "locos"
 path = "src/bin/main.rs"
 required-features = []
 
-# 该 crate 仅以 include_dir! 宏使用，machete 无法静态识别
+# include_dir 仅以宏使用；openssl 仅用于开启 vendored 特性，均无法被静态识别
 [package.metadata.cargo-machete]
-ignored = ["include_dir"]
+ignored = ["include_dir", "openssl"]
 
 [[test]]
 name = "integration"
