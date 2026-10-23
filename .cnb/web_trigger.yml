@@ -10,11 +10,3 @@ branch:
       - name: Trixie 全架构构建 (AMD64 + ARM64)
         description: 构建并推送 Debian Trixie linux/amd64 与 linux/arm64 双架构镜像
         event: web_trigger_multi
-
-      - name: Alpine 静态构建 (仅 AMD64)
-        description: 构建并推送 Dockerfile.alpine 的 Alpine Musl 纯静态镜像
-        event: web_trigger_alpine
-
-      - name: Alpine 全架构构建 (AMD64 + ARM64)
-        description: 构建并推送 Dockerfile.alpine 的 Alpine Musl linux/amd64 与 linux/arm64 双架构镜像
-        event: web_trigger_alpine_multi
