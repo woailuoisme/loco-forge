@@ -42,7 +42,6 @@ impl fmt::Display for SeedMode {
     }
 }
 
-#[allow(clippy::module_name_repetitions)]
 pub struct SeedData;
 
 #[async_trait]

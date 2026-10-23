@@ -117,7 +117,18 @@ lint:
 
 # 自动修复格式与 Clippy 警告
 fix:
-    cargo clippy --fix --allow-dirty --allow-staged
+    cargo clippy --fix --all-targets --all-features --allow-dirty --allow-staged
+
+# 提交前聚合门禁：格式校验 + Clippy 零警告 + 未使用依赖
+verify:
+    cargo fmt --all --check
+    cargo clippy --all-targets --all-features -- -D warnings
+    cargo machete
+
+# 依赖安全审计：漏洞/许可证/来源策略 (含既有 advisory，结果需人工研判)
+deps:
+    cargo machete
+    cargo deny check
 
 # ==============================================================================
 # 4. 辅助工具 (Utilities)

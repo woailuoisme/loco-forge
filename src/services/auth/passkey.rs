@@ -34,7 +34,7 @@ fn webauthn_instance(ctx: &AppContext) -> AppResult<Webauthn> {
         .unwrap_or_else(|| PASSKEY_ORIGIN.to_string());
 
     let origin_url = url::Url::parse(&origin)
-        .map_err(|_| AppError::internal("Invalid passkey origin in config"))?;
+        .map_err(|e| AppError::internal(format!("Invalid passkey origin in config: {e}")))?;
     WebauthnBuilder::new(&rp_id, &origin_url)
         .and_then(|b| b.rp_name(PASSKEY_RP_NAME).build())
         .map_err(|e| {
@@ -121,7 +121,9 @@ impl CredentialService {
             .map_err(|e| AppError::internal(format!("Corrupted passkey state: {e}")))?;
 
         let assertion: PublicKeyCredential = serde_json::from_value(params.response.clone())
-            .map_err(|_| AppError::bad_request("Invalid WebAuthn assertion format"))?;
+            .map_err(|e| {
+                AppError::bad_request(format!("Invalid WebAuthn assertion format: {e}"))
+            })?;
 
         let result = webauthn
             .finish_passkey_authentication(&assertion, &state)
@@ -174,7 +176,7 @@ impl CredentialService {
             .map_err(|e| AppError::internal(format!("Corrupted passkey state: {e}")))?;
 
         let user_unique_id = uuid::Uuid::parse_str(&user.id)
-            .map_err(|_| AppError::internal("User id is not a valid UUID"))?;
+            .map_err(|e| AppError::internal(format!("User id is not a valid UUID: {e}")))?;
 
         let (ccr, state) = webauthn
             .start_passkey_registration(
@@ -211,7 +213,9 @@ impl CredentialService {
         let webauthn = webauthn_instance(ctx)?;
 
         let reg: RegisterPublicKeyCredential = serde_json::from_value(params.response.clone())
-            .map_err(|_| AppError::bad_request("Invalid WebAuthn registration response"))?;
+            .map_err(|e| {
+                AppError::bad_request(format!("Invalid WebAuthn registration response: {e}"))
+            })?;
 
         let record = load_state(&ctx.db, &format!("{STATE_KEY_REG}{user_id}")).await?;
         let state: PasskeyRegistration = serde_json::from_str(&record.value)

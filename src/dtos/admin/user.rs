@@ -9,7 +9,7 @@ use crate::dtos::common::PaginationRequest;
 
 /// PATCH 三态语义下的可置空字符串字段。
 ///
-/// 外层配合 `Option<NullableString>` 与 [`deserialize_nullable`] 使用：
+/// 外层配合 `Option<NullableString>` 与 `deserialize_nullable` 使用：
 /// - 字段**缺省** → `None`，保持原值不变
 /// - 显式 `null` → `Some(NullableString::Null)`，置空
 /// - 具体值 → `Some(NullableString::Value(v))`，覆盖

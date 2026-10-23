@@ -6,5 +6,7 @@
 pub mod auth;
 pub mod user;
 
+#[doc(inline)]
 pub use auth::*;
+#[doc(inline)]
 pub use user::*;

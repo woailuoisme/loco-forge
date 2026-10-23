@@ -18,17 +18,16 @@ static GLOBAL: Jemalloc = Jemalloc;
 #[tokio::main]
 async fn main() -> loco_rs::Result<()> {
     // 加载 .env 文件，确保 cargo task / cargo start 都能读取环境变量
-    dotenvy::dotenv().ok();
+    let _ = dotenvy::dotenv();
 
     // loco 以 default-features = false 引入 opendal，未安装默认 HTTP transport，
     // S3 存储会报 "default HTTP transport is not installed"。幂等，可安全重复调用。
     opendal::install_default();
 
-    color_eyre::config::HookBuilder::default()
+    let _ = color_eyre::config::HookBuilder::default()
         .issue_url("https://github.com/woailuoisme/loco-forge/issues")
         .add_default_filters()
-        .install()
-        .ok();
+        .install();
 
     // `app init` 必须早于 loco CLI 分发：boot 会连接目标库，库不存在时直接失败
     let argv: Vec<String> = std::env::args().skip(1).collect();

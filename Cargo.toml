@@ -1,6 +1,6 @@
 [workspace]
-members = [".", "migration"] # 根 crate + migration 子 crate
-resolver = "3"               # MSRV-aware 解析器 (自动回退不兼容 MSRV 的依赖版本)
+members = [".", "migration"]
+resolver = "3" # MSRV-aware：不兼容 rust-version 的依赖版本自动回退
 
 [workspace.package]
 version = "0.1.0"
@@ -14,72 +14,86 @@ sea-orm = { version = "2.0" }
 sea-orm-migration = { version = "2.0" }
 
 [workspace.lints.rust]
-unsafe_code = "forbid"   # 禁止 unsafe
-unreachable_pub = "warn" # 清理不可达的 pub 导出
+unsafe_code = "forbid"
+unreachable_pub = "warn"
+ambiguous_negative_literals = "warn"
+redundant_lifetimes = "warn"
+trivial_numeric_casts = "warn"
+unused_lifetimes = "warn"
+# missing_debug_implementations 豁免理由见 AGENTS.md（仅剩零字段门面 struct）
 
 [workspace.lints.clippy]
-# --- 1. Rust 2024 现代语法 ---
-manual_let_else = "warn"                    # 强制 let-else
-implicit_clone = "warn"                     # 禁止隐式 Clone
-redundant_closure_for_method_calls = "warn" # 优先函数指针
-uninlined_format_args = "warn"              # 强制 format!("{var}") 内联
-use_self = "warn"                           # 用 Self 替代类型名
-needless_lifetimes = "deny"                 # 消除冗余生命周期
-double_must_use = "deny"                    # 禁止重复 #[must_use]
-macro_use_imports = "warn"                  # 淘汰 #[macro_use]
-cloned_instead_of_copied = "warn"           # Copy 类型用 .copied()
-needless_raw_strings = "warn"               # 清理多余原生字符串
-needless_raw_string_hashes = "warn"         # 清理多余 r#""# 井号
+# 1. 现代语法
+manual_let_else = "warn"
+implicit_clone = "warn"
+redundant_closure_for_method_calls = "warn"
+uninlined_format_args = "warn"
+use_self = "warn"
+needless_lifetimes = "deny"
+double_must_use = "deny"
+macro_use_imports = "warn"
+cloned_instead_of_copied = "warn"
+needless_raw_strings = "warn"
+needless_raw_string_hashes = "warn"
 
-# --- 2. 异步并发与生产防护 ---
-if_let_mutex = "warn"         # 禁止在 if let 中隐式持锁
-large_futures = "warn"        # 提示过大 Future
-large_stack_arrays = "warn"   # 提示栈上大数组
-mutex_atomic = "warn"         # 单值 Mutex 改用原子类型
-mutex_integer = "warn"        # Mutex<i64> 改用原子整数
-match_wild_err_arm = "warn"   # 禁止 Err(_) 吞没错误
-dbg_macro = "warn"            # 禁止遗留 dbg!
-exit = "warn"                 # 禁止直接 process::exit
-unimplemented = "warn"        # 提示遗留 unimplemented!
+# 2. 异步并发与生产防护
+if_let_mutex = "warn"
+large_futures = "warn"
+large_stack_arrays = "warn"
+mutex_atomic = "warn"
+mutex_integer = "warn"
+match_wild_err_arm = "warn"
+dbg_macro = "warn"
+exit = "warn"
+unimplemented = "warn"
 
-# --- 3. 迭代器与零堆分配 ---
-manual_is_variant_and = "warn"          # 用 is_some_and / is_ok_and
-manual_string_new = "warn"              # 用 String::new()
-filter_map_next = "warn"                # 用 find_map 替代 filter_map().next()
-iter_filter_is_some = "warn"            # 用 flatten 替代 filter(is_some)
-iter_filter_is_ok = "warn"              # 用 flatten 替代 filter(is_ok)
-option_as_ref_cloned = "warn"           # 用 .cloned()
-flat_map_option = "warn"                # 用 filter_map
-map_unwrap_or = "warn"                  # 用 map_or
-zero_sized_map_values = "warn"          # 用 HashSet 替代 HashMap<K, ()>
-linkedlist = "warn"                     # 用 Vec 替代 LinkedList
-needless_for_each = "warn"              # 用 for 循环替代 for_each
+# 3. 迭代器与零堆分配
+manual_is_variant_and = "warn"
+manual_string_new = "warn"
+filter_map_next = "warn"
+iter_filter_is_some = "warn"
+iter_filter_is_ok = "warn"
+option_as_ref_cloned = "warn"
+flat_map_option = "warn"
+map_unwrap_or = "warn"
+zero_sized_map_values = "warn"
+linkedlist = "warn"
+needless_for_each = "warn"
 
-# --- 4. 字符串与模式匹配 ---
-single_char_pattern = "warn"            # 单字符匹配零分配
-manual_instant_elapsed = "warn"         # 用 instant.elapsed()
-manual_assert = "warn"                  # 用 assert!
-range_plus_one = "warn"                 # 用 a..=b
-unnested_or_patterns = "warn"           # 折叠 Some(A | B)
-match_same_arms = "warn"                # 提示重复分支
+# 4. 字符串与模式匹配
+single_char_pattern = "warn"
+manual_instant_elapsed = "warn"
+manual_assert = "warn"
+range_plus_one = "warn"
+unnested_or_patterns = "warn"
+match_same_arms = "warn"
 
-# --- 5. 控制流与类型设计 ---
-fn_params_excessive_bools = "warn"     # 超过 3 个 bool 参数提示重构
-option_option = "warn"                 # 禁止 Option<Option<T>>
-ref_option = "warn"                    # 用 Option<&T> 替代 &Option<T>
-needless_pass_by_value = "warn"        # 避免无谓 Move
-trivially_copy_pass_by_ref = "warn"    # 小 Copy 类型传值优先
-cast_lossless = "warn"                 # 无损转换用 From::from
-redundant_clone = "warn"               # 剔除无谓 clone
-needless_continue = "warn"             # 消除多余 continue
-bool_to_int_with_if = "warn"           # 用 From::from(b)
-unnecessary_join = "warn"              # 用 collect::<String>()
-unnecessary_self_imports = "warn"      # 清理 use foo::{self}
-useless_let_if_seq = "warn"            # 用 let x = if ...
-semicolon_if_nothing_returned = "warn" # 无返回值语句补分号
-semicolon_outside_block = "warn"       # 统一块外分号风格
-redundant_else = "warn"                # 消除冗余 else
-redundant_type_annotations = "warn"    # 清理可推导的类型标注
+# 5. 控制流与类型设计
+fn_params_excessive_bools = "warn"
+option_option = "warn"
+ref_option = "warn"
+needless_pass_by_value = "warn"
+trivially_copy_pass_by_ref = "warn"
+cast_lossless = "warn"
+redundant_clone = "warn"
+needless_continue = "warn"
+bool_to_int_with_if = "warn"
+unnecessary_join = "warn"
+unnecessary_self_imports = "warn"
+useless_let_if_seq = "warn"
+semicolon_if_nothing_returned = "warn"
+semicolon_outside_block = "warn"
+redundant_else = "warn"
+redundant_type_annotations = "warn"
+
+# 6. Pragmatic Rust Guidelines 对齐：日志禁令 / 错误上下文 / 文档可扫读
+print_stdout = "warn"
+print_stderr = "warn"
+unused_result_ok = "warn"
+map_err_ignore = "warn"
+deref_by_slicing = "warn"
+assertions_on_result_states = "warn"
+too_long_first_doc_paragraph = "warn"
 
 [package]
 name = "locos"
@@ -93,7 +107,7 @@ default-run = "locos"
 workspace = true
 
 [dependencies]
-# 1. 核心框架与异步运行时
+# 1. 框架与运行时
 loco-rs = { workspace = true, features = [
   "storage_aws_s3",
   "cache_redis",
@@ -101,9 +115,8 @@ loco-rs = { workspace = true, features = [
   "auth",
   "with-db",
 ] }
-# loco 以 default-features = false 引入 opendal 且不启用 HTTP transport，
-# 否则 storage_aws_s3 必然报 "default HTTP transport is not installed"。
-# 这里只做特性补齐（同版本特性合并），不直接调用该 crate 的 API。
+# loco 以 default-features = false 引入 opendal 且不带 HTTP transport，
+# 缺少 "http-transport-reqwest" 时 storage_aws_s3 会报错，故此处补齐特性
 opendal = { version = "0.58", default-features = false, features = [
   "auto-register-services",
   "http-transport-reqwest",
@@ -116,16 +129,16 @@ tokio = { version = "1.54", features = [
   "signal",
   "fs",
   "io-util",
-] } # 异步运行时
-axum = { version = "0.8", features = ["multipart", "macros"] } # Web 框架
-tokio-util = { version = "0.7" } # CancellationToken / Codec / TaskTracker
-async-trait = { version = "0.1" } # Trait 中的 async 方法 (Hooks/Initializer 必需)
-governor = { version = "0.10", features = ["jitter", "quanta"] } # 频控算法核心
-tower_governor = { version = "0.8", features = ["tracing"] } # Axum 限流中间件
-totp-rs = { version = "6.0", features = ["otpauth", "gen_secret"] } # TOTP 两步验证
-webauthn-rs = { version = "0.5", features = ["danger-allow-state-serialisation"] } # WebAuthn / Passkey 服务端验证（状态序列化存储为官方推荐做法）
-url = { version = "2" } # URL 解析 (WebAuthn origin)
-jsonwebtoken = { version = "10", features = ["use_pem"] } # JWT 签名与 JWKS
+] }
+axum = { version = "0.8", features = ["multipart", "macros"] }
+tokio-util = { version = "0.7" }
+async-trait = { version = "0.1" } # Loco Hooks/Initializer 要求
+governor = { version = "0.10", features = ["jitter", "quanta"] }
+tower_governor = { version = "0.8", features = ["tracing"] }
+totp-rs = { version = "6.0", features = ["otpauth", "gen_secret"] }
+webauthn-rs = { version = "0.5", features = ["danger-allow-state-serialisation"] } # 状态序列化存库为官方推荐
+url = { version = "2" }
+jsonwebtoken = { version = "10", features = ["use_pem"] }
 
 # 2. 数据库与迁移
 migration = { path = "migration" }
@@ -137,75 +150,53 @@ sea-orm = { workspace = true, features = [
   "with-rust_decimal",
 ] }
 
-# 3. 网络、检索与 HTTP 客户端
+# 3. 网络与检索
 reqwest = { version = "0.13.5", default-features = false, features = [
   "rustls",
   "json",
   "form",
   "stream",
   "multipart",
-] } # 异步 HTTP 客户端
+] }
 meilisearch-sdk = { version = "0.33", default-features = false, features = [
   "reqwest",
   "tls",
   "jwt_rust_crypto",
-] } # 全文搜索引擎 SDK
-mime_guess = { version = "2" } # 文件后缀推导 MIME
-bytes = { version = "1", features = ["serde"] } # 二进制缓冲区
+] }
+mime_guess = { version = "2" }
+bytes = { version = "1", features = ["serde"] }
 
 # 4. 序列化、校验与数据类型
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
-validator = { version = "0.20", features = ["derive"] } # 字段校验
-thiserror = { version = "2" } # 错误类型派生
-color-eyre = { version = "0.6", features = ["tracing-error", "issue-url"] } # 优雅错误堆栈
-chrono = { version = "0.4", features = ["serde"] } # 日期时间
-uuid = { version = "1.26", features = ["v4", "v7", "serde"] } # UUID 生成
-rust_decimal = { version = "1", features = [
-  "macros",
-  "maths",
-  "serde",
-  "serde-with-str",
-  "serde-str",
-] } # 高精度定点小数
-fake = { version = "5", features = [
-  "derive",
-  "chrono",
-  "uuid",
-  "rust_decimal",
-  "serde_json",
-  "geo",
-  "url",
-  "indexmap",
-  "semver",
-] } # Mock 测试数据
-geo = { version = "0.33", features = ["serde"] } # 地理空间数据类型
-indexmap = { version = "2", features = ["serde"] } # 保序 Hash Map
-secrecy = { version = "0.10.3", features = ["serde"] } # 敏感数据内存包裹
+validator = { version = "0.20", features = ["derive"] }
+thiserror = { version = "2" }
+color-eyre = { version = "0.6", features = ["tracing-error", "issue-url"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.29", features = ["v4", "v7", "serde"] }
+secrecy = { version = "0.10.3", features = ["serde"] }
 base64 = { version = "0.23" }
 rand = { version = "0.10", features = ["serde"] }
-regex = { version = "1.13" }
-rust-i18n = { version = "4.2.2" } # 国际化框架
-sha2 = { version = "0.11" } # SHA-256 哈希
-dotenvy = { version = "0.15" } # .env 加载
+rust-i18n = { version = "4.2.2" }
+sha2 = { version = "0.11" }
+dotenvy = { version = "0.15" }
 
-# 5. CLI 与终端交互
-inquire = { version = "0.9", features = ["date", "editor", "macros"] } # 交互式命令行
-inquire-derive = { version = "0.9" }
+# 5. CLI
+inquire = { version = "0.9", features = ["date", "editor", "macros"] }
 
-# 6. 日志与链路追踪
+# 6. 日志
 tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
 # 7. 表格、图像与二维码
-calamine = { version = "0.37", features = ["chrono"] } # Excel 读取
-rust_xlsxwriter = { version = "0.100", features = [
+calamine = { version = "0.37", features = ["chrono"] }
+rust_xlsxwriter = { version = "0.101", features = [
   "constant_memory",
   "chrono",
   "serde",
-] } # Excel 导出
-image = { version = "0.25", features = ["serde", "color_quant"] } # 图像处理
-qrcode = { version = "0.14" } # 二维码生成
+] }
+image = { version = "0.25", features = ["serde", "color_quant"] }
+qrcode = { version = "0.14" }
 
 # 8. API 文档与前端契约
 utoipa = { version = "6", features = [
@@ -216,16 +207,20 @@ utoipa = { version = "6", features = [
   "openapi_extensions",
   "repr",
   "decimal",
-] } # OpenAPI 生成
-utoipa-scalar = { version = "0.4", features = ["axum"] } # Scalar UI
-utoipa-redoc = { version = "7", features = ["axum"] } # ReDoc UI
-ts-rs = { version = "12", features = ["chrono-impl", "serde-compat"] } # TS 类型绑定
-include_dir = { version = "0.7" } # 静态文件嵌入二进制
+] }
+utoipa-scalar = { version = "0.4", features = ["axum"] }
+utoipa-redoc = { version = "7", features = ["axum"] }
+ts-rs = { version = "12", features = ["chrono-impl", "serde-compat"] }
+include_dir = { version = "0.7" }
 
 [[bin]]
 name = "locos"
 path = "src/bin/main.rs"
 required-features = []
+
+# 该 crate 仅以 include_dir! 宏使用，machete 无法静态识别
+[package.metadata.cargo-machete]
+ignored = ["include_dir"]
 
 [[test]]
 name = "integration"
@@ -233,18 +228,17 @@ path = "tests/mod.rs"
 
 [dev-dependencies]
 loco-rs = { workspace = true, features = ["testing"] }
-tower = { version = "0.5", features = ["util"] } # ServiceExt::oneshot 测试支持
+tower = { version = "0.5", features = ["util"] } # ServiceExt::oneshot
 serial_test = { version = "4.0" }
 rstest = { version = "0.28" }
 
-# 业务代码不优化以保证增量编译速度，仅保留行号表
-# (split-debuginfo 由 .cargo/config.toml 统一提供，覆盖 dev/test/ci)
+# 关闭增量编译换取更小的调试信息；split-debuginfo 由 .cargo/config.toml 统一设置
 [profile.dev]
 opt-level = 0
 debug = 0
 incremental = false
 
-# 生产发布：最高优化 + ThinLTO + 单代码生成单元 + 剥离符号 + 禁用栈展开
+# panic = "abort"：panic 即终止进程，与 Rust Guidelines M-PANIC-IS-STOP 一致
 [profile.release]
 opt-level = 3
 lto = true
@@ -252,8 +246,7 @@ codegen-units = 1
 strip = true
 panic = "abort"
 
-# jemalloc 仅在 Linux 生产环境启用：macOS/Windows 回退系统分配器，避免编译整个 C 库
-# (src/bin/main.rs 的 #[global_allocator] 声明需保持一致的 cfg 条件)
+# jemalloc 仅 Linux 启用；src/bin/main.rs 的 #[global_allocator] 需保持相同 cfg
 [target.'cfg(target_os = "linux")'.dependencies]
 tikv-jemallocator = { version = "0.7", features = [
   "unprefixed_malloc_on_supported_platforms",

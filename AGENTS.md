@@ -5,6 +5,37 @@ AI Agent 在此项目中编写、重构代码或排查问题时，必须严格�
 
 ---
 
+## 强制上游规范 (Mandatory Upstream Guidelines)
+
+本项目以 **Microsoft Pragmatic Rust Guidelines** 作为编码约束基线：
+
+> <https://microsoft.github.io/rust-guidelines/agents/all.txt>
+
+- **编写 / 重构 / 评审 Rust 代码前必须先对照该规范**；与本文件或 `api.md` 冲突时以项目属地约定为准，其余一律以该规范为准。
+- 已固化为工具链门禁的部分（无需重复人工检查）：`[workspace.lints.*]` 表、`#[expect(reason)]`、`#[doc(inline)]`、`just verify`，详见核心原则第 10、11 条。
+- 尚未固化但**必须人工遵守**的要点：
+
+| 规则 | 要求 |
+|---|---|
+| `M-UNSOUND` | 代码必须 sound；即使「理论上」可能 UB 也不可接受（无例外，高于本项目其余一切约定） |
+| `M-UNSAFE` | `unsafe` 仅限新抽象 / 基准证实的热点 / FFI，且每处须有安全论证注释（本项目已 `unsafe_code = "forbid"`） |
+| `M-PANIC-STOP` / `M-PANIC-ON-BUG` | panic 仅表示程序错误，不得用于传达可恢复错误；检测到编程错误时 panic（附消息）而非造 `Error` 变体 |
+| `M-DOCUMENTED-MAGIC` | 生产代码魔法值必须具名常量化 + 注释说明取值理由 |
+| `M-CANONICAL-DOCS` | pub 项文档首句为摘要句；`# Errors` / `# Panics` / `# Safety` 按需存在；**禁止** `# Parameters` 参数表格 |
+| `M-FIRST-DOC-SENTENCE` | 文档首句单行、约 15 词以内 |
+| `M-LOG-STRUCTURED` | tracing 使用具名结构化字段与事件名，禁止 `format!` 拼接日志；敏感数据须脱敏（`.redacted`） |
+| `M-PUBLIC-DEBUG` | 公开类型实现 `Debug`；含敏感字段者手写脱敏实现并加断言测试 |
+| `M-TAUTOLOGICAL-TESTS` | 禁止「构造即通过」的同义反复测试，断言须验证行为或性质 |
+| `M-SINGLE-ITEM-PATH` | 同一 pub 项在 crate 内只能有一条可达路径，禁止多路径重复 re-export |
+| `M-NO-GLOB-REEXPORTS`（除已批准域） | 除 `dtos`/`controllers`/`services` 的域聚合 `mod.rs` 外禁止通配 re-export |
+| `M-SHORT-NAMES` / `M-WEASEL-WORDS` | 标识符不超过 2 个短词；避免 `Manager` / `Factory` 等无信息量词 |
+| `M-IMPL-ASREF` / `M-IMPL-IO` / `M-IMPL-RANGEBOUNDS` | 函数参数按需接受 `impl AsRef<T>` / `impl Read` / `impl RangeBounds<T>` |
+| `M-INITIAL-CAPACITY` | 已知规模的集合用 `with_capacity` 或迭代器 `collect`，禁止 `new()` + push 循环 |
+| `M-TYPES-SEND` | 公开类型与其 future 必须 `Send` |
+| `M-DESIGN-FOR-AI` | 模块与 pub 项均有文档、示例，类型语义强（避免 primitive obsession），便于 agent 无监督重构 |
+
+---
+
 ## 核心原则 (Core Principles)
 
 1. **优先使用 Loco 原生脚手架与内置代码生成器 (`cargo loco generate`)**
@@ -92,8 +123,20 @@ AI Agent 在此项目中编写、重构代码或排查问题时，必须严格�
     - **MUST**：每次完成全部代码修改后（一轮 multi-file 编辑结束、一个 feature/fix 任务收尾），**必须**按顺序执行：
      1. `just fmt` — 统一格式化所有 Rust 源码与 Markdown 文档
      2. `just lint` — 全量 Clippy 静态检查 (`--all-targets --all-features -- -D warnings`) + Markdown 审计
+    - 提交前单入口：`just verify`（`fmt --check` + `lint` + `cargo machete`）；依赖安全审计用 `just deps`（`cargo deny check`，含既有 advisory 需人工研判，故不纳入 `verify`）。
     - 若 `just lint` 报错或警告，必须在任务结束前修复全部问题，确保零警告通过。
     - 此门禁是"完成"的定义之一：未通过 `just lint` 的代码视为未完成。
+
+11. **Lint 覆盖与豁免约定 (Lint Overrides & Exemptions)**
+    - **局部豁免必须用 `#[expect(lint, reason = "...")]`**，禁止 `#[allow]`（生成代码与宏展开除外）。
+      `#[expect]` 在 lint 不再触发时会自报 "unfulfilled expectation"，因此失效豁免会在门禁中自动暴露，必须直接删除。
+    - 新增 lint 前先评估命中面：命中 > 30 处且无实际缺陷价值时，改为在 `Cargo.toml` 注释与本文件记录豁免理由，不做大规模机械 churn。
+    - 已记录的豁免项（勿反复提议开启）：
+      - `rustc::missing_debug_implementations`：DTO/Model 层已 100% 覆盖，剩余 38 处为零字段门面 struct（Service/Task/Worker），无调试价值。
+      - `rustc::redundant_imports`：与 `use loco_rs::prelude::*` 并存时产生 124 处告警，显式导入用于表达意图。
+      - `clippy::pedantic` / `nursery` 整组：与「逐条精选 lint」策略冲突，噪音过大。
+      - `-C target-cpu=x86-64-v3`（M-TARGET-CPU）：部署硬件未知，误配会触发 SIGILL。
+    - **内部 `pub use` 再导出须标注 `#[doc(inline)]`**（第三方/std 再导出不加），见 M-DOC-INLINE。
 
 ---
 

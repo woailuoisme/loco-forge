@@ -60,7 +60,10 @@ impl Model {
     }
 
     /// 更新 API Key 配置
-    #[allow(clippy::too_many_arguments)]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "仓储层更新方法逐字段传参，避免为单次调用引入 DTO 转换"
+    )]
     pub async fn update_metadata(
         &self,
         db: &DatabaseConnection,
@@ -118,7 +121,10 @@ fn hash_key(raw: &str) -> String {
 
 impl Entity {
     /// 创建新的 API Key
-    #[allow(clippy::too_many_arguments)]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "仓储层创建方法逐字段传参，避免为单次调用引入 DTO 转换"
+    )]
     pub async fn create_key(
         db: &DatabaseConnection,
         user_id: &str,

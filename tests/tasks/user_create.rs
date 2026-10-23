@@ -23,11 +23,9 @@ async fn test_can_run_user_create() {
         ("name".to_string(), "Test User".to_string()),
         ("password".to_string(), "securepassword".to_string()),
     ]);
-    assert!(
-        run_task::<App>(&boot.app_context, Some(&"user:create".to_string()), &vars)
-            .await
-            .is_ok()
-    );
+    run_task::<App>(&boot.app_context, Some(&"user:create".to_string()), &vars)
+        .await
+        .unwrap();
 
     let user = user::User::find_by_email(&boot.app_context.db, &email)
         .await
@@ -48,11 +46,9 @@ async fn test_user_email_already_exists() {
         ("password".to_string(), "securepassword".to_string()),
     ]);
     // 第一次创建成功
-    assert!(
-        run_task::<App>(&boot.app_context, Some(&"user:create".to_string()), &vars)
-            .await
-            .is_ok()
-    );
+    run_task::<App>(&boot.app_context, Some(&"user:create".to_string()), &vars)
+        .await
+        .unwrap();
 
     // 第二次创建相同邮箱，应返回错误
     let err = run_task::<App>(&boot.app_context, Some(&"user:create".to_string()), &vars)

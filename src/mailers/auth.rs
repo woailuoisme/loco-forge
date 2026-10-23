@@ -10,7 +10,10 @@ static welcome: Dir<'_> = include_dir!("src/mailers/auth/welcome");
 static forgot: Dir<'_> = include_dir!("src/mailers/auth/forgot");
 static otp: Dir<'_> = include_dir!("src/mailers/auth/otp");
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(
+    clippy::module_name_repetitions,
+    reason = "Mailer 实体名需带域前缀，与模块名 auth 的重复是 Loco 约定"
+)]
 pub struct AuthMailer {}
 impl Mailer for AuthMailer {}
 impl AuthMailer {

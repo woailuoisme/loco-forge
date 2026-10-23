@@ -8,7 +8,6 @@ use loco_rs::task::Tasks;
 /// 注册所有命令行 Tasks
 ///
 /// 允许通过 `cargo loco task <name>` 调起指定的后台任务。
-#[allow(unused_variables)]
 pub fn register_tasks(tasks: &mut Tasks) {
     // 步骤 1: 注册 JWT Secret 生成器任务
     tasks.register(tasks::jwt_secret::JwtSecret);

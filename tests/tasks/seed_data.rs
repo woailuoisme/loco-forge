@@ -9,9 +9,7 @@ async fn test_can_run_seed_data_append() {
 
     let vars = task::Vars::from_cli_args(vec![("refresh".to_string(), "false".to_string())]);
 
-    assert!(
-        run_task::<App>(&boot.app_context, Some(&"seed_data".to_string()), &vars)
-            .await
-            .is_ok()
-    );
+    run_task::<App>(&boot.app_context, Some(&"seed_data".to_string()), &vars)
+        .await
+        .unwrap();
 }

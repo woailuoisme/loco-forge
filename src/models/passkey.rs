@@ -61,7 +61,10 @@ impl ActiveModel {}
 // ③ 集合查询与管理
 impl Entity {
     /// 注册写入新的 Passkey 凭据记录
-    #[allow(clippy::too_many_arguments)]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "WebAuthn 凭据字段较多，仓储层逐字段传参以保持调用方零 DTO 转换"
+    )]
     pub async fn create_passkey<C>(
         db: &C,
         user_id: &str,

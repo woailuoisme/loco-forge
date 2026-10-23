@@ -1,6 +1,6 @@
 //! 后台管理员认证服务 (Admin Auth Service)
 //!
-//! 在认证域 [`crate::services::{SessionService}`] 之上增加一道**管理员闸门**：
+//! 在认证域 [`crate::services::SessionService`] 之上增加一道**管理员闸门**：
 //! 只有「存在 + 活跃 + 具备 admin 角色」的账号才能进入后台登录流程。
 //!
 //! **闸门位置的意义**：`/v1/sessions/email` 允许任何普通用户成功登录，

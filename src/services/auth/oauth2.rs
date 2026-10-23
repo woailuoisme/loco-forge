@@ -75,8 +75,10 @@ fn provider_config(ctx: &AppContext, provider_id: &str) -> AppResult<ProviderCon
             || serde_json::from_value(serde_json::Value::Null),
             |v| serde_json::from_value(v.clone()),
         )
-        .map_err(|_| {
-            AppError::bad_request(format!("OAuth provider `{provider_id}` is not configured"))
+        .map_err(|e| {
+            AppError::bad_request(format!(
+                "OAuth provider `{provider_id}` is not configured: {e}"
+            ))
         })
 }
 
@@ -139,7 +141,8 @@ async fn verify_id_token(
     endpoints: &Endpoints,
     client_id: &str,
 ) -> AppResult<IdClaims> {
-    let header = decode_header(token).map_err(|_| AppError::unauthorized("Malformed id_token"))?;
+    let header = decode_header(token)
+        .map_err(|e| AppError::unauthorized(format!("Malformed id_token: {e}")))?;
     let jwks = fetch_jwks(&endpoints.jwks_url).await?;
     let kid = header
         .kid

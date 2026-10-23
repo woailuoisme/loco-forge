@@ -286,8 +286,8 @@ mod tests {
     #[test]
     fn test_validate_file_extensions() {
         let config = UploadConfig::new().allowed_extensions(&["png", "jpg", "pdf"]);
-        assert!(UploadUtil::validate_file("image.png", None, &config).is_ok());
-        assert!(UploadUtil::validate_file("image.JPG", None, &config).is_ok());
+        UploadUtil::validate_file("image.png", None, &config).unwrap();
+        UploadUtil::validate_file("image.JPG", None, &config).unwrap();
         assert!(UploadUtil::validate_file("script.sh", None, &config).is_err());
     }
 

@@ -94,7 +94,7 @@ async fn test_scout_builder_query_chaining() {
 
         // 默认背景测试环境中无 Live Meilisearch 服务，预期 get_raw 返回连接错误
         let res = builder.get_raw().await;
-        assert!(res.is_err());
+        res.unwrap_err();
     })
     .await;
 }

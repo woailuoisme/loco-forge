@@ -163,7 +163,7 @@ impl Engine for MeilisearchEngine {
         Ok(SearchResult {
             hits,
             estimated_total_hits,
-            processing_time_ms: search_results.processing_time_ms as usize,
+            processing_time_ms: search_results.processing_time_ms,
             limit: query.limit.unwrap_or(20),
             offset: query.offset.unwrap_or(0),
         })
