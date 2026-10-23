@@ -49,12 +49,52 @@
             --push \
             .
 
+# 仅手动触发：Alpine Musl 静态镜像
+.alpine_pipeline: &alpine_pipeline
+  - services:
+      - docker
+    stages:
+      - name: Build and push Alpine (amd64 only)
+        script: |
+          set -euo pipefail
+          REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
+
+          docker buildx build \
+            --platform linux/amd64 \
+            --tag "${REGISTRY}:alpine" \
+            --file ./Dockerfile.alpine \
+            --cache-from "type=registry,ref=${REGISTRY}:cache-alpine" \
+            --cache-to "type=registry,ref=${REGISTRY}:cache-alpine,mode=max,image-manifest=true,oci-mediatypes=true" \
+            --push \
+            .
+
+.alpine_multi_pipeline: &alpine_multi_pipeline
+  - services:
+      - docker
+    stages:
+      - name: Build and push Alpine multi-arch (amd64 + arm64)
+        script: |
+          set -euo pipefail
+          REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
+
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --tag "${REGISTRY}:alpine" \
+            --tag "${REGISTRY}:alpine-multi" \
+            --file ./Dockerfile.alpine \
+            --cache-from "type=registry,ref=${REGISTRY}:cache-alpine-multi" \
+            --cache-to "type=registry,ref=${REGISTRY}:cache-alpine-multi,mode=max,image-manifest=true,oci-mediatypes=true" \
+            --push \
+            .
+
 # ── main 分支：push 即构建，与手动 Trixie 按钮完全一致 ─────────────────
 main:
   push: *trixie_pipeline
   # 手动按钮在 main 分支页面上仍需可见，故同步挂载同一份定义
   web_trigger_trixie: *trixie_pipeline
   web_trigger_multi: *multi_pipeline
+  web_trigger_alpine: *alpine_pipeline
+  web_trigger_alpine_multi: *alpine_multi_pipeline
 
 # ── 兜底：其余分支的手动构建与 tag 事件 ───────────────────────────────
 $:
@@ -64,7 +104,13 @@ $:
   # ── 2. 手动触发：Trixie 全架构构建 (linux/amd64 + linux/arm64) ────────
   web_trigger_multi: *multi_pipeline
 
-  # ── 3. v* tag push：版本发布自动构建双架构镜像 ─────────────────────────
+  # ── 3. 手动触发：Alpine Musl 静态构建 (仅 linux/amd64) ────────────────
+  web_trigger_alpine: *alpine_pipeline
+
+  # ── 4. 手动触发：Alpine Musl 全架构构建 (linux/amd64 + linux/arm64) ───
+  web_trigger_alpine_multi: *alpine_multi_pipeline
+
+  # ── 5. v* tag push：版本发布自动构建双架构镜像 ─────────────────────────
   tag_push:
     - services:
         - docker

@@ -1,0 +1,53 @@
+ARG RUST_VERSION=1.99.1
+ARG ALPINE_VERSION=3.24
+
+# ── Chef 基础阶段 ─────────────────────────────────────────────────────────────
+FROM lukemathwalker/cargo-chef:latest-rust-${RUST_VERSION}-alpine${ALPINE_VERSION} AS chef
+WORKDIR /app
+SHELL ["/bin/sh", "-o", "pipefail", "-c"]
+
+# build-base: tikv-jemalloc-sys；pkgconfig + openssl-dev: openssl-sys；libs-static: musl 静态链接
+RUN apk add --no-cache build-base pkgconfig openssl-dev openssl-libs-static
+
+# ── Planner：生成依赖清单 recipe.json ──────────────────────────────────────────
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+# ── Builder：预编译依赖 + 构建静态二进制 ──────────────────────────────────────
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+
+# recipe 变更时 registry 缓存避免重下 crate
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    cargo chef cook --release --locked --bin locos --recipe-path recipe.json
+
+COPY . .
+RUN cargo build --release --locked --bin locos
+
+# ── Runtime：最小化生产镜像 ───────────────────────────────────────────────────
+FROM alpine:${ALPINE_VERSION} AS runtime
+
+ENV LOCO_ENV=production \
+    APP_PORT=5150 \
+    APP_BINDING=0.0.0.0 \
+    TZ=Asia/Shanghai
+
+# 基础镜像不含 CA 证书与时区库，出站 TLS / 时区依赖它们
+RUN apk add --no-cache ca-certificates tzdata \
+    && cp /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+WORKDIR /app
+
+# 复用镜像内置 nobody（Alpine 无 nogroup）
+COPY --from=builder --chown=nobody:nobody /app/target/release/locos /app/locos
+COPY --chown=nobody:nobody config/ /app/config/
+COPY --chown=nobody:nobody locales/ /app/locales/
+
+RUN mkdir -p storages/logs storages/uploads storages/tmp && chown -R nobody:nobody /app/storages
+
+USER nobody:nobody
+EXPOSE 5150
+
+ENTRYPOINT ["/app/locos"]
+CMD ["start"]
